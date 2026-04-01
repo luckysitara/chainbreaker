@@ -1,6 +1,6 @@
-import { BaseAgent } from './baseAgent.js';
+import { BaseAgent } from "./baseAgent.js";
+import { ToolManager } from "../tools/ToolManager.js";
 export declare class CommanderAgent extends BaseAgent {
-    private execTool;
-    constructor();
+    constructor(toolManager: ToolManager);
     run(task: string): Promise<void>;
 }

@@ -1,4 +1,5 @@
-interface AgentToolResult {
+import { ITool } from "./ITool.js";
+export interface ExecResult {
     stdout: string;
     stderr: string;
     exitCode: number | null;
@@ -9,9 +10,8 @@ export interface ExecParams {
     cwd?: string;
     timeout?: number;
 }
-export declare class ExecTool {
-    static readonly toolName = "exec";
-    static readonly description = "Execute shell commands with an optional working directory and timeout.";
-    execute(params: ExecParams): Promise<AgentToolResult>;
+export declare class ExecTool implements ITool {
+    name: string;
+    description: string;
+    execute(params: ExecParams): Promise<ExecResult>;
 }
-export {};

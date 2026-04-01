@@ -1,12 +1,14 @@
 // chainbreaker/src/tools/ToolManager.ts
-import { ITool } from './ITool.js';
+import { ITool } from "./ITool.js";
 
 export class ToolManager {
   private tools: Map<string, ITool> = new Map();
 
   registerTool(tool: ITool): void {
     if (this.tools.has(tool.name)) {
-      console.warn(`Tool with name "${tool.name}" already registered. Overwriting.`);
+      console.warn(
+        `Tool with name "${tool.name}" already registered. Overwriting.`,
+      );
     }
     this.tools.set(tool.name, tool);
     console.log(`Tool "${tool.name}" registered.`);
@@ -20,8 +22,7 @@ export class ToolManager {
     return Array.from(this.tools.values());
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async executeTool(name: string, params: any): Promise<any> {
+  async executeTool(name: string, params: unknown): Promise<unknown> {
     const tool = this.getTool(name);
     if (!tool) {
       throw new Error(`Tool "${name}" not found.`);
