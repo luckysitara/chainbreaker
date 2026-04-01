@@ -1,0 +1,52 @@
+# Chainbreaker Tools Dockerfile
+FROM ubuntu:22.04
+
+# Avoid prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Core dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    build-essential \
+    libssl-dev \
+    pkg-config \
+    python3 \
+    python3-pip \
+    python3-venv \
+    unzip \
+    wget \
+    jq \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install Solana CLI
+RUN sh -c "$(curl -sSfL https://release.solana.com/stable/install)"
+ENV PATH="/root/.local/share/solana/install/active_release/bin:${PATH}"
+
+# Install Anchor CLI
+RUN cargo install --git https://github.com/coral-xyz/anchor avm --locked --force && \
+    avm install latest && \
+    avm use latest
+
+# Install Foundry
+RUN curl -L https://foundry.paradigm.xyz | bash && \
+    /root/.foundry/bin/foundryup
+ENV PATH="/root/.foundry/bin:${PATH}"
+
+# Install Slither, Mythril, and other Python tools
+RUN pip3 install slither-analyzer mythril solc-select && \
+    solc-select install all
+
+# Set workspace
+WORKDIR /workspace
+
+# Default command
+CMD ["tail", "-f", "/dev/null"]

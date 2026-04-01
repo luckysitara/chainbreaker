@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: chainbreaker_n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_FUNCTION_ALLOW_BUILTIN=*
+      - NODE_FUNCTION_ALLOW_EXTERNAL=*
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-chainbreaker_secret}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - /home/tiktoor/raw/chainbreaker:/workspace
+    networks:
+      - chainbreaker_net
+
+  security-tools:
+    build:
+      context: .
+      dockerfile: Dockerfile.tools
+    container_name: chainbreaker_tools
+    restart: always
+    volumes:
+      - /home/tiktoor/raw/chainbreaker:/workspace
+    networks:
+      - chainbreaker_net
+
+networks:
+  chainbreaker_net:
+    driver: bridge
+
+volumes:
+  n8n_data:
