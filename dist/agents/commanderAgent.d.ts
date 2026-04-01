@@ -1,4 +1,4 @@
-import { BaseAgent } from './baseAgent';
+import { BaseAgent } from './baseAgent.js';
 export declare class CommanderAgent extends BaseAgent {
     private execTool;
     constructor();

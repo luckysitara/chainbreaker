@@ -1,10 +1,11 @@
 // chainbreaker/src/tools/exec.ts
 import { exec as cp_exec } from 'child_process';
 import { promisify } from 'util';
+import { ITool } from './ITool.js'; // Import the ITool interface
 
 const execPromise = promisify(cp_exec);
 
-interface AgentToolResult {
+export interface ExecResult {
   stdout: string;
   stderr: string;
   exitCode: number | null;
@@ -17,11 +18,11 @@ export interface ExecParams {
   timeout?: number; // in milliseconds
 }
 
-export class ExecTool {
-  static readonly toolName = "exec";
-  static readonly description = "Execute shell commands with an optional working directory and timeout.";
+export class ExecTool implements ITool { // Implement ITool
+  name: string = "exec"; // Explicitly define name
+  description: string = "Execute shell commands with an optional working directory and timeout."; // Explicitly define description
 
-  async execute(params: ExecParams): Promise<AgentToolResult> {
+  async execute(params: ExecParams): Promise<ExecResult> {
     const { command, cwd, timeout } = params;
 
     console.log(`Executing command: "${command}" in cwd: "${cwd || process.cwd()}"`);

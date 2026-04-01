@@ -1,5 +1,5 @@
 // chainbreaker/src/index.ts
-import { CommanderAgent } from './agents/commanderAgent';
+import { CommanderAgent } from './agents/commanderAgent.js';
 console.log("Chainbreaker Agent Framework starting...");
 async function main() {
     console.log("Initializing Chainbreaker components...");

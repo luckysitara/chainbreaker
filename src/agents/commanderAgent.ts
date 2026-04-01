@@ -1,6 +1,6 @@
 // chainbreaker/src/agents/commanderAgent.ts
-import { BaseAgent } from './baseAgent';
-import { ExecTool } from '../tools/exec';
+import { BaseAgent } from './baseAgent.js';
+import { ExecTool } from '../tools/exec.js';
 
 export class CommanderAgent extends BaseAgent {
   private execTool: ExecTool;
