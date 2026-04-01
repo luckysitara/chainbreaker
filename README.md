@@ -1,34 +1,34 @@
 # Chainbreaker: Agentic AI Toolchain for Solana & Ethereum Auditing
 
-**Chainbreaker** is an autonomous agentic security toolchain designed for deep auditing and exploitation of Solana and Ethereum smart contracts. Orchestrated by **n8n**, it integrates a multi-agent "Metasploit-like" flow with direct access to local security tools, browsers, and cross-chain execution.
+**Chainbreaker** is an autonomous agentic security toolchain designed for deep auditing and exploitation of Solana and Ethereum smart contracts. Inspired by the modular architecture of Openclaw, it integrates a multi-agent "Metasploit-like" flow with direct access to local security tools, browsers, and cross-chain execution, all orchestrated by its internal AI agent framework.
 
 ## 🚀 Features
 
-- **Multi-Agent Orchestration**: A Manager Agent coordinates specialized workers for Solana, Ethereum, and Network scanning.
-- **Autonomous Audit Flow**: Automatically builds, analyzes (static/dynamic), and fuzzes contracts.
-- **Full PC Access**: Executes shell commands, installs required tools, and manages local files via n8n.
+- **Modular Agent Framework**: An internal framework manages a Commander Agent that coordinates specialized workers for Solana, Ethereum, and Network scanning.
+- **Autonomous Audit Flow**: Agents automatically build, analyze (static/dynamic), and fuzz contracts.
+- **Full PC Access**: Agents can execute shell commands, install required tools, and manage local files within a sandboxed environment.
 - **Smart Contract Specialists**:
-  - **Solana**: `anchor`, `soteria`, `trident`, `solana-program-test`.
-  - **Ethereum**: `foundry`, `slither`, `echidna`, `halmos`.
-- **RAG-Enhanced Reasoning**: Uses a vector database of vulnerability patterns and recent exploit reports.
-- **Full n8n Integration**: Workflows are modular, versioned, and easily extensible.
+  - **Solana**: Leverages `anchor`, `soteria`, `trident`, `solana-program-test`.
+  - **Ethereum**: Leverages `foundry`, `slither`, `echidna`, `halmos`.
+- **RAG-Enhanced Reasoning**: Uses a vector database of vulnerability patterns and recent exploit reports for enhanced analysis.
 
 ## 📁 Directory Structure
 
-- `workflows/`: JSON exports of n8n workflows (the agent "brains").
-- `scripts/`: Custom exploit/audit scripts used by agents.
-- `docs/`: Technical guides and system architecture.
+- `src/`: Core Chainbreaker agent framework and internal logic.
+- `agents/`: Definitions and implementations of specialized agents (Commander, Solana, Ethereum).
+- `tools/`: Implementations of tools agents can use (e.g., shell executor, file manager).
+- `modules/`: Metasploit-like auditing and exploitation modules.
 - `skills/`: Specialized prompt templates for auditing tasks.
 - `docker/`: Container configurations for the toolchain environment.
 - `output/`: Audit reports, logs, and findings.
+- `docs/`: Technical guides and system architecture.
 
 ## 🛠 Setup
 
 Detailed setup instructions will be provided as the project evolves.
 
-1.  **Self-Hosted n8n**: Ensure you have a self-hosted instance of n8n.
-2.  **Environment**: Run `docker-compose up` in the `docker/` directory to spin up the toolchain.
-3.  **API Keys**: Configure your LLM (Claude/GPT) and Search (Tavily/Brave) keys.
+1.  **Environment**: Run `docker-compose up` in the `docker/` directory to spin up the toolchain.
+2.  **API Keys**: Configure your LLM (Claude/GPT) and Search (Tavily/Brave) keys within the Chainbreaker configuration.
 
 ## ⚖ License
 

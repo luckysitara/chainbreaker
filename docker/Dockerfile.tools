@@ -23,6 +23,9 @@ RUN apt-get update && apt-get install -y \
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs
 
+# Install Yarn
+RUN npm install -g yarn
+
 # Install Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
@@ -45,8 +48,8 @@ ENV PATH="/root/.foundry/bin:${PATH}"
 RUN pip3 install slither-analyzer mythril solc-select && \
     solc-select install all
 
-# Set workspace
-WORKDIR /workspace
+# Set application workdir
+WORKDIR /app
 
 # Default command
-CMD ["tail", "-f", "/dev/null"]
+CMD ["node", "dist/index.js"]
