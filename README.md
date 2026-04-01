@@ -33,3 +33,7 @@ Detailed setup instructions will be provided as the project evolves.
 ## ⚖ License
 
 MIT
+The Chainbreaker project is now fully set up and functional, with a verified core agent
+  framework, including Docker integration, core components, and local execution. My next focus
+  is on agent communication and orchestration, followed by specialized tool development,
+  subagent spawning, LLM integration, and Metasploit-like modules.
