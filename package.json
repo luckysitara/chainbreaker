@@ -6,15 +6,22 @@
   "type": "module",
   "scripts": {
     "start": "node dist/index.js",
-    "build": "pnpm run lint && tsc",
+    "build": "tsc",
     "dev": "tsc --watch & node dist/index.js",
-    "lint": "eslint \"{src,agents,tools}/**/*.ts\" --fix"
+    "lint": "eslint '{src,agents,tools}/**/*.ts' --fix"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
+  "dependencies": {
+    "ioredis": "^5.4.1",
+    "zod": "^3.23.8",
+    "openai": "^4.0.0",
+    "@google/generative-ai": "^0.1.0"
+  },
   "devDependencies": {
     "@types/node": "^20.x",
+    "@types/ioredis": "^5.0.0",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^8.57.0",

@@ -1,5 +1,5 @@
 // chainbreaker/src/tools/ToolManager.ts
-import { ITool } from "./ITool.js";
+import { ITool } from "./ITool"; // Removed .js
 
 export class ToolManager {
   private tools: Map<string, ITool> = new Map();

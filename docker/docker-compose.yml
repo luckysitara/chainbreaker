@@ -9,6 +9,19 @@ services:
     restart: always
     volumes:
       - /home/tiktoor/raw/chainbreaker:/app
+    depends_on:
+      - redis
+    networks:
+      - chainbreaker_net
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  redis:
+    image: redis:alpine
+    container_name: chainbreaker_redis
+    ports:
+      - "6379:6379"
     networks:
       - chainbreaker_net
 
