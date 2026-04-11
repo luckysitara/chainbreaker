@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { cleanStaleMatrixPluginConfig } from "../commands/doctor/providers/matrix.js";
 import type { ChainbreakerConfig } from "../config/config.js";
 import { loadConfig, readConfigFileSnapshot } from "../config/config.js";
 import { installHooksFromNpmSpec, installHooksFromPath } from "../hooks/install.js";
@@ -175,6 +176,7 @@ async function tryInstallHookPackFromNpmSpec(params: {
 
 function isAllowedMatrixRecoveryIssue(issue: { path?: string; message?: string }): boolean {
   return (
+    (issue.path === "channels.matrix" && issue.message === "unknown channel id: matrix") ||
     (issue.path === "plugins.load.paths" &&
       typeof issue.message === "string" &&
       issue.message.includes("plugin path not found"))
@@ -190,6 +192,7 @@ function buildInvalidPluginInstallConfigError(message: string): Error {
 async function loadConfigFromSnapshotForInstall(
   request: PluginInstallRequestContext,
 ): Promise<ChainbreakerConfig> {
+  if (resolvePluginInstallInvalidConfigPolicy(request) !== "recover-matrix-only") {
     throw buildInvalidPluginInstallConfigError(
       "Config invalid; run `chainbreaker doctor --fix` before installing plugins.",
     );

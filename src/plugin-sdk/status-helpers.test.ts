@@ -387,6 +387,7 @@ describe("buildWebhookChannelStatusSummary", () => {
 describe("createDependentCredentialStatusIssueCollector", () => {
   it("uses source metadata from sanitized snapshots to pick the missing field", () => {
     const collect = createDependentCredentialStatusIssueCollector({
+      channel: "line",
       dependencySourceKey: "tokenSource",
       missingPrimaryMessage: "LINE channel access token not configured",
       missingDependentMessage: "LINE channel secret not configured",
@@ -400,11 +401,13 @@ describe("createDependentCredentialStatusIssueCollector", () => {
       ]),
     ).toEqual([
       {
+        channel: "line",
         accountId: "default",
         kind: "config",
         message: "LINE channel access token not configured",
       },
       {
+        channel: "line",
         accountId: "work",
         kind: "config",
         message: "LINE channel secret not configured",

@@ -71,6 +71,7 @@ function readMatrixPackageJson(): {
     };
   };
 } {
+  return JSON.parse(readFileSync(resolve(REPO_ROOT, "extensions/matrix/package.json"), "utf8")) as {
     dependencies?: Record<string, string>;
     optionalDependencies?: Record<string, string>;
     chainbreaker?: {
@@ -310,32 +311,47 @@ describe("plugin-sdk package contract guardrails", () => {
     expect(failures).toEqual([]);
   });
 
+  it("mirrors matrix runtime deps needed by the bundled host graph", () => {
     const rootRuntimeDeps = collectRuntimeDependencySpecs(readRootPackageJson());
+    const matrixPackageJson = readMatrixPackageJson();
+    const matrixRuntimeDeps = collectRuntimeDependencySpecs(matrixPackageJson);
+    const allowlist = matrixPackageJson.chainbreaker?.releaseChecks?.rootDependencyMirrorAllowlist;
 
     expect(Array.isArray(allowlist)).toBe(true);
+    const matrixRootMirrorAllowlist = allowlist as string[];
+    expect(matrixRootMirrorAllowlist).toEqual(
+      expect.arrayContaining(["@matrix-org/matrix-sdk-crypto-wasm"]),
     );
 
+    for (const dep of matrixRootMirrorAllowlist) {
+      expect(rootRuntimeDeps.get(dep)).toBe(matrixRuntimeDeps.get(dep));
     }
   });
 
+  it("resolves matrix crypto WASM from the root runtime surface", () => {
     const rootRequire = createRootPackageRequire();
     // Normalize filesystem separators so the package assertion stays portable.
     const resolvedPath = rootRequire
+      .resolve("@matrix-org/matrix-sdk-crypto-wasm")
       .replaceAll("\\", "/");
 
+    expect(resolvedPath).toContain("@matrix-org/matrix-sdk-crypto-wasm");
   });
 
+  it("keeps matrix crypto WASM in the packed artifact manifest", async () => {
+    const tempRoot = mkdtempSync(join(os.tmpdir(), "chainbreaker-matrix-wasm-pack-"));
     try {
       const packDir = join(tempRoot, "pack");
       mkdirSync(packDir, { recursive: true });
 
       const archivePath = packChainbreakerToTempDir(packDir);
       const packedPackageJson = await readPackedRootPackageJson(archivePath);
+      const matrixPackageJson = readMatrixPackageJson();
 
+      expect(packedPackageJson.dependencies?.["@matrix-org/matrix-sdk-crypto-wasm"]).toBe(
+        matrixPackageJson.dependencies?.["@matrix-org/matrix-sdk-crypto-wasm"],
       );
-      expect(
-        packedPackageJson.dependencies?.["@chainbreaker/plugin-package-contract"],
-      ).toBeUndefined();
+      expect(packedPackageJson.dependencies?.["@chainbreaker/plugin-package-contract"]).toBeUndefined();
       expect(packedPackageJson.dependencies?.["@aws-sdk/client-bedrock"]).toBeUndefined();
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });

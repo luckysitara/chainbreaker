@@ -119,6 +119,7 @@ export function logNonInteractiveOnboardingFailure(params: {
     return;
   }
 
+  const lines = [
     params.message,
     params.detail ? `Last probe: ${params.detail}` : undefined,
     params.diagnostics?.service
@@ -136,4 +137,5 @@ export function logNonInteractiveOnboardingFailure(params: {
     .filter(Boolean)
     .join("\n");
 
+  params.runtime.error(lines);
 }

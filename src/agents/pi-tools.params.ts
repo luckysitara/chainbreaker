@@ -287,6 +287,7 @@ export function wrapToolParamNormalization(
   const patched = patchToolSchemaForClaudeCompatibility(tool);
   return {
     ...patched,
+    execute: async (toolCallId, params, signal, onUpdate) => {
       const normalized = normalizeToolParams(params);
       const record =
         normalized ??
@@ -294,6 +295,7 @@ export function wrapToolParamNormalization(
       if (requiredParamGroups?.length) {
         assertRequiredParams(record, requiredParamGroups, tool.name);
       }
+      return tool.execute(toolCallId, normalized ?? params, signal, onUpdate);
     },
   };
 }

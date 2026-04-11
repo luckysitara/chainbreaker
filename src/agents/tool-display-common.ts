@@ -213,11 +213,14 @@ export function resolveReadDetail(args: unknown): string | undefined {
   const limit = limitRaw !== undefined ? Math.max(1, limitRaw) : undefined;
 
   if (offset !== undefined && limit !== undefined) {
+    const unit = limit === 1 ? "line" : "lines";
     return `${unit} ${offset}-${offset + limit - 1} from ${path}`;
   }
   if (offset !== undefined) {
+    return `from line ${offset} in ${path}`;
   }
   if (limit !== undefined) {
+    const unit = limit === 1 ? "line" : "lines";
     return `first ${limit} ${unit} of ${path}`;
   }
   return `from ${path}`;

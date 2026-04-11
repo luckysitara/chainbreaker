@@ -99,8 +99,12 @@ function extractSherpaOnnxText(raw: string): string | null {
     return direct;
   }
 
+  const lines = raw
     .split("\n")
+    .map((line) => line.trim())
     .filter(Boolean);
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    const parsed = tryParse(lines[i] ?? "");
     if (parsed) {
       return parsed;
     }
@@ -197,6 +201,7 @@ async function resolveCliOutput(params: {
     }
   }
 
+  if (commandId === "sherpa-onnx-offline") {
     const response = extractSherpaOnnxText(params.stdout);
     if (response) {
       return response;

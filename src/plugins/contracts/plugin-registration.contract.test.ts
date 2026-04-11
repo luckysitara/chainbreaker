@@ -61,6 +61,10 @@ const pluginRegistrationContractTests: PluginRegistrationContractParams[] = [
     requireSpeechVoices: true,
   },
   {
+    pluginId: "minimax",
+    providerIds: ["minimax", "minimax-portal"],
+    mediaUnderstandingProviderIds: ["minimax", "minimax-portal"],
+    imageGenerationProviderIds: ["minimax", "minimax-portal"],
     requireDescribeImages: true,
     requireGenerateImage: true,
   },
@@ -115,6 +119,8 @@ const pluginRegistrationContractTests: PluginRegistrationContractParams[] = [
     webSearchProviderIds: ["grok"],
   },
   {
+    pluginId: "zai",
+    mediaUnderstandingProviderIds: ["zai"],
     requireDescribeImages: true,
   },
 ];

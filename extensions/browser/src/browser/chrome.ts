@@ -77,9 +77,7 @@ function resolveBrowserExecutable(resolved: ResolvedBrowserConfig): BrowserExecu
   return resolveBrowserExecutableForPlatform(resolved, process.platform);
 }
 
-export function resolveChainbreakerUserDataDir(
-  profileName = DEFAULT_CHAINBREAKER_BROWSER_PROFILE_NAME,
-) {
+export function resolveChainbreakerUserDataDir(profileName = DEFAULT_CHAINBREAKER_BROWSER_PROFILE_NAME) {
   return path.join(CONFIG_DIR, "browser", profileName, "user-data");
 }
 
@@ -174,6 +172,7 @@ async function fetchChromeVersion(
   try {
     await assertCdpEndpointAllowed(cdpUrl, ssrfPolicy);
     const versionUrl = appendCdpPath(cdpUrl, "/json/version");
+    const res = await fetchCdpChecked(versionUrl, timeoutMs, { signal: ctrl.signal });
     const data = (await res.json()) as ChromeVersion;
     if (!data || typeof data !== "object") {
       return null;
@@ -348,6 +347,8 @@ export async function launchChainbreakerChrome(
   // Then decorate (if needed) before the "real" run.
   if (needsBootstrap) {
     const bootstrap = spawnOnce();
+    const deadline = Date.now() + CHROME_BOOTSTRAP_PREFS_TIMEOUT_MS;
+    while (Date.now() < deadline) {
       if (exists(localStatePath) && exists(preferencesPath)) {
         break;
       }
@@ -358,6 +359,8 @@ export async function launchChainbreakerChrome(
     } catch {
       // ignore
     }
+    const exitDeadline = Date.now() + CHROME_BOOTSTRAP_EXIT_TIMEOUT_MS;
+    while (Date.now() < exitDeadline) {
       if (bootstrap.exitCode != null) {
         break;
       }
@@ -395,6 +398,8 @@ export async function launchChainbreakerChrome(
   proc.stderr?.on("data", onStderr);
 
   // Wait for CDP to come up.
+  const readyDeadline = Date.now() + CHROME_LAUNCH_READY_WINDOW_MS;
+  while (Date.now() < readyDeadline) {
     if (await isChromeReachable(profile.cdpUrl)) {
       break;
     }

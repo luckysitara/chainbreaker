@@ -791,6 +791,7 @@ export function attachGatewayWsMessageHandler(params: {
               reason,
             });
             // QR bootstrap onboarding is node-only and single-use. When a fresh device presents
+            // a valid bootstrap token for the baseline node profile, complete pairing in the same
             // handshake so iOS does not get stuck retrying with an already-consumed bootstrap token.
             const allowSilentBootstrapPairing =
               authMethod === "bootstrap-token" &&

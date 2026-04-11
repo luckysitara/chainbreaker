@@ -130,6 +130,8 @@ export async function channelsListCommand(
     return;
   }
 
+  const lines: string[] = [];
+  lines.push(theme.heading("Chat channels:"));
 
   for (const plugin of plugins) {
     const accounts = plugin.config.listAccountIds(cfg);
@@ -142,6 +144,7 @@ export async function channelsListCommand(
         cfg,
         accountId,
       });
+      lines.push(
         formatAccountLine({
           channel: plugin,
           snapshot,
@@ -150,13 +153,18 @@ export async function channelsListCommand(
     }
   }
 
+  lines.push("");
+  lines.push(theme.heading("Auth providers (OAuth + API keys):"));
   if (authProfiles.length === 0) {
+    lines.push(theme.muted("- none"));
   } else {
     for (const profile of authProfiles) {
       const external = profile.isExternal ? theme.muted(" (synced)") : "";
+      lines.push(`- ${theme.accent(profile.id)} (${theme.success(profile.type)}${external})`);
     }
   }
 
+  runtime.log(lines.join("\n"));
 
   if (includeUsage) {
     runtime.log("");

@@ -9,6 +9,9 @@ import {
   resolveSubagentToolPolicy,
 } from "../agents/pi-tools.policy.js";
 import {
+  applyToolPolicyPipeline,
+  buildDefaultToolPolicyPipelineSteps,
+} from "../agents/tool-policy-pipeline.js";
 import {
   applyOwnerOnlyToolPolicy,
   collectExplicitAllowlist,
@@ -290,10 +293,14 @@ export async function handleToolsInvokeHttpRequest(
     ]),
   });
 
+  const subagentFiltered = applyToolPolicyPipeline({
+    // oxlint-disable-next-line typescript/no-explicit-any
     tools: allTools as any,
-    toolMeta: (tool) => getPluginToolMeta(tool),
+    // oxlint-disable-next-line typescript/no-explicit-any
+    toolMeta: (tool) => getPluginToolMeta(tool as any),
     warn: logWarn,
     steps: [
+      ...buildDefaultToolPolicyPipelineSteps({
         profilePolicy: profilePolicyWithAlsoAllow,
         profile,
         profileAlsoAllow,
@@ -338,6 +345,7 @@ export async function handleToolsInvokeHttpRequest(
   try {
     const toolCallId = `http-${Date.now()}`;
     const toolArgs = mergeActionIntoArgsIfSupported({
+      // oxlint-disable-next-line typescript/no-explicit-any
       toolSchema: (tool as any).parameters,
       action,
       args,
@@ -359,6 +367,7 @@ export async function handleToolsInvokeHttpRequest(
       });
       return true;
     }
+    // oxlint-disable-next-line typescript/no-explicit-any
     const result = await (tool as any).execute?.(toolCallId, hookResult.params);
     sendJson(res, 200, { ok: true, result });
   } catch (err) {

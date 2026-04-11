@@ -6,6 +6,7 @@ describe("doctor finalize config flow", () => {
     const note = vi.fn();
     const result = await finalizeDoctorConfigFlow({
       cfg: { channels: {} },
+      candidate: { channels: { signal: { enabled: true } } },
       pendingChanges: true,
       shouldRepair: false,
       fixHints: ['Run "chainbreaker doctor --fix" to apply these changes.'],
@@ -14,14 +15,17 @@ describe("doctor finalize config flow", () => {
     });
 
     expect(result).toEqual({
+      cfg: { channels: { signal: { enabled: true } } },
       shouldWriteConfig: true,
     });
     expect(note).not.toHaveBeenCalled();
   });
 
+  it("emits fix hints when preview changes are declined", async () => {
     const note = vi.fn();
     const result = await finalizeDoctorConfigFlow({
       cfg: { channels: {} },
+      candidate: { channels: { signal: { enabled: true } } },
       pendingChanges: true,
       shouldRepair: false,
       fixHints: ['Run "chainbreaker doctor --fix" to apply these changes.'],
@@ -41,6 +45,8 @@ describe("doctor finalize config flow", () => {
 
   it("writes automatically in repair mode when changes exist", async () => {
     const result = await finalizeDoctorConfigFlow({
+      cfg: { channels: { signal: { enabled: true } } },
+      candidate: { channels: { signal: { enabled: false } } },
       pendingChanges: true,
       shouldRepair: true,
       fixHints: [],
@@ -49,6 +55,7 @@ describe("doctor finalize config flow", () => {
     });
 
     expect(result).toEqual({
+      cfg: { channels: { signal: { enabled: true } } },
       shouldWriteConfig: true,
     });
   });

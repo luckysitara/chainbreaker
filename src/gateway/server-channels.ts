@@ -103,6 +103,7 @@ type ChannelManagerOptions = {
    * plugins to access advanced Plugin SDK features (AI dispatch, routing,
    * text processing, etc.).
    *
+   * Built-in channels (slack, discord, telegram) typically don't use this
    * because they can directly import internal modules from the monorepo.
    *
    * This field is optional - omitting it maintains backward compatibility
@@ -333,6 +334,7 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
             manuallyStopped.delete(rKey);
           }
 
+          if (abort.signal.aborted || manuallyStopped.has(rKey)) {
             setRuntime(channelId, id, {
               accountId: id,
               running: false,
@@ -363,6 +365,7 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
             accountId: id,
             account,
             runtime: channelRuntimeEnvs[channelId],
+            abortSignal: abort.signal,
             log,
             getStatus: () => getRuntime(channelId, id),
             setStatus: (next) => setRuntime(channelId, id, next),
@@ -406,6 +409,7 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
                 reconnectAttempts: attempt,
               });
               try {
+                await sleepWithAbort(delayMs, abort.signal);
                 if (manuallyStopped.has(rKey)) {
                   return;
                 }
@@ -485,6 +489,7 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
             accountId: id,
             account,
             runtime: channelRuntimeEnvs[channelId],
+            abortSignal: abort?.signal ?? new AbortController().signal,
             log: channelLogs[channelId],
             getStatus: () => getRuntime(channelId, id),
             setStatus: (next) => setRuntime(channelId, id, next),

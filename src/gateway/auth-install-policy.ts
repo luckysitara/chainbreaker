@@ -2,9 +2,7 @@ import type { ChainbreakerConfig } from "../config/config.js";
 import { collectDurableServiceEnvVars } from "../config/state-dir-dotenv.js";
 import { hasConfiguredSecretInput } from "../config/types.secrets.js";
 
-type GatewayInstallAuthMode = NonNullable<
-  NonNullable<ChainbreakerConfig["gateway"]>["auth"]
->["mode"];
+type GatewayInstallAuthMode = NonNullable<NonNullable<ChainbreakerConfig["gateway"]>["auth"]>["mode"];
 
 function hasExplicitGatewayInstallAuthMode(
   mode: GatewayInstallAuthMode | undefined,

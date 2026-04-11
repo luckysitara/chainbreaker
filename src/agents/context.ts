@@ -356,6 +356,7 @@ function resolveConfiguredProviderContextWindow(
     return exactResult;
   }
 
+  // 2. Normalized fallback: covers alias keys such as "z.ai" → "zai".
   const normalizedProvider = normalizeProviderId(provider);
   return findContextWindow((id) => normalizeProviderId(id) === normalizedProvider);
 }

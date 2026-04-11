@@ -6,6 +6,7 @@ import type { SessionEntry, SessionScope } from "../../config/sessions.js";
 import type { MsgContext } from "../templating.js";
 import type { ElevatedLevel, ReasoningLevel, ThinkLevel, VerboseLevel } from "../thinking.js";
 import type { GetReplyOptions, ReplyPayload } from "../types.js";
+import type { InlineDirectives } from "./directive-handling.js";
 import type { TypingController } from "./typing.js";
 
 export type CommandContext = {
@@ -21,6 +22,7 @@ export type CommandContext = {
   commandBodyNormalized: string;
   from?: string;
   to?: string;
+  /** Internal marker to prevent duplicate reset-hook emission across command pipelines. */
   resetHookTriggered?: boolean;
 };
 
@@ -31,6 +33,7 @@ export type HandleCommandsParams = {
   command: CommandContext;
   agentId?: string;
   agentDir?: string;
+  directives: InlineDirectives;
   elevated: {
     enabled: boolean;
     allowed: boolean;

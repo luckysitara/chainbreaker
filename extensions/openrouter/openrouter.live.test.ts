@@ -10,8 +10,7 @@ import plugin from "./index.js";
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? "";
 const LIVE_MODEL_ID =
   process.env.CHAINBREAKER_LIVE_OPENROUTER_PLUGIN_MODEL?.trim() || "openai/gpt-5.4-nano";
-const liveEnabled =
-  OPENROUTER_API_KEY.trim().length > 0 && process.env.CHAINBREAKER_LIVE_TEST === "1";
+const liveEnabled = OPENROUTER_API_KEY.trim().length > 0 && process.env.CHAINBREAKER_LIVE_TEST === "1";
 const describeLive = liveEnabled ? describe : describe.skip;
 const ModelRegistryCtor = ModelRegistry as unknown as {
   new (authStorage: AuthStorage, modelsJsonPath?: string): ModelRegistry;

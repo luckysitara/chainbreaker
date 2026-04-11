@@ -61,8 +61,10 @@ async function waitForRunningRuntime(params: {
   timeoutMs?: number;
 }): Promise<{ pid: number }> {
   const timeoutMs = params.timeoutMs ?? WAIT_TIMEOUT_MS;
+  const deadline = Date.now() + timeoutMs;
   let lastStatus = "unknown";
   let lastPid: number | undefined;
+  while (Date.now() < deadline) {
     const runtime = await readLaunchAgentRuntime(params.env);
     lastStatus = runtime.status ?? "unknown";
     lastPid = runtime.pid;

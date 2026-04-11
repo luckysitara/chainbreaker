@@ -65,6 +65,7 @@ ${formatHelpExamples([
   ],
   ['chainbreaker agent --to +15555550123 --message "Summon reply" --deliver', "Deliver reply."],
   [
+    'chainbreaker agent --agent ops --message "Generate report" --deliver --reply-channel slack --reply-to "#reports"',
     "Send reply to a different channel/target.",
   ],
 ])}
@@ -218,14 +219,8 @@ ${theme.muted("Docs:")} ${formatDocsLink("/cli/agent", "docs.chainbreaker.ai/cli
         `
 ${theme.heading("Examples:")}
 ${formatHelpExamples([
-  [
-    'chainbreaker agents set-identity --agent main --name "Chainbreaker" --emoji "🦞"',
-    "Set name + emoji.",
-  ],
-  [
-    "chainbreaker agents set-identity --agent main --avatar avatars/chainbreaker.png",
-    "Set avatar path.",
-  ],
+  ['chainbreaker agents set-identity --agent main --name "Chainbreaker" --emoji "🦞"', "Set name + emoji."],
+  ["chainbreaker agents set-identity --agent main --avatar avatars/chainbreaker.png", "Set avatar path."],
   [
     "chainbreaker agents set-identity --workspace ~/.chainbreaker/workspace --from-identity",
     "Load from IDENTITY.md.",

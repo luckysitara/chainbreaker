@@ -14,9 +14,11 @@ function mockGoogleApiKeyAuth() {
 function installGoogleFetchMock(params?: {
   data?: string;
   mimeType?: string;
+  inlineDataKey?: "inlineData" | "inline_data";
 }) {
   const mimeType = params?.mimeType ?? "image/png";
   const data = params?.data ?? "png-data";
+  const inlineDataKey = params?.inlineDataKey ?? "inlineData";
   const fetchMock = vi.fn().mockResolvedValue({
     ok: true,
     json: async () => ({
@@ -25,6 +27,8 @@ function installGoogleFetchMock(params?: {
           content: {
             parts: [
               {
+                [inlineDataKey]: {
+                  [inlineDataKey === "inlineData" ? "mimeType" : "mime_type"]: mimeType,
                   data: Buffer.from(data).toString("base64"),
                 },
               },
@@ -58,6 +62,7 @@ describe("Google image-generation provider", () => {
               parts: [
                 { text: "generated" },
                 {
+                  inlineData: {
                     mimeType: "image/png",
                     data: Buffer.from("png-data").toString("base64"),
                   },
@@ -112,6 +117,7 @@ describe("Google image-generation provider", () => {
     });
   });
 
+  it("accepts OAuth JSON auth and inline_data responses", async () => {
     vi.spyOn(providerAuthRuntime, "resolveApiKeyForProvider").mockResolvedValue({
       apiKey: JSON.stringify({ token: "oauth-token" }),
       source: "profile",
@@ -125,6 +131,7 @@ describe("Google image-generation provider", () => {
             content: {
               parts: [
                 {
+                  inline_data: {
                     mime_type: "image/jpeg",
                     data: Buffer.from("jpg-data").toString("base64"),
                   },
@@ -195,6 +202,7 @@ describe("Google image-generation provider", () => {
               role: "user",
               parts: [
                 {
+                  inlineData: {
                     mimeType: "image/png",
                     data: Buffer.from("reference-bytes").toString("base64"),
                   },

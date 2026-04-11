@@ -17,6 +17,7 @@ function createCommandResult() {
     stdout: "hello\n",
     stderr: "",
     code: 0,
+    signal: null,
     killed: false,
     noOutputTimedOut: false,
     termination: "exit" as const,

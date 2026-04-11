@@ -229,6 +229,7 @@ export function resolveChannelSelectionNoteLines(params: {
   }
   return params.selection
     .map((channel) => selectionNotes.get(channel))
+    .filter((line): line is string => Boolean(line));
 }
 
 export function resolveChannelSetupSelectionContributions(params: {

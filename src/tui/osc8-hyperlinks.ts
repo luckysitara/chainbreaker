@@ -50,6 +50,7 @@ interface UrlRange {
 }
 
 /**
+ * Find URL ranges in a line's visible text, handling cross-line URL splits.
  */
 function findUrlRanges(
   visibleText: string,
@@ -60,6 +61,7 @@ function findUrlRanges(
   let newPending: { url: string; consumed: number } | null = null;
   let searchFrom = 0;
 
+  // Handle continuation of a URL broken from the previous line
   if (pending) {
     const remaining = pending.url.slice(pending.consumed);
     const trimmed = visibleText.trimStart();
@@ -140,10 +142,13 @@ function findUrlRanges(
 }
 
 /**
+ * Apply OSC 8 hyperlink sequences to a line based on visible-text URL ranges.
  * Walks through the raw string character by character, inserting OSC 8
  * open/close sequences at URL range boundaries while preserving ANSI codes.
  */
+function applyOsc8Ranges(line: string, ranges: UrlRange[]): string {
   if (ranges.length === 0) {
+    return line;
   }
 
   // Build a lookup: visible position → URL
@@ -159,8 +164,11 @@ function findUrlRanges(
   let activeUrl: string | null = null;
   let i = 0;
 
+  while (i < line.length) {
     // Fast path: only check for escape sequences when we see ESC
+    if (line.charCodeAt(i) === 0x1b) {
       // ANSI SGR sequence
+      const sgr = line.slice(i).match(SGR_START_RE);
       if (sgr) {
         result += sgr[0];
         i += sgr[0].length;
@@ -168,6 +176,7 @@ function findUrlRanges(
       }
 
       // Existing OSC 8 sequence (pass through)
+      const osc = line.slice(i).match(OSC8_START_RE);
       if (osc) {
         result += osc[0];
         i += osc[0].length;
@@ -187,6 +196,7 @@ function findUrlRanges(
       activeUrl = targetUrl;
     }
 
+    result += line[i];
     visiblePos++;
     i++;
   }
@@ -199,15 +209,23 @@ function findUrlRanges(
 }
 
 /**
+ * Add OSC 8 hyperlinks to rendered lines using a pre-extracted URL list.
  *
+ * For each line, finds URL-like substrings in the visible text, matches them
  * against known URLs, and wraps each fragment with OSC 8 escape sequences.
+ * Handles URLs broken across multiple lines by pi-tui's word wrapping.
  */
+export function addOsc8Hyperlinks(lines: string[], urls: string[]): string[] {
   if (urls.length === 0) {
+    return lines;
   }
 
   let pending: { url: string; consumed: number } | null = null;
 
+  return lines.map((line) => {
+    const visible = stripAnsi(line);
     const result = findUrlRanges(visible, urls, pending);
     pending = result.pending;
+    return applyOsc8Ranges(line, result.ranges);
   });
 }

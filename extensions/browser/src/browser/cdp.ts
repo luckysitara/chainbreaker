@@ -219,6 +219,7 @@ export type CdpRemoteObject = {
 
 export type CdpExceptionDetails = {
   text?: string;
+  lineNumber?: number;
   columnNumber?: number;
   exception?: CdpRemoteObject;
   stackTrace?: unknown;

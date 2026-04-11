@@ -100,6 +100,7 @@ describe("acp cli option collisions", () => {
     {
       name: "rejects mixed secret flags and file flags",
       files: { token: "tok_file\n" },
+      args: (tokenFile: string) => ["--token", "tok_inline", "--token-file", tokenFile],
       expected: /Use either --token or --token-file/,
     },
     {
@@ -107,23 +108,22 @@ describe("acp cli option collisions", () => {
       files: { password: "pw_file\n" }, // pragma: allowlist secret
       args: (_tokenFile: string, passwordFile: string) => [
         "--password",
+        "pw_inline",
         "--password-file",
         passwordFile,
       ],
       expected: /Use either --password or --password-file/,
     },
   ])("$name", async ({ files, args, expected }) => {
-    await withTempSecretFiles(
-      "chainbreaker-acp-cli-",
-      files,
-      async ({ tokenFile, passwordFile }) => {
-        await parseAcp(args(tokenFile ?? "", passwordFile ?? ""));
-      },
-    );
+    await withTempSecretFiles("chainbreaker-acp-cli-", files, async ({ tokenFile, passwordFile }) => {
+      await parseAcp(args(tokenFile ?? "", passwordFile ?? ""));
+    });
 
     expectCliError(expected);
   });
 
+  it("warns when inline secret flags are used", async () => {
+    await parseAcp(["--token", "tok_inline", "--password", "pw_inline"]);
 
     expect(defaultRuntime.error).toHaveBeenCalledWith(
       expect.stringMatching(/--token can be exposed via process listings/),

@@ -44,9 +44,7 @@ describe("rewriteUpdateFlagArgv", () => {
 
 describe("shouldRegisterPrimarySubcommand", () => {
   it("skips eager primary registration for help/version invocations", () => {
-    expect(shouldRegisterPrimarySubcommand(["node", "chainbreaker", "status", "--help"])).toBe(
-      false,
-    );
+    expect(shouldRegisterPrimarySubcommand(["node", "chainbreaker", "status", "--help"])).toBe(false);
     expect(shouldRegisterPrimarySubcommand(["node", "chainbreaker", "-V"])).toBe(false);
     expect(shouldRegisterPrimarySubcommand(["node", "chainbreaker", "-v"])).toBe(false);
   });
@@ -118,9 +116,7 @@ describe("shouldEnsureCliPath", () => {
 
   it("skips path bootstrap for read-only fast paths", () => {
     expect(shouldEnsureCliPath(["node", "chainbreaker", "status"])).toBe(false);
-    expect(shouldEnsureCliPath(["node", "chainbreaker", "--log-level", "debug", "status"])).toBe(
-      false,
-    );
+    expect(shouldEnsureCliPath(["node", "chainbreaker", "--log-level", "debug", "status"])).toBe(false);
     expect(shouldEnsureCliPath(["node", "chainbreaker", "sessions", "--json"])).toBe(false);
     expect(shouldEnsureCliPath(["node", "chainbreaker", "config", "get", "update"])).toBe(false);
     expect(shouldEnsureCliPath(["node", "chainbreaker", "models", "status", "--json"])).toBe(false);
@@ -136,9 +132,7 @@ describe("shouldEnsureCliPath", () => {
 describe("shouldUseRootHelpFastPath", () => {
   it("uses the fast path for root help only", () => {
     expect(shouldUseRootHelpFastPath(["node", "chainbreaker", "--help"])).toBe(true);
-    expect(shouldUseRootHelpFastPath(["node", "chainbreaker", "--profile", "work", "-h"])).toBe(
-      true,
-    );
+    expect(shouldUseRootHelpFastPath(["node", "chainbreaker", "--profile", "work", "-h"])).toBe(true);
     expect(shouldUseRootHelpFastPath(["node", "chainbreaker", "status", "--help"])).toBe(false);
     expect(shouldUseRootHelpFastPath(["node", "chainbreaker", "--help", "status"])).toBe(false);
   });

@@ -37,9 +37,14 @@ describe("MiniMax implicit provider (#15275)", () => {
     const agentDir = mkdtempSync(join(tmpdir(), "chainbreaker-test-"));
     await withEnvAsync({ MINIMAX_API_KEY: "test-key" }, async () => {
       const providers = await resolveImplicitProvidersForTest({ agentDir });
+      expect(providers?.minimax).toBeDefined();
+      expect(providers?.minimax?.api).toBe("anthropic-messages");
+      expect(providers?.minimax?.authHeader).toBe(true);
+      expect(providers?.minimax?.baseUrl).toBe("https://api.minimax.io/anthropic");
     });
   });
 
+  it("should set authHeader for minimax portal provider", async () => {
     const agentDir = mkdtempSync(join(tmpdir(), "chainbreaker-test-"));
     await writeFile(
       join(agentDir, "auth-profiles.json"),
@@ -47,7 +52,9 @@ describe("MiniMax implicit provider (#15275)", () => {
         {
           version: 1,
           profiles: {
+            "minimax-portal:default": {
               type: "oauth",
+              provider: "minimax-portal",
               access: "token",
               refresh: "refresh-token",
               expires: Date.now() + 60_000,
@@ -61,11 +68,15 @@ describe("MiniMax implicit provider (#15275)", () => {
     );
 
     const providers = await resolveImplicitProvidersForTest({ agentDir });
+    expect(providers?.["minimax-portal"]?.authHeader).toBe(true);
   });
 
+  it("should include minimax portal provider when MINIMAX_OAUTH_TOKEN is configured", async () => {
     const agentDir = mkdtempSync(join(tmpdir(), "chainbreaker-test-"));
     await withEnvAsync({ MINIMAX_OAUTH_TOKEN: "portal-token" }, async () => {
       const providers = await resolveImplicitProvidersForTest({ agentDir });
+      expect(providers?.["minimax-portal"]).toBeDefined();
+      expect(providers?.["minimax-portal"]?.authHeader).toBe(true);
     });
   });
 });

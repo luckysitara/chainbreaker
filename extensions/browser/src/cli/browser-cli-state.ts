@@ -74,19 +74,26 @@ export function registerBrowserStateCommands(
     });
 
   set
+    .command("offline")
+    .description("Toggle offline mode")
     .argument("<on|off>", "on/off")
     .option("--target-id <id>", "CDP target id (or unique prefix)")
     .action(async (value: string, opts, cmd) => {
       const parent = parentOpts(cmd);
+      const offline = parseOnOff(value);
+      if (offline === null) {
         defaultRuntime.error(danger("Expected on|off"));
         defaultRuntime.exit(1);
         return;
       }
       await runBrowserSetRequest({
         parent,
+        path: "/set/offline",
         body: {
+          offline,
           targetId: opts.targetId?.trim() || undefined,
         },
+        successMessage: `offline: ${offline}`,
       });
     });
 

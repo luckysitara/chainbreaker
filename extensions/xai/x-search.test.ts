@@ -16,9 +16,7 @@ function installXSearchFetch(payload?: Record<string, unknown>) {
                   {
                     type: "output_text",
                     text: "Found X posts",
-                    annotations: [
-                      { type: "url_citation", url: "https://x.com/chainbreaker/status/1" },
-                    ],
+                    annotations: [{ type: "url_citation", url: "https://x.com/chainbreaker/status/1" }],
                   },
                 ],
               },

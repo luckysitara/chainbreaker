@@ -251,10 +251,7 @@ describe("gateway server models + voicewake", () => {
         expect(after.payload?.triggers).toEqual(["hi", "there"]);
 
         const onDisk = JSON.parse(
-          await fs.readFile(
-            path.join(homeDir, ".chainbreaker", "settings", "voicewake.json"),
-            "utf8",
-          ),
+          await fs.readFile(path.join(homeDir, ".chainbreaker", "settings", "voicewake.json"), "utf8"),
         ) as { triggers?: unknown; updatedAtMs?: unknown };
         expect(onDisk.triggers).toEqual(["hi", "there"]);
         expect(typeof onDisk.updatedAtMs).toBe("number");
@@ -439,6 +436,7 @@ describe("gateway server misc", () => {
       JSON.stringify(
         {
           channels: {
+            discord: {
               token: "token-123",
             },
           },
@@ -455,6 +453,8 @@ describe("gateway server misc", () => {
 
     const updated = JSON.parse(await fs.readFile(configPath, "utf-8")) as Record<string, unknown>;
     const channels = updated.channels as Record<string, unknown> | undefined;
+    const discord = channels?.discord as Record<string, unknown> | undefined;
+    expect(discord).toMatchObject({
       token: "token-123",
       enabled: true,
     });

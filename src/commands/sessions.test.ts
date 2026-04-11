@@ -42,8 +42,10 @@ describe("sessionsCommand", () => {
 
     fs.rmSync(store);
 
+    const tableHeader = logs.find((line) => line.includes("Tokens (ctx %"));
     expect(tableHeader).toBeTruthy();
 
+    const row = logs.find((line) => line.includes("+15555550123")) ?? "";
     expect(row).toContain("2.0k/32k (6%)");
     expect(row).toContain("45m ago");
     expect(row).toContain("pi:opus");
@@ -51,6 +53,7 @@ describe("sessionsCommand", () => {
 
   it("shows placeholder rows when tokens are missing", async () => {
     const store = writeStore({
+      "discord:group:demo": {
         sessionId: "xyz",
         updatedAt: Date.now() - 5 * 60_000,
         thinkingLevel: "high",
@@ -62,6 +65,7 @@ describe("sessionsCommand", () => {
 
     fs.rmSync(store);
 
+    const row = logs.find((line) => line.includes("discord:group:demo")) ?? "";
     expect(row).toContain("unknown/32k (?%)");
     expect(row).toContain("think:high");
     expect(row).toContain("5m ago");
@@ -78,6 +82,7 @@ describe("sessionsCommand", () => {
         totalTokensFresh: true,
         model: "pi:opus",
       },
+      "discord:group:demo": {
         sessionId: "xyz",
         updatedAt: Date.now() - 5 * 60_000,
         inputTokens: 20,
@@ -94,6 +99,7 @@ describe("sessionsCommand", () => {
       }>;
     }>(sessionsCommand, store);
     const main = payload.sessions?.find((row) => row.key === "main");
+    const group = payload.sessions?.find((row) => row.key === "discord:group:demo");
     expect(main?.totalTokens).toBe(2000);
     expect(main?.totalTokensFresh).toBe(true);
     expect(group?.totalTokens).toBeNull();

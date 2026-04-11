@@ -4,6 +4,7 @@ import { repoInstallSpec } from "../../../test/helpers/bundled-plugin-paths.js";
 import { loggingState } from "../../logging/state.js";
 import { setCommandJsonMode } from "./json-mode.js";
 
+const MATRIX_REPO_INSTALL_SPEC = repoInstallSpec("matrix");
 
 const setVerboseMock = vi.fn();
 const emitCliBannerMock = vi.fn();
@@ -249,6 +250,8 @@ describe("registerPreActionHooks", () => {
 
   it("only allows invalid config for explicit Matrix reinstall requests", async () => {
     await runPreAction({
+      parseArgv: ["plugins", "install", "@chainbreaker/matrix"],
+      processArgv: ["node", "chainbreaker", "plugins", "install", "@chainbreaker/matrix"],
     });
 
     expect(ensureConfigReadyMock).toHaveBeenCalledWith({
@@ -282,11 +285,13 @@ describe("registerPreActionHooks", () => {
 
     vi.clearAllMocks();
     await runPreAction({
+      parseArgv: ["plugins", "install", "@chainbreaker/matrix", "--marketplace", "local/repo"],
       processArgv: [
         "node",
         "chainbreaker",
         "plugins",
         "install",
+        "@chainbreaker/matrix",
         "--marketplace",
         "local/repo",
       ],
@@ -371,15 +376,7 @@ describe("registerPreActionHooks", () => {
     // config set --json is parse-only (not JSON output mode), should not route
     await runPreAction({
       parseArgv: ["config", "set", "gateway.auth.mode", "local", "--json"],
-      processArgv: [
-        "node",
-        "chainbreaker",
-        "config",
-        "set",
-        "gateway.auth.mode",
-        "local",
-        "--json",
-      ],
+      processArgv: ["node", "chainbreaker", "config", "set", "gateway.auth.mode", "local", "--json"],
     });
 
     expect(routeLogsToStderrMock).not.toHaveBeenCalled();

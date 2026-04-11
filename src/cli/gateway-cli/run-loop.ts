@@ -100,11 +100,14 @@ export async function runGatewayLoop(params: {
   const SUPERVISOR_STOP_TIMEOUT_MS = 30_000;
   const SHUTDOWN_TIMEOUT_MS = SUPERVISOR_STOP_TIMEOUT_MS - 5_000;
 
+  const request = (action: GatewayRunSignalAction, signal: string) => {
     if (shuttingDown) {
+      gatewayLog.info(`received ${signal} during shutdown; ignoring`);
       return;
     }
     shuttingDown = true;
     const isRestart = action === "restart";
+    gatewayLog.info(`received ${signal}; ${isRestart ? "restarting" : "shutting down"}`);
 
     // Allow extra time for draining active turns on restart.
     const forceExitMs = isRestart ? DRAIN_TIMEOUT_MS + SHUTDOWN_TIMEOUT_MS : SHUTDOWN_TIMEOUT_MS;
@@ -175,12 +178,15 @@ export async function runGatewayLoop(params: {
   };
 
   const onSigterm = () => {
+    gatewayLog.info("signal SIGTERM received");
     request("stop", "SIGTERM");
   };
   const onSigint = () => {
+    gatewayLog.info("signal SIGINT received");
     request("stop", "SIGINT");
   };
   const onSigusr1 = () => {
+    gatewayLog.info("signal SIGUSR1 received");
     const authorized = consumeGatewaySigusr1RestartAuthorization();
     if (!authorized) {
       if (!isGatewaySigusr1RestartExternallyAllowed()) {

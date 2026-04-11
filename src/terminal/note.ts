@@ -59,14 +59,21 @@ function pushWrappedWordSegments(params: {
   available: number;
   firstPrefix: string;
   continuationPrefix: string;
+  lines: string[];
 }) {
   const parts = splitLongWord(params.word, params.available);
   const first = parts.shift() ?? "";
+  params.lines.push(params.firstPrefix + first);
   for (const part of parts) {
+    params.lines.push(params.continuationPrefix + part);
   }
 }
 
+function wrapLine(line: string, maxWidth: number): string[] {
+  if (line.trim().length === 0) {
+    return [line];
   }
+  const match = line.match(/^(\s*)([-*\u2022]\s+)?(.*)$/);
   const indent = match?.[1] ?? "";
   const bullet = match?.[2] ?? "";
   const content = match?.[3] ?? "";
@@ -76,6 +83,7 @@ function pushWrappedWordSegments(params: {
   const nextWidth = Math.max(10, maxWidth - visibleWidth(nextPrefix));
 
   const words = content.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
   let current = "";
   let prefix = firstPrefix;
   let available = firstWidth;
@@ -92,6 +100,7 @@ function pushWrappedWordSegments(params: {
           available,
           firstPrefix: prefix,
           continuationPrefix: nextPrefix,
+          lines,
         });
         prefix = nextPrefix;
         available = nextWidth;
@@ -107,6 +116,7 @@ function pushWrappedWordSegments(params: {
       continue;
     }
 
+    lines.push(prefix + current);
     prefix = nextPrefix;
     available = nextWidth;
 
@@ -120,6 +130,7 @@ function pushWrappedWordSegments(params: {
         available,
         firstPrefix: prefix,
         continuationPrefix: prefix,
+        lines,
       });
       current = "";
       continue;
@@ -128,8 +139,10 @@ function pushWrappedWordSegments(params: {
   }
 
   if (current || words.length === 0) {
+    lines.push(prefix + current);
   }
 
+  return lines;
 }
 
 export function wrapNoteMessage(
@@ -140,6 +153,7 @@ export function wrapNoteMessage(
   const maxWidth = options.maxWidth ?? Math.max(40, Math.min(88, columns - 10));
   return message
     .split("\n")
+    .flatMap((line) => wrapLine(line, maxWidth))
     .join("\n");
 }
 

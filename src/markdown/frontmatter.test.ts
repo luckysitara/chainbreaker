@@ -7,12 +7,16 @@ describe("parseFrontmatterBlock", () => {
     const content = `---
 name: yaml-hook
 description: |
+  line one
+  line two
 ---
 `;
     const result = parseFrontmatterBlock(content);
     expect(result.name).toBe("yaml-hook");
+    expect(result.description).toBe("line one\nline two");
   });
 
+  it("handles JSON5-style multi-line metadata", () => {
     const content = `---
 name: session-memory
 metadata:
@@ -32,7 +36,9 @@ metadata:
     expect(parsed.chainbreaker?.emoji).toBe("disk");
   });
 
+  it("preserves inline JSON values", () => {
     const content = `---
+name: inline-json
 metadata: {"chainbreaker": {"events": ["test"]}}
 ---
 `;
@@ -62,6 +68,7 @@ metadata:
     expect(parsed.chainbreaker?.events).toEqual(["command:new"]);
   });
 
+  it("preserves inline description values containing colons", () => {
     const content = `---
 name: sample-skill
 description: Use anime style IMPORTANT: Must be kawaii

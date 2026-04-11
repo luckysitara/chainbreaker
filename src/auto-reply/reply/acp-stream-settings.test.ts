@@ -85,6 +85,7 @@ describe("acp stream settings", () => {
   it("resolves chunking/coalescing from ACP stream controls", () => {
     const streaming = resolveAcpStreamingConfig({
       cfg: createAcpTestConfig(),
+      provider: "discord",
     });
     expect(streaming.chunking.maxChars).toBe(64);
     expect(streaming.coalescing.idleMs).toBe(0);
@@ -102,6 +103,7 @@ describe("acp stream settings", () => {
           },
         },
       }),
+      provider: "discord",
       deliveryMode: "live",
     });
     expect(streaming.chunking.minChars).toBe(1);

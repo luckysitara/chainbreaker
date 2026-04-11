@@ -11,10 +11,17 @@ describe("browser route dispatcher (abort)", () => {
         registerBrowserRoutes(app: { get: (path: string, handler: unknown) => void }) {
           app.get(
             "/slow",
+            async (req: { signal?: AbortSignal }, res: { json: (body: unknown) => void }) => {
+              const signal = req.signal;
               await new Promise<void>((resolve, reject) => {
+                if (signal?.aborted) {
+                  reject(signal.reason ?? new Error("aborted"));
                   return;
                 }
+                const onAbort = () => reject(signal?.reason ?? new Error("aborted"));
+                signal?.addEventListener("abort", onAbort, { once: true });
                 queueMicrotask(() => {
+                  signal?.removeEventListener("abort", onAbort);
                   resolve();
                 });
               });
@@ -43,6 +50,7 @@ describe("browser route dispatcher (abort)", () => {
     const promise = dispatcher.dispatch({
       method: "GET",
       path: "/slow",
+      signal: ctrl.signal,
     });
 
     ctrl.abort(new Error("timed out"));

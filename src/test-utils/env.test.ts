@@ -33,6 +33,7 @@ describe("env test utils", () => {
     expect(process.env[keyB]).toBe(prevB);
   });
 
+  it("captureFullEnv restores added keys and baseline values", () => {
     const key = "CHAINBREAKER_ENV_TEST_ADDED";
     const prevHome = process.env.HOME;
     const snapshot = captureFullEnv();

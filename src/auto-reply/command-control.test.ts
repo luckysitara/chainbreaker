@@ -3,6 +3,7 @@ import type { ChainbreakerConfig } from "../config/config.js";
 import { setActivePluginRegistry } from "../plugins/runtime.js";
 import { createOutboundTestPlugin, createTestRegistry } from "../test-utils/channel-plugins.js";
 import { resolveCommandAuthorization } from "./command-auth.js";
+import { hasControlCommand, hasInlineCommandTokens } from "./command-detection.js";
 import { listChatCommands } from "./commands-registry.js";
 import { parseActivationCommand } from "./group-activation.js";
 import { parseSendPolicyCommand } from "./send-policy.js";
@@ -162,7 +163,9 @@ describe("resolveCommandAuthorization", () => {
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "discord",
           plugin: createOutboundTestPlugin({
+            id: "discord",
             outbound: { deliveryMode: "direct" },
           }),
           source: "test",
@@ -170,10 +173,15 @@ describe("resolveCommandAuthorization", () => {
       ]),
     );
     const cfg = {
+      channels: { discord: {} },
     } as ChainbreakerConfig;
 
     const ctx = {
+      Provider: "discord",
+      Surface: "discord",
+      From: "discord:123",
       SenderId: "123",
+      OwnerAllowFrom: ["discord:123"],
     } as MsgContext;
 
     const auth = resolveCommandAuthorization({
@@ -296,6 +304,9 @@ describe("resolveCommandAuthorization", () => {
 
     function makeDiscordContext(senderId: string, fromOverride?: string): MsgContext {
       return {
+        Provider: "discord",
+        Surface: "discord",
+        From: fromOverride ?? `discord:${senderId}`,
         SenderId: senderId,
       } as MsgContext;
     }
@@ -424,13 +435,17 @@ describe("resolveCommandAuthorization", () => {
       const cfg = {
         commands: {
           allowFrom: {
+            discord: ["channel:123456789012345678"],
           },
         },
       } as ChainbreakerConfig;
 
       const auth = resolveCommandAuthorization({
         ctx: {
+          Provider: "discord",
+          Surface: "discord",
           ChatType: "channel",
+          From: "discord:channel:123456789012345678",
           SenderId: "999999999999999999",
         } as MsgContext,
         cfg,
@@ -444,13 +459,17 @@ describe("resolveCommandAuthorization", () => {
       const cfg = {
         commands: {
           allowFrom: {
+            discord: ["123456789012345678"],
           },
         },
       } as ChainbreakerConfig;
 
       const auth = resolveCommandAuthorization({
         ctx: {
+          Provider: "discord",
+          Surface: "discord",
           ChatType: "direct",
+          From: "discord:123456789012345678",
           SenderId: " ",
           SenderE164: " ",
         } as MsgContext,
@@ -489,6 +508,7 @@ describe("resolveCommandAuthorization", () => {
       const cfg = {
         commands: {
           allowFrom: {
+            discord: ["user:123", "<@!456>", "pk:member-1"],
           },
         },
       } as ChainbreakerConfig;
@@ -510,6 +530,7 @@ describe("resolveCommandAuthorization", () => {
       expect(mentionAuth.isAuthorizedSender).toBe(true);
 
       const pkAuth = resolveCommandAuthorization({
+        ctx: makeDiscordContext("member-1", "discord:999"),
         cfg,
         commandAuthorized: false,
       });
@@ -588,6 +609,7 @@ describe("resolveCommandAuthorization", () => {
 
     it("fails closed for global commands.allowFrom when inference errors drop every provider", () => {
       registerAllowFromPlugins(
+        createThrowingAllowFromPlugin("slack", "channels.slack.token: unresolved SecretRef"),
       );
 
       const auth = resolveCommandAuthorization({
@@ -601,6 +623,7 @@ describe("resolveCommandAuthorization", () => {
             },
           },
           channels: {
+            slack: {},
           },
         } as ChainbreakerConfig,
         commandAuthorized: false,
@@ -612,6 +635,7 @@ describe("resolveCommandAuthorization", () => {
     it("does not let an unrelated provider resolution error poison inferred commands.allowFrom", () => {
       registerAllowFromPlugins(
         createAllowFromPlugin("telegram", () => ["123"]),
+        createThrowingAllowFromPlugin("slack", "channels.slack.token: unresolved SecretRef"),
       );
 
       const auth = resolveCommandAuthorization({
@@ -670,13 +694,17 @@ describe("resolveCommandAuthorization", () => {
     });
 
     it("treats undefined allowFrom as an open channel, not a resolution failure", () => {
+      registerAllowFromPlugins(createAllowFromPlugin("discord", () => undefined));
 
       const auth = resolveCommandAuthorization({
         ctx: {
+          Provider: "discord",
+          Surface: "discord",
           SenderId: "123",
         } as MsgContext,
         cfg: {
           channels: {
+            discord: {},
           },
         } as ChainbreakerConfig,
         commandAuthorized: true,
@@ -829,6 +857,12 @@ describe("control command parsing", () => {
     expect(hasControlCommand("/send on")).toBe(true);
   });
 
+  it("detects inline command tokens", () => {
+    expect(hasInlineCommandTokens("hello /status")).toBe(true);
+    expect(hasInlineCommandTokens("hey /think high")).toBe(true);
+    expect(hasInlineCommandTokens("plain text")).toBe(false);
+    expect(hasInlineCommandTokens("http://example.com/path")).toBe(false);
+    expect(hasInlineCommandTokens("stop")).toBe(false);
   });
 
   it("ignores telegram commands addressed to other bots", () => {

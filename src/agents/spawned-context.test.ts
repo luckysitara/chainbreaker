@@ -12,12 +12,14 @@ describe("normalizeSpawnedRunMetadata", () => {
       normalizeSpawnedRunMetadata({
         spawnedBy: "  agent:main:subagent:1 ",
         groupId: "  group-1 ",
+        groupChannel: "  slack ",
         groupSpace: " ",
         workspaceDir: " /tmp/ws ",
       }),
     ).toEqual({
       spawnedBy: "agent:main:subagent:1",
       groupId: "group-1",
+      groupChannel: "slack",
       workspaceDir: "/tmp/ws",
     });
   });

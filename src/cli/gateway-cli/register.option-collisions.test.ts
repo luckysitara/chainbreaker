@@ -84,6 +84,7 @@ vi.mock("../../infra/widearea-dns.js", () => ({
 }));
 
 vi.mock("../../terminal/health-style.js", () => ({
+  styleHealthChannelLine: (line: string) => line,
 }));
 
 vi.mock("../../terminal/links.js", () => ({

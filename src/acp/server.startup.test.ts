@@ -120,11 +120,15 @@ describe("serveAcpGateway startup", () => {
   }
 
   function captureProcessSignalHandlers() {
+    const signalHandlers = new Map<NodeJS.Signals, () => void>();
     const onceSpy = vi.spyOn(process, "once").mockImplementation(((
+      signal: NodeJS.Signals,
       handler: () => void,
     ) => {
+      signalHandlers.set(signal, handler);
       return process;
     }) as typeof process.once);
+    return { signalHandlers, onceSpy };
   }
 
   async function emitHelloAndWaitForAgentSideConnection() {
@@ -136,8 +140,10 @@ describe("serveAcpGateway startup", () => {
   }
 
   async function stopServeWithSigint(
+    signalHandlers: Map<NodeJS.Signals, () => void>,
     servePromise: Promise<void>,
   ) {
+    signalHandlers.get("SIGINT")?.();
     await servePromise;
   }
 
@@ -158,6 +164,7 @@ describe("serveAcpGateway startup", () => {
   });
 
   it("waits for gateway hello before creating AgentSideConnection", async () => {
+    const { signalHandlers, onceSpy } = captureProcessSignalHandlers();
 
     try {
       const servePromise = serveAcpGateway({});
@@ -165,6 +172,7 @@ describe("serveAcpGateway startup", () => {
 
       expect(mockState.agentSideConnectionCtor).not.toHaveBeenCalled();
       await emitHelloAndWaitForAgentSideConnection();
+      await stopServeWithSigint(signalHandlers, servePromise);
     } finally {
       onceSpy.mockRestore();
     }
@@ -174,6 +182,7 @@ describe("serveAcpGateway startup", () => {
     const onceSpy = vi
       .spyOn(process, "once")
       .mockImplementation(
+        ((_signal: NodeJS.Signals, _handler: () => void) => process) as typeof process.once,
       );
 
     try {
@@ -194,6 +203,7 @@ describe("serveAcpGateway startup", () => {
       token: undefined,
       password: "resolved-secret-password", // pragma: allowlist secret
     });
+    const { signalHandlers, onceSpy } = captureProcessSignalHandlers();
 
     try {
       const servePromise = serveAcpGateway({});
@@ -210,12 +220,14 @@ describe("serveAcpGateway startup", () => {
       });
 
       await emitHelloAndWaitForAgentSideConnection();
+      await stopServeWithSigint(signalHandlers, servePromise);
     } finally {
       onceSpy.mockRestore();
     }
   });
 
   it("passes CLI URL override context into shared gateway auth resolution", async () => {
+    const { signalHandlers, onceSpy } = captureProcessSignalHandlers();
 
     try {
       const servePromise = serveAcpGateway({
@@ -232,6 +244,7 @@ describe("serveAcpGateway startup", () => {
       );
 
       await emitHelloAndWaitForAgentSideConnection();
+      await stopServeWithSigint(signalHandlers, servePromise);
     } finally {
       onceSpy.mockRestore();
     }

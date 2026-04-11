@@ -46,6 +46,8 @@ function setManifestPlugins(plugins: PluginManifestRecord[]) {
 function setOwningProviderManifestPlugins() {
   setManifestPlugins([
     createManifestProviderPlugin({
+      id: "minimax",
+      providerIds: ["minimax", "minimax-portal"],
     }),
     createManifestProviderPlugin({
       id: "openai",
@@ -385,6 +387,8 @@ describe("resolvePluginProviders", () => {
 
   it.each([
     {
+      provider: "minimax-portal",
+      expectedPluginIds: ["minimax"],
     },
     {
       provider: "openai-codex",

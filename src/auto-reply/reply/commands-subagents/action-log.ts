@@ -34,7 +34,10 @@ export async function handleSubagentsLogAction(
   });
   const rawMessages = Array.isArray(history?.messages) ? history.messages : [];
   const filtered = includeTools ? rawMessages : stripToolMessages(rawMessages);
+  const lines = formatLogLines(filtered as ChatMessage[]);
   const header = `📜 Subagent log: ${formatRunLabel(targetResolution.entry)}`;
+  if (lines.length === 0) {
     return stopWithText(`${header}\n(no messages)`);
   }
+  return stopWithText([header, ...lines].join("\n"));
 }

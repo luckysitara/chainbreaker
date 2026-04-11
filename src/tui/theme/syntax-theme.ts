@@ -80,6 +80,7 @@ export function createSyntaxTheme(
     attribute: chalk.hex("#9CDCFE"), // light blue - attributes
     variable: chalk.hex("#9CDCFE"), // light blue - variables
     bullet: chalk.hex("#D7BA7D"), // gold - list bullets in markdown
+    code: chalk.hex("#CE9178"), // orange - inline code
     emphasis: chalk.italic, // italic
     strong: chalk.bold, // bold
     formula: chalk.hex("#C586C0"), // purple - math

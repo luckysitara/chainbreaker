@@ -35,7 +35,11 @@ const TOOL_LOCATION_PATH_KEYS = [
 ] as const;
 
 const TOOL_LOCATION_LINE_KEYS = [
+  "line",
+  "lineNumber",
+  "line_number",
   "startLine",
+  "start_line",
 ] as const;
 const TOOL_RESULT_PATH_MARKER_RE = /^(?:FILE|MEDIA):(.+)$/gm;
 const TOOL_LOCATION_MAX_DEPTH = 4;
@@ -52,6 +56,7 @@ const INLINE_CONTROL_ESCAPE_MAP: Readonly<Record<string, string>> = {
   "\u2029": "\\u2029",
 };
 
+function escapeInlineControlChars(value: string): string {
   let escaped = "";
   for (const char of value) {
     const codePoint = char.codePointAt(0);
@@ -60,10 +65,12 @@ const INLINE_CONTROL_ESCAPE_MAP: Readonly<Record<string, string>> = {
       continue;
     }
 
+    const isInlineControl =
       codePoint <= 0x1f ||
       (codePoint >= 0x7f && codePoint <= 0x9f) ||
       codePoint === 0x2028 ||
       codePoint === 0x2029;
+    if (!isInlineControl) {
       escaped += char;
       continue;
     }
@@ -85,6 +92,7 @@ const INLINE_CONTROL_ESCAPE_MAP: Readonly<Record<string, string>> = {
 
 function escapeResourceTitle(value: string): string {
   // Keep title content, but escape characters that can break the resource-link annotation shape.
+  return escapeInlineControlChars(value).replace(/[()[\]]/g, (char) => `\\${char}`);
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -122,10 +130,15 @@ function normalizeToolLocationLine(value: unknown): number | undefined {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return undefined;
   }
+  const line = Math.floor(value);
+  return line > 0 ? line : undefined;
 }
 
 function extractToolLocationLine(record: Record<string, unknown>): number | undefined {
   for (const key of TOOL_LOCATION_LINE_KEYS) {
+    const line = normalizeToolLocationLine(record[key]);
+    if (line !== undefined) {
+      return line;
     }
   }
   return undefined;
@@ -134,6 +147,7 @@ function extractToolLocationLine(record: Record<string, unknown>): number | unde
 function addToolLocation(
   locations: Map<string, ToolCallLocation>,
   rawPath: string,
+  line?: number,
 ): void {
   const path = normalizeToolLocationPath(rawPath);
   if (!path) {
@@ -143,14 +157,18 @@ function addToolLocation(
     if (existing.path !== path) {
       continue;
     }
+    if (line === undefined || existing.line === line) {
       return;
     }
+    if (existing.line === undefined) {
       locations.delete(existingKey);
     }
   }
+  const locationKey = `${path}:${line ?? ""}`;
   if (locations.has(locationKey)) {
     return;
   }
+  locations.set(locationKey, line ? { path, line } : { path });
 }
 
 function collectLocationsFromTextMarkers(
@@ -194,9 +212,11 @@ function collectToolLocations(
   }
 
   const record = value as Record<string, unknown>;
+  const line = extractToolLocationLine(record);
   for (const key of TOOL_LOCATION_PATH_KEYS) {
     const rawPath = record[key];
     if (typeof rawPath === "string") {
+      addToolLocation(locations, rawPath, line);
     }
   }
 
@@ -236,6 +256,7 @@ export function extractTextFromPrompt(prompt: ContentBlock[], maxBytes?: number)
       }
     } else if (block.type === "resource_link") {
       const title = block.title ? ` (${escapeResourceTitle(block.title)})` : "";
+      const uri = block.uri ? escapeInlineControlChars(block.uri) : "";
       blockText = uri ? `[Resource link${title}] ${uri}` : `[Resource link${title}]`;
     }
     if (blockText !== undefined) {
@@ -287,6 +308,7 @@ export function formatToolTitle(
   });
   // Sanitize at the source so session updates and permission requests never
   // inherit raw control bytes from untrusted tool arguments.
+  return escapeInlineControlChars(`${base}: ${parts.join(", ")}`);
 }
 
 export function inferToolKind(name?: string): ToolKind {

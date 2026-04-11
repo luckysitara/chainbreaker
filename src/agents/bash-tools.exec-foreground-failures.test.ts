@@ -7,10 +7,7 @@ import { resolveShellFromPath } from "./shell-utils.js";
 const isWin = process.platform === "win32";
 const defaultShell = isWin
   ? undefined
-  : process.env.CHAINBREAKER_TEST_SHELL ||
-    resolveShellFromPath("bash") ||
-    process.env.SHELL ||
-    "sh";
+  : process.env.CHAINBREAKER_TEST_SHELL || resolveShellFromPath("bash") || process.env.SHELL || "sh";
 const longDelayCmd = isWin ? "Start-Sleep -Milliseconds 72" : "sleep 0.072";
 
 describe("exec foreground failures", () => {

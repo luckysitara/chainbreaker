@@ -52,6 +52,7 @@ async function runTelegramAnnounceTurn(params: {
   storePath: string;
   deps: CliDeps;
   cfg?: ReturnType<typeof makeCfg>;
+  signal?: AbortSignal;
 }) {
   return runCronIsolatedAgentTurn({
     cfg: params.cfg ?? makeCfg(params.home, params.storePath),
@@ -65,6 +66,7 @@ async function runTelegramAnnounceTurn(params: {
     },
     message: "do it",
     sessionKey: "cron:job-1",
+    signal: params.signal,
     lane: "cron",
   });
 }
@@ -274,6 +276,7 @@ describe("runCronIsolatedAgentTurn", () => {
         home,
         storePath,
         deps,
+        signal: controller.signal,
       });
 
       expect(res.status).toBe("error");

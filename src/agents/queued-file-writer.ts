@@ -3,6 +3,7 @@ import path from "node:path";
 
 export type QueuedFileWriter = {
   filePath: string;
+  write: (line: string) => void;
 };
 
 export function getQueuedFileWriter(
@@ -20,8 +21,10 @@ export function getQueuedFileWriter(
 
   const writer: QueuedFileWriter = {
     filePath,
+    write: (line: string) => {
       queue = queue
         .then(() => ready)
+        .then(() => fs.appendFile(filePath, line, "utf8"))
         .catch(() => undefined);
     },
   };

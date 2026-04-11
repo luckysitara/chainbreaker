@@ -88,6 +88,8 @@ function createApplyAuthChoiceConfig(includeMinimaxProvider = false) {
           kilocode: createKilocodeProvider(),
           ...(includeMinimaxProvider
             ? {
+                minimax: {
+                  baseUrl: "https://api.minimax.io/anthropic",
                   api: "anthropic-messages",
                   models: [{ id: "MiniMax-M2.7", name: "MiniMax M2.7" }],
                 },
@@ -127,6 +129,7 @@ describe("promptAuthConfig", () => {
       "kilo/auto",
       "anthropic/claude-sonnet-4",
     ]);
+    expect(result.models?.providers?.minimax?.models?.map((model) => model.id)).toEqual([
       "MiniMax-M2.7",
     ]);
   });

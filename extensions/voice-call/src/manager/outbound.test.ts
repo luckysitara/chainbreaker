@@ -115,6 +115,7 @@ describe("voice-call outbound helpers", () => {
     });
   });
 
+  it("initiates notify-mode calls with inline TwiML and records provider ids", async () => {
     const initiateProviderCall = vi.fn(async () => ({ providerCallId: "provider-1" }));
     const ctx = {
       activeCalls: new Map(),
@@ -147,6 +148,7 @@ describe("voice-call outbound helpers", () => {
       from: "+14155550100",
       to: "+14155550123",
       webhookUrl: "https://example.com/webhook",
+      inlineTwiml: "<Response />",
     });
     expect(ctx.providerCallIdMap.get("provider-1")).toBe(callId);
     expect(persistCallRecordMock).toHaveBeenCalledTimes(2);

@@ -122,6 +122,9 @@ describe("config io write", () => {
       ...params.gatewayPatch,
     };
     await io.writeConfigFile(next);
+    const lines = (await fs.readFile(auditPath, "utf-8")).trim().split("\n").filter(Boolean);
+    const last = JSON.parse(lines.at(-1) ?? "{}") as Record<string, unknown>;
+    return { last, lines, configPath };
   }
 
   const createGatewayCommandsInput = (): Record<string, unknown> => ({
@@ -462,9 +465,11 @@ describe("config io write", () => {
         home,
         initialConfig: {
           channels: {
+            discord: {
               dmPolicy: "pairing",
               dm: { enabled: true, policy: "pairing" },
             },
+            slack: {
               dmPolicy: "pairing",
               dm: { enabled: true, policy: "pairing" },
             },
@@ -475,16 +480,28 @@ describe("config io write", () => {
 
       const next = structuredClone(snapshot.config);
       // Simulate doctor removing legacy keys while keeping dm enabled.
+      if (next.channels?.discord?.dm && typeof next.channels.discord.dm === "object") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test helper
+        delete (next.channels.discord.dm as any).policy;
       }
+      if (next.channels?.slack?.dm && typeof next.channels.slack.dm === "object") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test helper
+        delete (next.channels.slack.dm as any).policy;
       }
 
       await io.writeConfigFile(next);
 
       const persisted = JSON.parse(await fs.readFile(configPath, "utf-8")) as {
         channels?: {
+          discord?: { dm?: Record<string, unknown>; dmPolicy?: unknown };
+          slack?: { dm?: Record<string, unknown>; dmPolicy?: unknown };
         };
       };
 
+      expect(persisted.channels?.discord?.dmPolicy).toBe("pairing");
+      expect(persisted.channels?.discord?.dm).toEqual({ enabled: true });
+      expect(persisted.channels?.slack?.dmPolicy).toBe("pairing");
+      expect(persisted.channels?.slack?.dm).toEqual({ enabled: true });
     });
   });
 
@@ -616,11 +633,13 @@ describe("config io write", () => {
 
   it("appends config write audit JSONL entries with forensic metadata", async () => {
     await withSuiteHome(async (home) => {
+      const { configPath, lines, last } = await writeGatewayPatchAndReadLastAuditEntry({
         home,
         initialConfig: { gateway: { port: 18789 } },
         gatewayPatch: { mode: "local" },
         env: {} as NodeJS.ProcessEnv,
       });
+      expect(lines.length).toBeGreaterThan(0);
       expect(last.source).toBe("config-io");
       expect(last.event).toBe("config.write");
       expect(last.configPath).toBe(configPath);
@@ -638,6 +657,7 @@ describe("config io write", () => {
 
   it('ignores literal "undefined" home env values when choosing the audit log path', async () => {
     await withSuiteHome(async (home) => {
+      const { lines } = await writeGatewayPatchAndReadLastAuditEntry({
         home,
         initialConfig: { gateway: { mode: "local" } },
         gatewayPatch: { bind: "loopback" },
@@ -647,6 +667,7 @@ describe("config io write", () => {
           CHAINBREAKER_HOME: "undefined",
         } as NodeJS.ProcessEnv,
       });
+      expect(lines.length).toBeGreaterThan(0);
       await expect(
         fs.stat(path.join(home, ".chainbreaker", "logs", "config-audit.jsonl")),
       ).resolves.toBeDefined();

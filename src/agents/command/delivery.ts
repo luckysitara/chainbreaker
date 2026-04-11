@@ -58,8 +58,11 @@ function logNestedOutput(
   sessionKey?: string,
 ) {
   const prefix = formatNestedLogPrefix(opts, sessionKey);
+  for (const line of output.split(/\r?\n/)) {
+    if (!line) {
       continue;
     }
+    runtime.log(`${prefix} ${line}`);
   }
 }
 
@@ -200,8 +203,9 @@ export async function deliverAgentCommandResult(params: {
   const resolvedTarget = resolved.resolvedTarget;
   const deliveryTarget = resolved.resolvedTo;
   const resolvedThreadId = deliveryPlan.resolvedThreadId ?? opts.threadId;
-  const resolvedReplyToId = undefined;
-  const resolvedThreadTarget = resolvedThreadId;
+  const resolvedReplyToId =
+    deliveryChannel === "slack" && resolvedThreadId != null ? String(resolvedThreadId) : undefined;
+  const resolvedThreadTarget = deliveryChannel === "slack" ? undefined : resolvedThreadId;
 
   const logDeliveryError = (err: unknown) => {
     const message = `Delivery failed (${deliveryChannel}${deliveryTarget ? ` to ${deliveryTarget}` : ""}): ${String(err)}`;

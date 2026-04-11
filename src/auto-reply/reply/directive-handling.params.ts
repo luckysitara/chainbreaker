@@ -2,10 +2,12 @@ import type { ModelAliasIndex } from "../../agents/model-selection.js";
 import type { ChainbreakerConfig } from "../../config/config.js";
 import type { SessionEntry } from "../../config/sessions.js";
 import type { MsgContext } from "../templating.js";
+import type { InlineDirectives } from "./directive-handling.parse.js";
 import type { ElevatedLevel, ReasoningLevel, ThinkLevel, VerboseLevel } from "./directives.js";
 
 export type HandleDirectiveOnlyCoreParams = {
   cfg: ChainbreakerConfig;
+  directives: InlineDirectives;
   sessionEntry: SessionEntry;
   sessionStore: Record<string, SessionEntry>;
   sessionKey: string;
@@ -39,6 +41,7 @@ export type HandleDirectiveOnlyParams = HandleDirectiveOnlyCoreParams & {
   gatewayClientScopes?: string[];
 };
 
+export type ApplyInlineDirectivesFastLaneParams = HandleDirectiveOnlyCoreParams & {
   commandAuthorized: boolean;
   ctx: MsgContext;
   agentId?: string;

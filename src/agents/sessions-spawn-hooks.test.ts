@@ -22,6 +22,7 @@ const hookRunnerMocks = vi.hoisted(() => ({
       return undefined;
     }
     const channel = input.requester?.channel?.trim().toLowerCase();
+    if (channel !== "discord") {
       const channelLabel = input.requester?.channel?.trim() || "unknown";
       return {
         status: "error" as const,
@@ -61,6 +62,7 @@ async function runSessionThreadSpawnAndGetError(params: {
   hookRunnerMocks.runSubagentSpawning.mockResolvedValueOnce(params.spawningResult);
   const tool = await getSessionsSpawnTool({
     agentSessionKey: "main",
+    agentChannel: "discord",
     agentAccountId: "work",
     agentTo: "channel:123",
   });
@@ -78,6 +80,7 @@ async function runSessionThreadSpawnAndGetError(params: {
 async function getDiscordThreadSessionTool() {
   return await getSessionsSpawnTool({
     agentSessionKey: "main",
+    agentChannel: "discord",
     agentAccountId: "work",
     agentTo: "channel:123",
     agentThreadId: "456",
@@ -164,6 +167,7 @@ describe("sessions_spawn subagent lifecycle hooks", () => {
   it("runs subagent_spawning and emits subagent_spawned with requester metadata", async () => {
     const tool = await getSessionsSpawnTool({
       agentSessionKey: "main",
+      agentChannel: "discord",
       agentAccountId: "work",
       agentTo: "channel:123",
       agentThreadId: 456,
@@ -185,6 +189,7 @@ describe("sessions_spawn subagent lifecycle hooks", () => {
         label: "research",
         mode: "session",
         requester: {
+          channel: "discord",
           accountId: "work",
           to: "channel:123",
           threadId: 456,
@@ -208,6 +213,7 @@ describe("sessions_spawn subagent lifecycle hooks", () => {
       label: "research",
       mode: "session",
       requester: {
+        channel: "discord",
         accountId: "work",
         to: "channel:123",
         threadId: 456,
@@ -225,6 +231,7 @@ describe("sessions_spawn subagent lifecycle hooks", () => {
   it("emits subagent_spawned with threadRequested=false when not requested", async () => {
     const tool = await getSessionsSpawnTool({
       agentSessionKey: "main",
+      agentChannel: "discord",
       agentTo: "channel:123",
     });
 
@@ -243,6 +250,7 @@ describe("sessions_spawn subagent lifecycle hooks", () => {
       mode: "run",
       threadRequested: false,
       requester: {
+        channel: "discord",
         to: "channel:123",
       },
     });
@@ -251,6 +259,7 @@ describe("sessions_spawn subagent lifecycle hooks", () => {
   it("respects explicit mode=run when thread binding is requested", async () => {
     const tool = await getSessionsSpawnTool({
       agentSessionKey: "main",
+      agentChannel: "discord",
       agentTo: "channel:123",
     });
 
@@ -295,6 +304,7 @@ describe("sessions_spawn subagent lifecycle hooks", () => {
   it("rejects mode=session when thread=true is not requested", async () => {
     const tool = await getSessionsSpawnTool({
       agentSessionKey: "main",
+      agentChannel: "discord",
       agentTo: "channel:123",
     });
 
@@ -313,6 +323,7 @@ describe("sessions_spawn subagent lifecycle hooks", () => {
   it("rejects thread=true on channels without thread support", async () => {
     const tool = await getSessionsSpawnTool({
       agentSessionKey: "main",
+      agentChannel: "signal",
       agentTo: "+123",
     });
 
@@ -322,6 +333,7 @@ describe("sessions_spawn subagent lifecycle hooks", () => {
       mode: "session",
     });
 
+    expectErrorResultMessage(result, /only discord/i);
     expect(hookRunnerMocks.runSubagentSpawning).toHaveBeenCalledTimes(1);
     expect(hookRunnerMocks.runSubagentSpawned).not.toHaveBeenCalled();
     expectSessionsDeleteWithoutAgentStart();
@@ -369,10 +381,12 @@ describe("sessions_spawn subagent lifecycle hooks", () => {
     });
   });
 
+  it("cleans up the provisional session when lineage patching fails after thread binding", async () => {
     const callGatewayMock = getCallGatewayMock();
     callGatewayMock.mockImplementation(async (opts: unknown) => {
       const request = opts as { method?: string; params?: Record<string, unknown> };
       if (request.method === "sessions.patch" && typeof request.params?.spawnedBy === "string") {
+        throw new Error("lineage patch failed");
       }
       if (request.method === "sessions.delete") {
         return { ok: true };
@@ -384,6 +398,7 @@ describe("sessions_spawn subagent lifecycle hooks", () => {
 
     expect(result.details).toMatchObject({
       status: "error",
+      error: "lineage patch failed",
     });
     expect(hookRunnerMocks.runSubagentSpawned).not.toHaveBeenCalled();
     expect(hookRunnerMocks.runSubagentEnded).not.toHaveBeenCalled();

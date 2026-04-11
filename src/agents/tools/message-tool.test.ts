@@ -22,6 +22,7 @@ type MessageToolDiscoveryContext = Parameters<DescribeMessageTool>[0];
 type MessageToolSchema = NonNullable<ReturnType<DescribeMessageTool>>["schema"];
 
 function createDiscordMessageToolComponentsSchema() {
+  return Type.Object({ type: Type.Literal("discord-components") });
 }
 
 function createSlackMessageToolBlocksSchema() {
@@ -189,20 +190,24 @@ async function executeSend(params: {
 
 describe("message tool secret scoping", () => {
   it("scopes command-time secret resolution to the selected channel/account", async () => {
+    mockSendResult({ channel: "discord", to: "discord:123" });
     mocks.loadConfig.mockReturnValue({
       channels: {
+        discord: {
           token: { source: "env", provider: "default", id: "DISCORD_TOKEN" },
           accounts: {
             ops: { token: { source: "env", provider: "default", id: "DISCORD_OPS_TOKEN" } },
             chat: { token: { source: "env", provider: "default", id: "DISCORD_CHAT_TOKEN" } },
           },
         },
+        slack: {
           botToken: { source: "env", provider: "default", id: "SLACK_BOT_TOKEN" },
         },
       },
     });
 
     const tool = createMessageTool({
+      currentChannelProvider: "discord",
       agentAccountId: "ops",
       loadConfig: mocks.loadConfig as never,
       resolveCommandSecretRefsViaGateway: mocks.resolveCommandSecretRefsViaGateway as never,
@@ -221,8 +226,10 @@ describe("message tool secret scoping", () => {
     };
     expect(secretResolveCall.targetIds).toBeInstanceOf(Set);
     expect(
+      [...(secretResolveCall.targetIds ?? [])].every((id) => id.startsWith("channels.discord.")),
     ).toBe(true);
     expect(secretResolveCall.allowedPaths).toEqual(
+      new Set(["channels.discord.token", "channels.discord.accounts.ops.token"]),
     );
   });
 });
@@ -255,6 +262,7 @@ describe("message tool explicit target guard", () => {
       config: {} as never,
       runMessageAction: mocks.runMessageAction as never,
       requireExplicitTarget: true,
+      currentChannelProvider: "slack",
       currentChannelId: "channel:C123",
     });
 
@@ -271,8 +279,10 @@ describe("message tool explicit target guard", () => {
   it("allows upload-file when an explicit target is provided", async () => {
     mocks.runMessageAction.mockResolvedValueOnce({
       kind: "action",
+      channel: "slack",
       action: "upload-file",
       handledBy: "dry-run",
+      payload: { ok: true, dryRun: true, channel: "slack", action: "upload-file" },
       dryRun: true,
     });
 
@@ -280,6 +290,7 @@ describe("message tool explicit target guard", () => {
       config: {} as never,
       runMessageAction: mocks.runMessageAction as never,
       requireExplicitTarget: true,
+      currentChannelProvider: "slack",
       currentChannelId: "channel:C123",
     });
 
@@ -335,7 +346,10 @@ describe("message tool schema scoping", () => {
     ],
   });
 
+  const discordPlugin = createChannelPlugin({
+    id: "discord",
     label: "Discord",
+    docsPath: "/channels/discord",
     blurb: "Discord test plugin.",
     actions: ["send", "poll", "poll-vote"],
     capabilities: ["interactive", "components"],
@@ -346,7 +360,10 @@ describe("message tool schema scoping", () => {
     }),
   });
 
+  const slackPlugin = createChannelPlugin({
+    id: "slack",
     label: "Slack",
+    docsPath: "/channels/slack",
     blurb: "Slack test plugin.",
     actions: ["send", "react"],
     capabilities: ["interactive", "blocks"],
@@ -372,6 +389,7 @@ describe("message tool schema scoping", () => {
       expectedActions: ["send", "react", "poll", "poll-vote"],
     },
     {
+      provider: "discord",
       expectComponents: true,
       expectBlocks: false,
       expectButtons: false,
@@ -380,6 +398,7 @@ describe("message tool schema scoping", () => {
       expectedActions: ["send", "poll", "poll-vote", "react"],
     },
     {
+      provider: "slack",
       expectComponents: false,
       expectBlocks: true,
       expectButtons: false,
@@ -401,6 +420,8 @@ describe("message tool schema scoping", () => {
       setActivePluginRegistry(
         createTestRegistry([
           { pluginId: "telegram", source: "test", plugin: telegramPlugin },
+          { pluginId: "discord", source: "test", plugin: discordPlugin },
+          { pluginId: "slack", source: "test", plugin: slackPlugin },
         ]),
       );
 
@@ -618,7 +639,9 @@ describe("message tool schema scoping", () => {
 
   it("uses discovery account scope for other configured channel actions", () => {
     const currentPlugin = createChannelPlugin({
+      id: "discord",
       label: "Discord",
+      docsPath: "/channels/discord",
       blurb: "Discord test plugin.",
       actions: ["send"],
     });
@@ -634,16 +657,19 @@ describe("message tool schema scoping", () => {
 
     setActivePluginRegistry(
       createTestRegistry([
+        { pluginId: "discord", source: "test", plugin: currentPlugin },
         { pluginId: "telegram", source: "test", plugin: scopedOtherPlugin },
       ]),
     );
 
     const scopedTool = createMessageTool({
       config: {} as never,
+      currentChannelProvider: "discord",
       agentAccountId: "ops",
     });
     const unscopedTool = createMessageTool({
       config: {} as never,
+      currentChannelProvider: "discord",
     });
 
     expect(getActionEnum(getToolProperties(scopedTool))).toContain("react");
@@ -655,7 +681,9 @@ describe("message tool schema scoping", () => {
   it("routes full discovery context into plugin action discovery", () => {
     const seenContexts: Record<string, unknown>[] = [];
     const contextPlugin = createChannelPlugin({
+      id: "discord",
       label: "Discord",
+      docsPath: "/channels/discord",
       blurb: "Discord context plugin.",
       describeMessageTool: (ctx) => {
         seenContexts.push({ phase: "describeMessageTool", ...ctx });
@@ -667,10 +695,12 @@ describe("message tool schema scoping", () => {
     });
 
     setActivePluginRegistry(
+      createTestRegistry([{ pluginId: "discord", source: "test", plugin: contextPlugin }]),
     );
 
     createMessageTool({
       config: {} as never,
+      currentChannelProvider: "discord",
       currentChannelId: "channel:123",
       currentThreadTs: "thread-456",
       currentMessageId: "msg-789",
@@ -682,6 +712,7 @@ describe("message tool schema scoping", () => {
 
     expect(seenContexts).toContainEqual(
       expect.objectContaining({
+        currentChannelProvider: "discord",
         currentChannelId: "channel:123",
         currentThreadTs: "thread-456",
         currentMessageId: "msg-789",
@@ -715,6 +746,7 @@ describe("message tool description", () => {
       ];
       const lowered = currentChannelId?.toLowerCase() ?? "";
       const isDmTarget =
+        lowered.includes("chat_guid:imessage;-;") || lowered.includes("chat_guid:sms;-;");
       return {
         actions: isDmTarget
           ? all.filter(
@@ -762,7 +794,10 @@ describe("message tool description", () => {
   });
 
   it("includes other configured channels when currentChannel is set", () => {
+    const signalPlugin = createChannelPlugin({
+      id: "signal",
       label: "Signal",
+      docsPath: "/channels/signal",
       blurb: "Signal test plugin.",
       actions: ["send", "react"],
     });
@@ -777,28 +812,35 @@ describe("message tool description", () => {
 
     setActivePluginRegistry(
       createTestRegistry([
+        { pluginId: "signal", source: "test", plugin: signalPlugin },
         { pluginId: "telegram", source: "test", plugin: telegramPluginFull },
       ]),
     );
 
     const tool = createMessageTool({
       config: {} as never,
+      currentChannelProvider: "signal",
     });
 
     // Current channel actions are listed
+    expect(tool.description).toContain("Current channel (signal) supports: react, send.");
     // Other configured channels are also listed
     expect(tool.description).toContain("Other configured channels:");
     expect(tool.description).toContain("telegram (delete, edit, react, send, topic-create)");
   });
 
   it("normalizes channel aliases before building the current channel description", () => {
+    const signalPlugin = createChannelPlugin({
+      id: "signal",
       label: "Signal",
+      docsPath: "/channels/signal",
       blurb: "Signal test plugin.",
       aliases: ["sig"],
       actions: ["send", "react"],
     });
 
     setActivePluginRegistry(
+      createTestRegistry([{ pluginId: "signal", source: "test", plugin: signalPlugin }]),
     );
 
     const tool = createMessageTool({
@@ -806,6 +848,7 @@ describe("message tool description", () => {
       currentChannelProvider: "sig",
     });
 
+    expect(tool.description).toContain("Current channel (signal) supports: react, send.");
   });
 
   it("does not include 'Other configured channels' when only one channel is configured", () => {
@@ -829,16 +872,22 @@ describe("message tool reasoning tag sanitization", () => {
       field: "text",
       input: "<think>internal reasoning</think>Hello!",
       expected: "Hello!",
+      target: "signal:+15551234567",
+      channel: "signal",
     },
     {
       field: "content",
       input: "<think>reasoning here</think>Reply text",
       expected: "Reply text",
+      target: "discord:123",
+      channel: "discord",
     },
     {
       field: "text",
       input: "Normal message without any tags",
       expected: "Normal message without any tags",
+      target: "signal:+15551234567",
+      channel: "signal",
     },
   ])(
     "sanitizes reasoning tags in $field before sending",
@@ -882,10 +931,12 @@ describe("message tool sandbox passthrough", () => {
   });
 
   it("forwards trusted requesterSenderId to runMessageAction", async () => {
+    mockSendResult({ to: "discord:123" });
 
     const call = await executeSend({
       toolOptions: { requesterSenderId: "1234567890" },
       action: {
+        target: "discord:123",
         message: "hi",
       },
     });

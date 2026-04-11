@@ -190,8 +190,10 @@ describe("legacy migrate tts provider shape", () => {
     });
   });
 
+  it("moves channels.discord.accounts.<id>.voice.tts.edge into providers.microsoft", () => {
     const res = migrateLegacyConfig({
       channels: {
+        discord: {
           accounts: {
             main: {
               voice: {
@@ -208,8 +210,10 @@ describe("legacy migrate tts provider shape", () => {
     });
 
     expect(res.changes).toContain(
+      "Moved channels.discord.accounts.main.voice.tts.edge → channels.discord.accounts.main.voice.tts.providers.microsoft.",
     );
     const mainTts = (
+      res.config?.channels?.discord?.accounts as
         | Record<string, { voice?: { tts?: Record<string, unknown> } }>
         | undefined
     )?.main?.voice?.tts;
@@ -383,6 +387,7 @@ describe("legacy migrate heartbeat config", () => {
       },
       heartbeat: {
         every: "30m",
+        target: "discord",
         model: "anthropic/claude-3-5-haiku-20241022",
       },
     });

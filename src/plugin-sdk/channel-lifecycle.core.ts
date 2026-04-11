@@ -22,21 +22,27 @@ export function createAccountStatusSink(params: {
 }
 
 /**
+ * Return a promise that resolves when the signal is aborted.
  *
+ * If no signal is provided, the promise stays pending forever. When provided,
  * `onAbort` runs once before the promise resolves.
  */
 export function waitUntilAbort(
+  signal?: AbortSignal,
   onAbort?: () => void | Promise<void>,
 ): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     const complete = () => {
       Promise.resolve(onAbort?.()).then(() => resolve(), reject);
     };
+    if (!signal) {
       return;
     }
+    if (signal.aborted) {
       complete();
       return;
     }
+    signal.addEventListener("abort", complete, { once: true });
   });
 }
 
@@ -59,6 +65,7 @@ export async function runPassiveAccountLifecycle<Handle>(
 /**
  * Keep a channel/provider task pending until the HTTP server closes.
  *
+ * When an abort signal is provided, `onAbort` is invoked once and should
  * trigger server shutdown. The returned promise resolves only after `close`.
  */
 export async function keepHttpServerTaskAlive(params: {

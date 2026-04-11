@@ -114,6 +114,7 @@ function shouldRemoveElement(element: Element): boolean {
     return true;
   }
 
+  // inline style-based hiding
   const style = element.getAttribute("style") ?? "";
   if (style && isStyleHidden(style)) {
     return true;

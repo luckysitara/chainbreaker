@@ -583,6 +583,7 @@ describe("config cli", () => {
       expect(helpText).toContain("--allow-exec");
       expect(helpText).toContain("chainbreaker config set gateway.port 19001 --strict-json");
       expect(helpText).toContain(
+        "chainbreaker config set channels.discord.token --ref-provider default --ref-source",
       );
       expect(helpText).toContain("--ref-id DISCORD_BOT_TOKEN");
       expect(helpText).toContain(
@@ -601,6 +602,7 @@ describe("config cli", () => {
       await runConfigCommand([
         "config",
         "set",
+        "channels.discord.token",
         "--ref-provider",
         "default",
         "--ref-source",
@@ -611,6 +613,7 @@ describe("config cli", () => {
 
       expect(mockWriteConfigFile).toHaveBeenCalledTimes(1);
       const written = mockWriteConfigFile.mock.calls[0]?.[0];
+      expect(written.channels?.discord?.token).toEqual({
         source: "env",
         provider: "default",
         id: "DISCORD_BOT_TOKEN",
@@ -708,6 +711,7 @@ describe("config cli", () => {
       await runConfigCommand([
         "config",
         "set",
+        "channels.discord.token",
         "--ref-provider",
         "default",
         "--ref-source",
@@ -876,6 +880,7 @@ describe("config cli", () => {
         "config",
         "set",
         "--batch-json",
+        '[{"path":"channels.discord.token","ref":{"source":"env","provider":"default","id":"DISCORD_BOT_TOKEN"}},{"path":"secrets.providers.default","provider":{"source":"env"}}]',
         "--dry-run",
       ]);
 
@@ -901,6 +906,7 @@ describe("config cli", () => {
       await runConfigCommand([
         "config",
         "set",
+        "channels.discord.token",
         "--ref-provider",
         "runner",
         "--ref-source",
@@ -937,6 +943,7 @@ describe("config cli", () => {
       await runConfigCommand([
         "config",
         "set",
+        "channels.discord.token",
         "--ref-provider",
         "runner",
         "--ref-source",
@@ -991,6 +998,7 @@ describe("config cli", () => {
         runConfigCommand([
           "config",
           "set",
+          "channels.discord.token",
           "--ref-provider",
           "runner",
           "--ref-source",
@@ -1024,6 +1032,7 @@ describe("config cli", () => {
         runConfigCommand([
           "config",
           "set",
+          "channels.discord.token",
           "--ref-provider",
           "runner",
           "--ref-source",
@@ -1080,6 +1089,7 @@ describe("config cli", () => {
         runConfigCommand([
           "config",
           "set",
+          "channels.discord.token",
           "--ref-provider",
           "default",
           "--ref-source",
@@ -1164,6 +1174,7 @@ describe("config cli", () => {
           "config",
           "set",
           "--batch-json",
+          '[{"path":"channels.discord.token","value":"x","ref":{"source":"env","provider":"default","id":"DISCORD_BOT_TOKEN"}}]',
         ]),
       ).rejects.toThrow("__exit__:1");
 
@@ -1188,6 +1199,7 @@ describe("config cli", () => {
         runConfigCommand([
           "config",
           "set",
+          "channels.discord.token",
           "--ref-provider",
           "default",
           "--ref-source",
@@ -1217,6 +1229,7 @@ describe("config cli", () => {
       await runConfigCommand([
         "config",
         "set",
+        "channels.discord.token",
         "--ref-provider",
         "default",
         "--ref-source",
@@ -1265,6 +1278,7 @@ describe("config cli", () => {
       await runConfigCommand([
         "config",
         "set",
+        "channels.discord.token",
         "--ref-provider",
         "runner",
         "--ref-source",
@@ -1306,6 +1320,7 @@ describe("config cli", () => {
         runConfigCommand([
           "config",
           "set",
+          "channels.discord.token",
           "--ref-provider",
           "default",
           "--ref-source",
@@ -1346,6 +1361,7 @@ describe("config cli", () => {
           "config",
           "set",
           "--batch-json",
+          '[{"path":"channels.discord.token","ref":{"source":"exec","provider":"default","id":"DISCORD_BOT_TOKEN"}},{"path":"channels.telegram.botToken","ref":{"source":"exec","provider":"default","id":"TELEGRAM_BOT_TOKEN"}}]',
           "--dry-run",
           "--json",
         ]),
@@ -1386,6 +1402,7 @@ describe("config cli", () => {
           "config",
           "set",
           "--batch-json",
+          '[{"path":"gateway.port","value":"not-a-number"},{"path":"channels.discord.token","ref":{"source":"env","provider":"default","id":"DISCORD_BOT_TOKEN"}}]',
           "--dry-run",
           "--json",
         ]),

@@ -19,6 +19,7 @@ const {
   maybePersistResolvedTelegramTarget,
 } = getTelegramSendTestMocks();
 const {
+  buildInlineKeyboard,
   createForumTopicTelegram,
   editForumTopicTelegram,
   editMessageTelegram,
@@ -146,9 +147,12 @@ describe("sent-message-cache", () => {
   });
 });
 
+describe("buildInlineKeyboard", () => {
   it("normalizes keyboard inputs", () => {
     const cases: Array<{
       name: string;
+      input: Parameters<typeof buildInlineKeyboard>[0];
+      expected: ReturnType<typeof buildInlineKeyboard>;
     }> = [
       {
         name: "empty input",
@@ -170,6 +174,7 @@ describe("sent-message-cache", () => {
           ],
         ],
         expected: {
+          inline_keyboard: [
             [{ text: "Option A", callback_data: "cmd:a" }],
             [
               { text: "Option B", callback_data: "cmd:b" },
@@ -190,6 +195,7 @@ describe("sent-message-cache", () => {
           ],
         ],
         expected: {
+          inline_keyboard: [
             [
               {
                 text: "Option A",
@@ -211,11 +217,13 @@ describe("sent-message-cache", () => {
           [],
         ],
         expected: {
+          inline_keyboard: [[{ text: "Ok", callback_data: "cmd:ok" }]],
         },
       },
     ];
     for (const testCase of cases) {
       const input = testCase.input?.map((row) => row.map((button) => ({ ...button })));
+      expect(buildInlineKeyboard(input), testCase.name).toEqual(testCase.expected);
     }
   });
 });
@@ -836,6 +844,7 @@ describe("sendMessageTelegram", () => {
         expectedMessage: {
           parse_mode: "HTML",
           reply_markup: {
+            inline_keyboard: [[{ text: "Btn", callback_data: "dat" }]],
           },
         },
       },
@@ -1607,6 +1616,7 @@ describe("sendMessageTelegram", () => {
     expect((secondCall[1] as string).length).toBeLessThanOrEqual(4000);
     expect(firstCall[2]?.reply_markup).toBeUndefined();
     expect(secondCall[2]?.reply_markup).toEqual({
+      inline_keyboard: [[{ text: "OK", callback_data: "ok" }]],
     });
     expect(res.messageId).toBe("91");
   });
@@ -2037,6 +2047,7 @@ describe("editMessageTelegram", () => {
     {
       name: "buttons undefined keeps existing keyboard",
       text: "hi",
+      buttons: undefined as Parameters<typeof buildInlineKeyboard>[0],
       expectedCalls: 1,
       firstExpectNoReplyMarkup: true,
       parseFallback: false,
@@ -2044,13 +2055,18 @@ describe("editMessageTelegram", () => {
     {
       name: "buttons empty clears keyboard",
       text: "hi",
+      buttons: [] as Parameters<typeof buildInlineKeyboard>[0],
       expectedCalls: 1,
+      firstExpectReplyMarkup: { inline_keyboard: [] } as Record<string, unknown>,
       parseFallback: false,
     },
     {
       name: "parse error fallback preserves cleared keyboard",
       text: "<bad> html",
+      buttons: [] as Parameters<typeof buildInlineKeyboard>[0],
       expectedCalls: 2,
+      firstExpectReplyMarkup: { inline_keyboard: [] } as Record<string, unknown>,
+      secondExpectReplyMarkup: { inline_keyboard: [] } as Record<string, unknown>,
       parseFallback: true,
     },
   ])("$name", async (testCase) => {

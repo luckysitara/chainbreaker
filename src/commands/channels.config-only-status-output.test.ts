@@ -23,10 +23,12 @@ async function formatLocalStatusSummary(
     sourceConfig?: unknown;
   },
 ) {
+  const lines = await formatConfigChannelsStatusLines(
     cfg as never,
     { mode: "local" },
     options?.sourceConfig ? { sourceConfig: options.sourceConfig as never } : undefined,
   );
+  return lines.join("\n");
 }
 
 function unresolvedTokenAccount() {
@@ -123,7 +125,9 @@ function makeResolvedTokenPluginWithoutInspectAccount(): ChannelPlugin {
 
 function makeUnavailableHttpSlackPlugin(): ChannelPlugin {
   return makeDirectPlugin({
+    id: "slack",
     label: "Slack",
+    docsPath: "/channels/slack",
     config: {
       listAccountIds: () => ["primary"],
       defaultAccountId: () => "primary",
@@ -203,6 +207,7 @@ describe("config-only channels status output", () => {
   });
 
   it("renders Slack HTTP signing-secret availability in config-only status", async () => {
+    registerSingleTestPlugin("slack", makeUnavailableHttpSlackPlugin());
 
     const joined = await formatLocalStatusSummary({ channels: {} });
     expect(joined).toContain("Slack");

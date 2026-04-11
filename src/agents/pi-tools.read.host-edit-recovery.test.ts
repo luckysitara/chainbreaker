@@ -96,6 +96,7 @@ describe("edit tool recovery hardening", () => {
       readFile: (absolutePath) => fs.readFile(absolutePath, "utf-8"),
       execute: async () => {
         throw new Error(
+          "Could not find the exact text in demo.txt. The old text must match exactly including all whitespace and newlines.",
         );
       },
     });

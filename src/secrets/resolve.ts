@@ -183,10 +183,7 @@ function toProviderKey(source: SecretRefSource, provider: string): string {
   return `${source}:${provider}`;
 }
 
-function resolveConfiguredProvider(
-  ref: SecretRef,
-  config: ChainbreakerConfig,
-): SecretProviderConfig {
+function resolveConfiguredProvider(ref: SecretRef, config: ChainbreakerConfig): SecretProviderConfig {
   const providerConfig = config.secrets?.providers?.[ref.provider];
   if (!providerConfig) {
     if (ref.source === "env" && ref.provider === resolveDefaultSecretProviderAlias(config, "env")) {
@@ -311,6 +308,7 @@ async function readFileProviderPayload(params: {
     });
     try {
       const payload = await Promise.race([
+        fs.readFile(secureFilePath, { signal: abortController.signal }),
         timeoutPromise,
       ]);
       if (payload.byteLength > maxBytes) {
@@ -433,6 +431,7 @@ type ExecRunResult = {
   stdout: string;
   stderr: string;
   code: number | null;
+  signal: NodeJS.Signals | null;
   termination: "exit" | "timeout" | "no-output-timeout";
 };
 
@@ -526,6 +525,7 @@ async function runExecResolver(params: {
     });
     child.stdout?.on("data", (chunk) => append(chunk, "stdout"));
     child.stderr?.on("data", (chunk) => append(chunk, "stderr"));
+    child.on("close", (code, signal) => {
       if (settled) {
         return;
       }
@@ -535,6 +535,7 @@ async function runExecResolver(params: {
         stdout,
         stderr,
         code,
+        signal,
         termination: noOutputTimedOut ? "no-output-timeout" : timedOut ? "timeout" : "exit",
       });
     });

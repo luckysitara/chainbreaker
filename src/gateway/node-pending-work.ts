@@ -32,6 +32,7 @@ type DrainResult = {
   hasMore: boolean;
 };
 
+const DEFAULT_STATUS_ITEM_ID = "baseline-status";
 const DEFAULT_STATUS_PRIORITY: NodePendingWorkPriority = "default";
 const DEFAULT_PRIORITY: NodePendingWorkPriority = "normal";
 const DEFAULT_MAX_ITEMS = 4;
@@ -83,6 +84,7 @@ function sortedItems(state: NodePendingWorkState): NodePendingWorkItem[] {
   });
 }
 
+function makeBaselineStatusItem(nowMs: number): NodePendingWorkItem {
   return {
     id: DEFAULT_STATUS_ITEM_ID,
     type: "status.request",
@@ -141,11 +143,16 @@ export function drainNodePendingWork(nodeId: string, opts: DrainOptions = {}): D
   const explicitItems = state ? sortedItems(state) : [];
   const items = explicitItems.slice(0, maxItems);
   const hasExplicitStatus = explicitItems.some((item) => item.type === "status.request");
+  const includeBaseline = opts.includeDefaultStatus !== false && !hasExplicitStatus;
+  if (includeBaseline && items.length < maxItems) {
+    items.push(makeBaselineStatusItem(nowMs));
   }
   const explicitReturnedCount = items.filter((item) => item.id !== DEFAULT_STATUS_ITEM_ID).length;
+  const baselineIncluded = items.some((item) => item.id === DEFAULT_STATUS_ITEM_ID);
   return {
     revision,
     items,
+    hasMore: explicitItems.length > explicitReturnedCount || (includeBaseline && !baselineIncluded),
   };
 }
 

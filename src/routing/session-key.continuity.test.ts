@@ -3,6 +3,7 @@ import { buildAgentSessionKey } from "./resolve-route.js";
 
 describe("Discord Session Key Continuity", () => {
   const agentId = "main";
+  const channel = "discord";
   const accountId = "default";
 
   function buildDiscordSessionKey(params: {
@@ -32,6 +33,7 @@ describe("Discord Session Key Continuity", () => {
     });
 
     expect(dmKey).toBe(params.expectedDmKey);
+    expect(groupKey).toBe("agent:main:discord:channel:channel456");
     expect(dmKey).not.toBe(groupKey);
   }
 

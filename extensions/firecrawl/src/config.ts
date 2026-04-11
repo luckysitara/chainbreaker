@@ -127,10 +127,7 @@ export function resolveFirecrawlBaseUrl(cfg?: ChainbreakerConfig): string {
   return configured || DEFAULT_FIRECRAWL_BASE_URL;
 }
 
-export function resolveFirecrawlOnlyMainContent(
-  cfg?: ChainbreakerConfig,
-  override?: boolean,
-): boolean {
+export function resolveFirecrawlOnlyMainContent(cfg?: ChainbreakerConfig, override?: boolean): boolean {
   if (typeof override === "boolean") {
     return override;
   }

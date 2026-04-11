@@ -19,6 +19,7 @@ function createDiscordBinding(
     targetSessionKey,
     targetKind: "subagent",
     conversation: {
+      channel: "discord",
       accountId: "runtime",
       conversationId,
       parentConversationId,
@@ -33,6 +34,7 @@ function registerDiscordSessionBindings(
   bindings: SessionBindingRecord[],
 ): void {
   registerSessionBindingAdapter({
+    channel: "discord",
     accountId: "runtime",
     listBySession: (requestedSessionKey) =>
       requestedSessionKey === targetSessionKey ? bindings : [],
@@ -63,6 +65,7 @@ describe("bound delivery router", () => {
       ...(params.requesterConversationId !== undefined
         ? {
             requester: {
+              channel: "discord",
               accountId: "runtime",
               conversationId: params.requesterConversationId,
             },
@@ -93,6 +96,7 @@ describe("bound delivery router", () => {
       },
     },
     {
+      name: "fails closed when multiple bindings exist without requester signal",
       bindings: [
         createDiscordBinding(TARGET_SESSION_KEY, "thread-1", 1),
         createDiscordBinding(TARGET_SESSION_KEY, "thread-2", 2),

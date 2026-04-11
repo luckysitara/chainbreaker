@@ -163,6 +163,7 @@ export function dispatchDiscordInteractiveHandler(params: {
 
   return params.registration.handler({
     ...handlerContext,
+    channel: "discord",
     interaction: {
       ...handlerContext.interaction,
       data: params.data,
@@ -174,6 +175,7 @@ export function dispatchDiscordInteractiveHandler(params: {
       registration: params.registration,
       senderId: handlerContext.senderId,
       conversation: {
+        channel: "discord",
         accountId: handlerContext.accountId,
         conversationId: handlerContext.conversationId,
         parentConversationId: handlerContext.parentConversationId,
@@ -194,6 +196,7 @@ export function dispatchSlackInteractiveHandler(params: {
 
   return params.registration.handler({
     ...handlerContext,
+    channel: "slack",
     interaction: {
       ...handlerContext.interaction,
       data: params.data,
@@ -205,6 +208,7 @@ export function dispatchSlackInteractiveHandler(params: {
       registration: params.registration,
       senderId: handlerContext.senderId,
       conversation: {
+        channel: "slack",
         accountId: handlerContext.accountId,
         conversationId: handlerContext.conversationId,
         parentConversationId: handlerContext.parentConversationId,

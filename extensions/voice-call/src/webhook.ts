@@ -429,9 +429,11 @@ export class VoiceCallWebhookServer {
     res: http.ServerResponse,
     webhookPath: string,
   ): Promise<void> {
+    const payload = await this.runWebhookPipeline(req, webhookPath);
     this.writeWebhookResponse(res, payload);
   }
 
+  private async runWebhookPipeline(
     req: http.IncomingMessage,
     webhookPath: string,
   ): Promise<WebhookResponsePayload> {

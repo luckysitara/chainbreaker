@@ -21,6 +21,7 @@ export function registerMessageSendCommand(message: Command, helpers: MessageCli
         )
         .option(
           "--buttons <json>",
+          "Telegram inline keyboard buttons as JSON (array of button rows)",
         )
         .option("--components <json>", "Discord components payload as JSON")
         .option("--card <json>", "Adaptive Card JSON object (when supported by the channel)")

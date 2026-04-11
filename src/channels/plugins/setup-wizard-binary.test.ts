@@ -8,21 +8,28 @@ import {
 import type { ChannelSetupWizard } from "./setup-wizard.js";
 
 describe("createDetectedBinaryStatus", () => {
+  it("builds status lines, hint, and score from binary detection", async () => {
     const status = createDetectedBinaryStatus({
       channelLabel: "Signal",
+      binaryLabel: "signal-cli",
       configuredLabel: "configured",
       unconfiguredLabel: "needs setup",
+      configuredHint: "signal-cli found",
+      unconfiguredHint: "signal-cli missing",
       configuredScore: 1,
       unconfiguredScore: 0,
       resolveConfigured: () => true,
+      resolveBinaryPath: () => "/usr/local/bin/signal-cli",
       detectBinary: vi.fn(async () => true),
     });
 
     expect(await status.resolveConfigured({ cfg: {} })).toBe(true);
     expect(await status.resolveStatusLines?.({ cfg: {}, configured: true })).toEqual([
       "Signal: configured",
+      "signal-cli: found (/usr/local/bin/signal-cli)",
     ]);
     expect(await status.resolveSelectionHint?.({ cfg: {}, configured: true })).toBe(
+      "signal-cli found",
     );
     expect(await status.resolveQuickstartScore?.({ cfg: {}, configured: true })).toBe(1);
   });
@@ -59,6 +66,7 @@ describe("createDelegatedSetupWizardStatusResolvers", () => {
           configuredLabel: "configured",
           unconfiguredLabel: "needs setup",
           resolveConfigured: () => true,
+          resolveStatusLines: async () => ["line"],
           resolveSelectionHint: async () => "hint",
           resolveQuickstartScore: async () => 7,
         },
@@ -68,6 +76,7 @@ describe("createDelegatedSetupWizardStatusResolvers", () => {
 
     const status = createDelegatedSetupWizardStatusResolvers(loadWizard);
 
+    expect(await status.resolveStatusLines?.({ cfg: {}, configured: true })).toEqual(["line"]);
     expect(await status.resolveSelectionHint?.({ cfg: {}, configured: true })).toBe("hint");
     expect(await status.resolveQuickstartScore?.({ cfg: {}, configured: true })).toBe(7);
   });

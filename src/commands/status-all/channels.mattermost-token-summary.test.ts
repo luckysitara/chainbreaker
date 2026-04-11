@@ -41,7 +41,9 @@ type TestTable = Awaited<ReturnType<typeof buildChannelsTable>>;
 
 function makeSlackDirectPlugin(config: ChannelPlugin["config"]): ChannelPlugin {
   return makeDirectPlugin({
+    id: "slack",
     label: "Slack",
+    docsPath: "/channels/slack",
     config,
   });
 }
@@ -120,7 +122,9 @@ function makeSourceAwareUnavailablePlugin(): ChannelPlugin {
 
 function makeSourceUnavailableResolvedAvailablePlugin(): ChannelPlugin {
   return makeDirectPlugin({
+    id: "discord",
     label: "Discord",
+    docsPath: "/channels/discord",
     config: {
       listAccountIds: () => ["primary"],
       defaultAccountId: () => "primary",
@@ -155,7 +159,9 @@ function makeSourceUnavailableResolvedAvailablePlugin(): ChannelPlugin {
 
 function makeHttpSlackUnavailablePlugin(): ChannelPlugin {
   return makeDirectPlugin({
+    id: "slack",
     label: "Slack",
+    docsPath: "/channels/slack",
     config: {
       listAccountIds: () => ["primary"],
       defaultAccountId: () => "primary",
@@ -255,11 +261,13 @@ describe("buildChannelsTable - mattermost token summary", () => {
 
   it("keeps bot+app requirement when both fields exist", async () => {
     const table = await buildTestTable([makeSlackPlugin({ botToken: "bot-token", appToken: "" })]);
+    expectTableRow(table, { id: "slack", state: "warn", detailContains: "need bot+app" });
   });
 
   it("reports configured-but-unavailable Slack credentials as warn", async () => {
     const table = await buildTestTable([makeUnavailableSlackPlugin()]);
     expectTableRow(table, {
+      id: "slack",
       state: "warn",
       detailContains: "unavailable in this command path",
     });
@@ -272,6 +280,7 @@ describe("buildChannelsTable - mattermost token summary", () => {
     });
 
     expectTableRow(table, {
+      id: "slack",
       state: "warn",
       detailContains: "unavailable in this command path",
     });
@@ -290,6 +299,7 @@ describe("buildChannelsTable - mattermost token summary", () => {
       sourceConfig: { marker: "source", channels: {} },
     });
 
+    expectTableRow(table, { id: "discord", state: "ok", detailEquals: "configured" });
     expectTableDetailRows(table, "Discord accounts", [
       {
         Account: "primary (Primary)",
@@ -302,6 +312,7 @@ describe("buildChannelsTable - mattermost token summary", () => {
   it("treats Slack HTTP signing-secret availability as required config", async () => {
     const table = await buildTestTable([makeHttpSlackUnavailablePlugin()]);
     expectTableRow(table, {
+      id: "slack",
       state: "warn",
       detailContains: "configured http credentials unavailable",
     });

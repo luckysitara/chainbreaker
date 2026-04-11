@@ -16,6 +16,7 @@ const log = createSubsystemLogger("env-overrides");
 type EnvUpdate = { key: string };
 type SkillConfig = NonNullable<ReturnType<typeof resolveSkillConfig>>;
 type ActiveSkillEnvEntry = {
+  baseline: string | undefined;
   value: string;
   count: number;
 };
@@ -46,6 +47,7 @@ function acquireActiveSkillEnvKey(key: string, value: string): boolean {
     return false;
   }
   activeSkillEnvEntries.set(key, {
+    baseline: process.env[key],
     value,
     count: 1,
   });
@@ -65,8 +67,10 @@ function releaseActiveSkillEnvKey(key: string) {
     return;
   }
   activeSkillEnvEntries.delete(key);
+  if (active.baseline === undefined) {
     delete process.env[key];
   } else {
+    process.env[key] = active.baseline;
   }
 }
 
@@ -212,10 +216,7 @@ function createEnvReverter(updates: EnvUpdate[]) {
   };
 }
 
-export function applySkillEnvOverrides(params: {
-  skills: SkillEntry[];
-  config?: ChainbreakerConfig;
-}) {
+export function applySkillEnvOverrides(params: { skills: SkillEntry[]; config?: ChainbreakerConfig }) {
   const { skills } = params;
   const config = resolveSkillRuntimeConfig(params.config);
   const updates: EnvUpdate[] = [];

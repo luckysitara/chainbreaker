@@ -86,15 +86,18 @@ describe("applyPatch", () => {
   it("supports end-of-file inserts", async () => {
     await withTempDir(async (dir) => {
       const target = path.join(dir, "end.txt");
+      await fs.writeFile(target, "line1\n", "utf8");
 
       const patch = `*** Begin Patch
 *** Update File: end.txt
 @@
++line2
 *** End of File
 *** End Patch`;
 
       await applyPatch(patch, { cwd: dir });
       const contents = await fs.readFile(target, "utf8");
+      expect(contents).toBe("line1\nline2\n");
     });
   });
 
@@ -331,9 +334,7 @@ describe("applyPatch", () => {
 
   it("allows deleting a symlink itself even if it points outside cwd", async () => {
     await withTempDir(async (dir) => {
-      const outsideDir = await fs.mkdtemp(
-        path.join(path.dirname(dir), "chainbreaker-patch-outside-"),
-      );
+      const outsideDir = await fs.mkdtemp(path.join(path.dirname(dir), "chainbreaker-patch-outside-"));
       try {
         const outsideTarget = path.join(outsideDir, "target.txt");
         await fs.writeFile(outsideTarget, "keep\n", "utf8");

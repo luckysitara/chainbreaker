@@ -31,6 +31,7 @@ function hasTraversalOrHomeDirPrefix(candidate: string): boolean {
 }
 
 // Broad structural check: does this look like a local file path? Used only for
+// stripping MEDIA: lines from output text — never for media approval.
 function looksLikeLocalFilePath(candidate: string): boolean {
   return (
     candidate.startsWith("/") ||
@@ -126,6 +127,7 @@ export function splitMediaFromOutput(raw: string): {
   audioAsVoice?: boolean; // true if [[audio_as_voice]] tag was found
 } {
   // KNOWN: Leading whitespace is semantically meaningful in Markdown (lists, indented fences).
+  // We only trim the end; token cleanup below handles removing `MEDIA:` lines.
   const trimmedRaw = raw.trimEnd();
   if (!trimmedRaw.trim()) {
     return { text: "" };
@@ -143,16 +145,30 @@ export function splitMediaFromOutput(raw: string): {
   const hasFenceMarkers = mayContainFenceMarkers(trimmedRaw);
   const fenceSpans = hasFenceMarkers ? parseFenceSpans(trimmedRaw) : [];
 
+  // Collect tokens line by line so we can strip them cleanly.
+  const lines = trimmedRaw.split("\n");
   const keptLines: string[] = [];
 
+  let lineOffset = 0; // Track character offset for fence checking
+  for (const line of lines) {
+    // Skip MEDIA extraction if this line is inside a fenced code block
+    if (hasFenceMarkers && isInsideFence(fenceSpans, lineOffset)) {
+      keptLines.push(line);
+      lineOffset += line.length + 1; // +1 for newline
       continue;
     }
 
+    const trimmedStart = line.trimStart();
     if (!trimmedStart.startsWith("MEDIA:")) {
+      keptLines.push(line);
+      lineOffset += line.length + 1; // +1 for newline
       continue;
     }
 
+    const matches = Array.from(line.matchAll(MEDIA_TOKEN_RE));
     if (matches.length === 0) {
+      keptLines.push(line);
+      lineOffset += line.length + 1; // +1 for newline
       continue;
     }
 
@@ -161,6 +177,7 @@ export function splitMediaFromOutput(raw: string): {
 
     for (const match of matches) {
       const start = match.index ?? 0;
+      pieces.push(line.slice(cursor, start));
 
       const payload = match[1];
       const unwrapped = unwrapQuoted(payload);
@@ -217,6 +234,7 @@ export function splitMediaFromOutput(raw: string): {
           pieces.push(invalidParts.join(" "));
         }
       } else if (looksLikeLocalPath) {
+        // Strip MEDIA: lines with local paths even when invalid (e.g. absolute paths
         // from internal tools like TTS). They should never leak as visible text.
         foundMediaToken = true;
       } else {
@@ -227,15 +245,18 @@ export function splitMediaFromOutput(raw: string): {
       cursor = start + match[0].length;
     }
 
+    pieces.push(line.slice(cursor));
 
     const cleanedLine = pieces
       .join("")
       .replace(/[ \t]{2,}/g, " ")
       .trim();
 
+    // If the line becomes empty, drop it.
     if (cleanedLine) {
       keptLines.push(cleanedLine);
     }
+    lineOffset += line.length + 1; // +1 for newline
   }
 
   let cleanedText = keptLines

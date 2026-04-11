@@ -1,8 +1,5 @@
 import type { Chat, Message, MessageOrigin, User } from "@grammyjs/types";
-import {
-  formatLocationText,
-  type NormalizedLocation,
-} from "chainbreaker/plugin-sdk/channel-inbound";
+import { formatLocationText, type NormalizedLocation } from "chainbreaker/plugin-sdk/channel-inbound";
 import { resolveTelegramPreviewStreamMode } from "chainbreaker/plugin-sdk/config-runtime";
 import type {
   TelegramDirectConfig,

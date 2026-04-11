@@ -49,15 +49,26 @@ export function buildPluginApprovalRequestMessage(
   request: PluginApprovalRequest,
   nowMsValue: number,
 ): string {
+  const lines: string[] = [];
   const severity = request.request.severity ?? "warning";
   const icon = severity === "critical" ? "🚨" : severity === "info" ? "ℹ️" : "🛡️";
+  lines.push(`${icon} Plugin approval required`);
+  lines.push(`Title: ${request.request.title}`);
+  lines.push(`Description: ${request.request.description}`);
   if (request.request.toolName) {
+    lines.push(`Tool: ${request.request.toolName}`);
   }
   if (request.request.pluginId) {
+    lines.push(`Plugin: ${request.request.pluginId}`);
   }
   if (request.request.agentId) {
+    lines.push(`Agent: ${request.request.agentId}`);
   }
+  lines.push(`ID: ${request.id}`);
   const expiresIn = Math.max(0, Math.round((request.expiresAtMs - nowMsValue) / 1000));
+  lines.push(`Expires in: ${expiresIn}s`);
+  lines.push("Reply with: /approve <id> allow-once|allow-always|deny");
+  return lines.join("\n");
 }
 
 export function buildPluginApprovalResolvedMessage(resolved: PluginApprovalResolved): string {

@@ -267,10 +267,7 @@ function loadRegistryFromSinglePlugin(params: {
   plugin: TempPlugin;
   pluginConfig?: Record<string, unknown>;
   includeWorkspaceDir?: boolean;
-  options?: Omit<
-    Parameters<typeof loadChainbreakerPlugins>[0],
-    "cache" | "workspaceDir" | "config"
-  >;
+  options?: Omit<Parameters<typeof loadChainbreakerPlugins>[0], "cache" | "workspaceDir" | "config">;
 }) {
   const pluginConfig = params.pluginConfig ?? {};
   return loadChainbreakerPlugins({
@@ -3907,19 +3904,17 @@ module.exports = {
       };`,
     });
 
-    const registry = withEnv(
-      { CHAINBREAKER_BUNDLED_PLUGINS_DIR: "/nonexistent/bundled/plugins" },
-      () =>
-        loadChainbreakerPlugins({
-          cache: false,
-          workspaceDir: plugin.dir,
-          config: {
-            plugins: {
-              load: { paths: [plugin.file] },
-              allow: ["legacy-root-import"],
-            },
+    const registry = withEnv({ CHAINBREAKER_BUNDLED_PLUGINS_DIR: "/nonexistent/bundled/plugins" }, () =>
+      loadChainbreakerPlugins({
+        cache: false,
+        workspaceDir: plugin.dir,
+        config: {
+          plugins: {
+            load: { paths: [plugin.file] },
+            allow: ["legacy-root-import"],
           },
-        }),
+        },
+      }),
     );
     const record = registry.plugins.find((entry) => entry.id === "legacy-root-import");
     expect(record?.status).toBe("loaded");

@@ -16,6 +16,8 @@ import {
 import { sameFileIdentity } from "../infra/file-identity.js";
 import {
   POSIX_INLINE_COMMAND_FLAGS,
+  resolveInlineCommandMatch,
+} from "../infra/shell-inline-command.js";
 import { formatExecCommand, resolveSystemRunCommandRequest } from "../infra/system-run-command.js";
 import { splitShellArgs } from "../utils/shell-argv.js";
 
@@ -73,6 +75,7 @@ const BUN_OPTIONS_WITH_VALUE = new Set([
   "--console-depth",
   "--cwd",
   "--define",
+  "--elide-lines",
   "--env-file",
   "--extension-order",
   "--filter",
@@ -427,6 +430,7 @@ function unwrapNpmExecInvocation(argv: string[]): string[] | null {
 
 function resolvePosixShellScriptOperandIndex(argv: string[]): number | null {
   if (
+    resolveInlineCommandMatch(argv, POSIX_INLINE_COMMAND_FLAGS, {
       allowCombinedC: true,
     }).valueTokenIndex !== null
   ) {
@@ -555,11 +559,14 @@ function collectExistingFileOperandIndexes(params: {
       return { hits: [], sawOptionValueFile: false };
     }
     if (token.startsWith("-")) {
+      const [flag, inlineValue] = token.split("=", 2);
       if (params.optionsWithFileValue?.has(flag.toLowerCase())) {
+        if (inlineValue && resolvesToExistingFileSync(inlineValue, params.cwd)) {
           hits.push(i);
           return { hits, sawOptionValueFile: true };
         }
         const nextToken = params.argv[i + 1]?.trim() ?? "";
+        if (!inlineValue && nextToken && resolvesToExistingFileSync(nextToken, params.cwd)) {
           hits.push(i + 1);
           return { hits, sawOptionValueFile: true };
         }

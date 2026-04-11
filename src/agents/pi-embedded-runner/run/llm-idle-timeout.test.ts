@@ -39,9 +39,7 @@ describe("resolveLlmIdleTimeoutMs", () => {
   });
 
   it("ignores negative values", () => {
-    const cfg = {
-      agents: { defaults: { llm: { idleTimeoutSeconds: -10 } } },
-    } as ChainbreakerConfig;
+    const cfg = { agents: { defaults: { llm: { idleTimeoutSeconds: -10 } } } } as ChainbreakerConfig;
     expect(resolveLlmIdleTimeoutMs(cfg)).toBe(DEFAULT_LLM_IDLE_TIMEOUT_MS);
   });
 

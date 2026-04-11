@@ -29,6 +29,7 @@ describe("shared/subagents-format", () => {
     expect(formatTokenShort(1_250_000)).toBe("1.3m");
   });
 
+  it("truncates lines only when needed", () => {
     expect(truncateLine("short", 10)).toBe("short");
     expect(truncateLine("trim me   ", 7)).toBe("trim me...");
   });

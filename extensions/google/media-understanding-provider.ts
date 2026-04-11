@@ -26,6 +26,7 @@ const DEFAULT_GOOGLE_VIDEO_MODEL = "gemini-3-flash-preview";
 const DEFAULT_GOOGLE_AUDIO_PROMPT = "Transcribe the audio.";
 const DEFAULT_GOOGLE_VIDEO_PROMPT = "Describe the video.";
 
+async function generateGeminiInlineDataText(params: {
   buffer: Buffer;
   mime?: string;
   apiKey: string;
@@ -77,6 +78,7 @@ const DEFAULT_GOOGLE_VIDEO_PROMPT = "Describe the video.";
         parts: [
           { text: prompt },
           {
+            inline_data: {
               mime_type: params.mime ?? params.defaultMime,
               data: params.buffer.toString("base64"),
             },
@@ -120,6 +122,7 @@ const DEFAULT_GOOGLE_VIDEO_PROMPT = "Describe the video.";
 export async function transcribeGeminiAudio(
   params: AudioTranscriptionRequest,
 ): Promise<AudioTranscriptionResult> {
+  const { text, model } = await generateGeminiInlineDataText({
     ...params,
     defaultBaseUrl: DEFAULT_GOOGLE_AUDIO_BASE_URL,
     defaultModel: DEFAULT_GOOGLE_AUDIO_MODEL,
@@ -134,6 +137,7 @@ export async function transcribeGeminiAudio(
 export async function describeGeminiVideo(
   params: VideoDescriptionRequest,
 ): Promise<VideoDescriptionResult> {
+  const { text, model } = await generateGeminiInlineDataText({
     ...params,
     defaultBaseUrl: DEFAULT_GOOGLE_VIDEO_BASE_URL,
     defaultModel: DEFAULT_GOOGLE_VIDEO_MODEL,

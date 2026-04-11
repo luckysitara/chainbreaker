@@ -23,6 +23,7 @@ import { parseViewerPayloadJson } from "./viewer-payload.js";
 const FULL_DEFAULTS = {
   fontFamily: "JetBrains Mono",
   fontSize: 17,
+  lineSpacing: 1.8,
   layout: "split",
   showLineNumbers: false,
   diffIndicators: "classic",
@@ -49,30 +50,37 @@ describe("resolveDiffsPluginDefaults", () => {
     ).toEqual(FULL_DEFAULTS);
   });
 
+  it("clamps and falls back for invalid line spacing and indicators", () => {
     expect(
       resolveDiffsPluginDefaults({
         defaults: {
+          lineSpacing: -5,
           diffIndicators: "unknown",
         },
       }),
     ).toMatchObject({
+      lineSpacing: 1,
       diffIndicators: "bars",
     });
 
     expect(
       resolveDiffsPluginDefaults({
         defaults: {
+          lineSpacing: 9,
         },
       }),
     ).toMatchObject({
+      lineSpacing: 3,
     });
 
     expect(
       resolveDiffsPluginDefaults({
         defaults: {
+          lineSpacing: Number.NaN,
         },
       }),
     ).toMatchObject({
+      lineSpacing: DEFAULT_DIFFS_TOOL_DEFAULTS.lineSpacing,
     });
   });
 
@@ -223,6 +231,7 @@ describe("diffs plugin schema surfaces", () => {
         defaults: {
           fontFamily: "Fira Code",
           fontSize: 15,
+          lineSpacing: 1.6,
           layout: "unified",
           showLineNumbers: true,
           diffIndicators: "bars",
@@ -352,6 +361,7 @@ describe("renderDiffDocument", () => {
     expect(rendered.html).toContain("min-height: 100vh;");
     expect(rendered.html).toContain('"diffIndicators":"bars"');
     expect(rendered.html).toContain('"disableLineNumbers":false');
+    expect(rendered.html).toContain("--diffs-line-height: 24px;");
     expect(rendered.html).toContain("--diffs-font-size: 15px;");
     expect(rendered.html).not.toContain("fonts.googleapis.com");
   });
@@ -374,8 +384,7 @@ describe("renderDiffDocument", () => {
     const loaderSrc = html.match(/<script type="module" src="([^"]+)"><\/script>/)?.[1];
     expect(loaderSrc).toBe("../../assets/viewer.js");
     expect(
-      new URL(loaderSrc ?? "", "https://example.com/chainbreaker/plugins/diffs/view/id/token")
-        .pathname,
+      new URL(loaderSrc ?? "", "https://example.com/chainbreaker/plugins/diffs/view/id/token").pathname,
     ).toBe("/chainbreaker/plugins/diffs/assets/viewer.js");
   });
 

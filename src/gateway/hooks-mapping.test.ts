@@ -274,9 +274,7 @@ describe("hooks mapping", () => {
   it.runIf(process.platform !== "win32")(
     "rejects transform module symlink escape outside transformsDir",
     () => {
-      const configDir = fs.mkdtempSync(
-        path.join(os.tmpdir(), "chainbreaker-config-symlink-module-"),
-      );
+      const configDir = fs.mkdtempSync(path.join(os.tmpdir(), "chainbreaker-config-symlink-module-"));
       const transformsRoot = path.join(configDir, "hooks", "transforms");
       fs.mkdirSync(transformsRoot, { recursive: true });
       const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "chainbreaker-outside-module-"));

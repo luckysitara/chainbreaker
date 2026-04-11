@@ -429,9 +429,7 @@ describe("resolveAgentConfig", () => {
     vi.stubEnv("CHAINBREAKER_STATE_DIR", "");
 
     const agentDir = resolveAgentDir({} as ChainbreakerConfig, "main");
-    expect(agentDir).toBe(
-      path.join(path.resolve(home), ".chainbreaker", "agents", "main", "agent"),
-    );
+    expect(agentDir).toBe(path.join(path.resolve(home), ".chainbreaker", "agents", "main", "agent"));
   });
 });
 

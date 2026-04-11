@@ -65,6 +65,7 @@ function resolveBeforeAfterFileName(params: {
 function buildDiffOptions(options: DiffRenderOptions): DiffViewerOptions {
   const fontFamily = escapeCssString(options.presentation.fontFamily);
   const fontSize = Math.max(10, Math.floor(options.presentation.fontSize));
+  const lineHeight = Math.max(20, Math.round(fontSize * options.presentation.lineSpacing));
   return {
     theme: {
       light: "pierre-light",
@@ -82,10 +83,12 @@ function buildDiffOptions(options: DiffRenderOptions): DiffViewerOptions {
         --diffs-font-family: "${fontFamily}", "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         --diffs-header-font-family: "${fontFamily}", "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         --diffs-font-size: ${fontSize}px;
+        --diffs-line-height: ${lineHeight}px;
       }
 
       [data-diffs-header] {
         min-height: 64px;
+        padding-inline: 18px 14px;
       }
 
       [data-header-content] {
@@ -97,12 +100,15 @@ function buildDiffOptions(options: DiffRenderOptions): DiffViewerOptions {
       }
 
       .oc-diff-toolbar {
+        display: inline-flex;
         align-items: center;
         gap: 6px;
+        margin-inline-start: 6px;
         flex: 0 0 auto;
       }
 
       .oc-diff-toolbar-button {
+        display: inline-flex;
         align-items: center;
         justify-content: center;
         width: 24px;
@@ -115,6 +121,7 @@ function buildDiffOptions(options: DiffRenderOptions): DiffViewerOptions {
         color: inherit;
         cursor: pointer;
         opacity: 0.6;
+        line-height: 0;
         overflow: visible;
         transition: opacity 120ms ease;
         flex: 0 0 auto;
@@ -410,6 +417,7 @@ async function renderPatchDiff(
     return sum + Math.max(splitLines, unifiedLines, 0);
   }, 0);
   if (totalLines > MAX_PATCH_TOTAL_LINES) {
+    throw new Error(`Patch input is too large to render (max ${MAX_PATCH_TOTAL_LINES} lines).`);
   }
 
   const { viewerOptions, imageOptions } = buildRenderVariants({ options, target });

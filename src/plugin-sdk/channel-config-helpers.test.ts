@@ -24,6 +24,7 @@ import {
 const resolveDefaultAccountId = () => DEFAULT_ACCOUNT_ID;
 
 function createMergedReaderCfg(
+  channelId: "whatsapp" | "imessage",
   accountConfig: { allowFrom: string[]; defaultTo: string },
 ) {
   return {
@@ -132,6 +133,7 @@ describe("provider config readers", () => {
     },
     {
       name: "reads merged iMessage allowFrom/defaultTo without the channel registry",
+      cfg: createMergedReaderCfg("imessage", {
         allowFrom: ["chat_id:9", "user@example.com"],
         defaultTo: " alt:chat ",
       }),

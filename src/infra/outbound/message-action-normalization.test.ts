@@ -60,8 +60,10 @@ describe("normalizeMessageActionInput", () => {
         },
         toolContext: {
           currentChannelId: "C1",
+          currentChannelProvider: "slack",
         },
       },
+      expectedFields: { channel: "slack" },
     },
     {
       input: {
@@ -124,10 +126,12 @@ describe("normalizeMessageActionInput", () => {
       input: {
         action: "read",
         args: {
+          channel: "slack",
           messageId: "123.456",
         },
         toolContext: {
           currentChannelId: "C12345678",
+          currentChannelProvider: "slack",
         },
       },
       expectedFields: { target: "C12345678", messageId: "123.456" },

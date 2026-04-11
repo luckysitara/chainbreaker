@@ -26,6 +26,7 @@ export type MsgContext = {
   Body?: string;
   /**
    * Agent prompt body (may include envelope/history/context). Prefer this for prompt shaping.
+   * Should use real newlines (`\n`), not escaped `\\n`.
    */
   BodyForAgent?: string;
   /**
@@ -140,6 +141,7 @@ export type MsgContext = {
   Timestamp?: number;
   /** Provider label (e.g. whatsapp, telegram). */
   Provider?: string;
+  /** Provider surface label (e.g. discord, slack). Prefer this over `Provider` when available. */
   Surface?: string;
   /** Platform bot username when command mentions should be normalized. */
   BotUsername?: string;

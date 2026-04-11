@@ -1,8 +1,6 @@
 import type { ChainbreakerConfig } from "../../config/config.js";
 
-type AgentToolsConfig = NonNullable<
-  NonNullable<ChainbreakerConfig["agents"]>["list"]
->[number]["tools"];
+type AgentToolsConfig = NonNullable<NonNullable<ChainbreakerConfig["agents"]>["list"]>[number]["tools"];
 type SandboxToolsConfig = {
   allow?: string[];
   deny?: string[];

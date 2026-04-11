@@ -143,6 +143,8 @@ describe("browser state option collisions", () => {
     expect(request.body?.headers).toEqual({ "x-auth": "ok" });
   });
 
+  it("errors when set offline receives an invalid value", async () => {
+    await runBrowserCommand(["set", "offline", "maybe"]);
 
     expect(mocks.callBrowserRequest).not.toHaveBeenCalled();
     expect(getBrowserCliRuntime().error).toHaveBeenCalledWith(

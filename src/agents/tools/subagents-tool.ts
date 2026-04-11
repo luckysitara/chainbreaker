@@ -65,6 +65,8 @@ export function createSubagentsTool(opts?: { agentSessionKey?: string }): AnyAge
           callerSessionKey: controller.callerSessionKey,
           callerIsSubagent: controller.callerIsSubagent,
           total: list.total,
+          active: list.active.map(({ line: _line, ...view }) => view),
+          recent: list.recent.map(({ line: _line, ...view }) => view),
           text: list.text,
         });
       }

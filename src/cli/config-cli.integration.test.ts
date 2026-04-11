@@ -48,6 +48,7 @@ function createExecDryRunBatch(params: { markerPath: string }) {
       },
     },
     {
+      path: "channels.discord.token",
       ref: {
         source: "exec",
         provider: "runner",
@@ -139,6 +140,7 @@ describe("config cli integration", () => {
               provider: { source: "env" },
             },
             {
+              path: "channels.discord.token",
               ref: {
                 source: "env",
                 provider: "default",
@@ -170,6 +172,7 @@ describe("config cli integration", () => {
       const afterDryRun = fs.readFileSync(configPath, "utf8");
       expect(afterDryRun).toBe(before);
       expect(runtime.errors).toEqual([]);
+      expect(runtime.logs.some((line) => line.includes("Dry run successful: 2 update(s)"))).toBe(
         true,
       );
 
@@ -183,6 +186,7 @@ describe("config cli integration", () => {
       expect(afterWrite.secrets?.providers?.default).toEqual({
         source: "env",
       });
+      expect(afterWrite.channels?.discord?.token).toEqual({
         source: "env",
         provider: "default",
         id: "DISCORD_BOT_TOKEN",
@@ -231,6 +235,7 @@ describe("config cli integration", () => {
       const before = fs.readFileSync(configPath, "utf8");
       await expect(
         runConfigSet({
+          path: "channels.discord.token",
           cliOptions: {
             refProvider: "default",
             refSource: "env",
@@ -280,6 +285,8 @@ describe("config cli integration", () => {
       expect(after).toBe(before);
       expect(fs.existsSync(params.markerPath)).toBe(false);
       expect(
+        params.runtime.logs.some((line) =>
+          line.includes("Dry run note: skipped 1 exec SecretRef resolvability check(s)."),
         ),
       ).toBe(true);
     });
@@ -301,6 +308,8 @@ describe("config cli integration", () => {
       expect(after).toBe(before);
       expect(fs.existsSync(params.markerPath)).toBe(true);
       expect(
+        params.runtime.logs.some((line) =>
+          line.includes("Dry run note: skipped 1 exec SecretRef resolvability check(s)."),
         ),
       ).toBe(false);
     });

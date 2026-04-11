@@ -379,6 +379,7 @@ const COMMON_SINGLE_ACCOUNT_KEYS_TO_MOVE = new Set([
   "botToken",
   "appToken",
   "account",
+  "signalNumber",
   "authDir",
   "cliPath",
   "dbPath",
@@ -405,6 +406,7 @@ const COMMON_SINGLE_ACCOUNT_KEYS_TO_MOVE = new Set([
 ]);
 
 const SINGLE_ACCOUNT_KEYS_TO_MOVE_BY_CHANNEL: Record<string, ReadonlySet<string>> = {
+  matrix: new Set([
     "deviceId",
     "avatarUrl",
     "initialSyncLimit",
@@ -498,6 +500,7 @@ export function resolveSingleAccountKeysToMove(params: {
         return false;
       }
       if (
+        params.channelKey === "matrix" &&
         hasNamedAccounts &&
         !MATRIX_NAMED_ACCOUNT_PROMOTION_KEYS.has(key)
       ) {
@@ -512,6 +515,7 @@ export function resolveSingleAccountPromotionTarget(params: {
   channelKey: string;
   channel: ChannelSectionBase;
 }): string {
+  if (params.channelKey !== "matrix") {
     return DEFAULT_ACCOUNT_ID;
   }
   const accounts = params.channel.accounts ?? {};
@@ -606,6 +610,7 @@ export function moveSingleAccountChannelSectionToDefaultAccount(params: {
 
   const accounts = base.accounts ?? {};
   if (Object.keys(accounts).length > 0) {
+    if (params.channelKey !== "matrix") {
       return params.cfg;
     }
     const keysToMove = resolveSingleAccountKeysToMove({

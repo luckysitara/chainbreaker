@@ -52,6 +52,7 @@ type ChannelSetupWizardCredentialValues = Partial<Record<string, string>>;
 
 export type ChannelSetupWizardNote = {
   title: string;
+  lines: string[];
   shouldShow?: (params: {
     cfg: ChainbreakerConfig;
     accountId: string;
@@ -479,6 +480,7 @@ export function buildChannelSetupWizardAdapterFromSetupWizard(params: {
             })
           : Boolean(wizard.introNote));
       if (shouldShowIntro && wizard.introNote) {
+        await prompter.note(wizard.introNote.lines.join("\n"), wizard.introNote.title);
       }
 
       if (wizard.prepare) {
@@ -856,6 +858,7 @@ export function buildChannelSetupWizardAdapterFromSetupWizard(params: {
             })
           : true);
       if (shouldShowCompletionNote && wizard.completionNote) {
+        await prompter.note(wizard.completionNote.lines.join("\n"), wizard.completionNote.title);
       }
 
       return { cfg: next, accountId };

@@ -11,11 +11,14 @@ describe("createRestrictSendersChannelSecurity", () => {
       dmPolicy?: string;
       groupPolicy?: GroupPolicy;
     }>({
+      channelKey: "line",
       resolveDmPolicy: (account) => account.dmPolicy,
       resolveDmAllowFrom: (account) => account.allowFrom,
       resolveGroupPolicy: (account) => account.groupPolicy,
       surface: "LINE groups",
       openScope: "any member in groups",
+      groupPolicyPath: "channels.line.groupPolicy",
+      groupAllowFromPath: "channels.line.groupAllowFrom",
       mentionGated: false,
       policyPathSuffix: "dmPolicy",
     });
@@ -27,15 +30,21 @@ describe("createRestrictSendersChannelSecurity", () => {
         account: {
           accountId: "default",
           dmPolicy: "allowlist",
+          allowFrom: ["line:user:abc"],
         },
       }),
     ).toEqual({
       policy: "allowlist",
+      allowFrom: ["line:user:abc"],
+      policyPath: "channels.line.dmPolicy",
+      allowFromPath: "channels.line.",
+      approveHint: formatPairingApproveHint("line"),
       normalizeEntry: undefined,
     });
 
     expect(
       security.collectWarnings?.({
+        cfg: { channels: { line: {} } } as never,
         accountId: "default",
         account: {
           accountId: "default",
@@ -43,6 +52,7 @@ describe("createRestrictSendersChannelSecurity", () => {
         },
       }),
     ).toEqual([
+      '- LINE groups: groupPolicy="open" allows any member in groups to trigger. Set channels.line.groupPolicy="allowlist" + channels.line.groupAllowFrom to restrict senders.',
     ]);
   });
 });

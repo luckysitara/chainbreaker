@@ -427,6 +427,7 @@ describe("createLaneTextDeliverer", () => {
     expect(harness.markDelivered).not.toHaveBeenCalled();
   });
 
+  it("does not use DM draft final shortcut when inline buttons are present", async () => {
     const answerStream = createTestDraftStream({ previewMode: "draft" });
     const harness = createHarness({
       answerStream: answerStream as DraftLaneState["stream"],

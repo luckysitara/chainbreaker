@@ -4,9 +4,6 @@ import {
   loadBundledPluginTestApiSync,
 } from "../src/test-utils/bundled-plugin-public-surface.js";
 
-}>({
-  artifactBasename: "src/outbound-adapter.js",
-});
 export const { telegramOutbound } = loadBundledPluginPublicSurfaceSync<{
   telegramOutbound: ChannelOutboundAdapter;
 }>({

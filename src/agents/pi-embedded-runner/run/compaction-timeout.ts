@@ -6,8 +6,11 @@ export type CompactionTimeoutSignal = {
   isCompactionInFlight: boolean;
 };
 
+export function shouldFlagCompactionTimeout(signal: CompactionTimeoutSignal): boolean {
+  if (!signal.isTimeout) {
     return false;
   }
+  return signal.isCompactionPendingOrRetrying || signal.isCompactionInFlight;
 }
 
 export function resolveRunTimeoutDuringCompaction(params: {

@@ -7,6 +7,7 @@ import type { OriginatingChannelType } from "../templating.js";
 import { SILENT_REPLY_TOKEN } from "../tokens.js";
 import type { ReplyPayload } from "../types.js";
 import { formatBunFetchSocketError, isBunFetchSocketError } from "./agent-runner-utils.js";
+import { createBlockReplyContentKey, type BlockReplyPipeline } from "./block-reply-pipeline.js";
 import {
   resolveOriginAccountId,
   resolveOriginMessageProvider,
@@ -92,6 +93,8 @@ export async function buildReplyPayloads(params: {
   didLogHeartbeatStrip: boolean;
   silentExpected?: boolean;
   blockStreamingEnabled: boolean;
+  blockReplyPipeline: BlockReplyPipeline | null;
+  /** Payload keys sent directly (not via pipeline) during tool flush. */
   directlySentBlockKeys?: Set<string>;
   replyToMode: ReplyToMode;
   replyToChannel?: OriginatingChannelType;
@@ -157,6 +160,8 @@ export async function buildReplyPayloads(params: {
   // If streaming aborted (e.g., timeout), fall back to final payloads.
   const shouldDropFinalPayloads =
     params.blockStreamingEnabled &&
+    Boolean(params.blockReplyPipeline?.didStream()) &&
+    !params.blockReplyPipeline?.isAborted();
   const messagingToolSentTexts = params.messagingToolSentTexts ?? [];
   const messagingToolSentTargets = params.messagingToolSentTargets ?? [];
   const shouldCheckMessagingToolDedupe =
@@ -206,10 +211,12 @@ export async function buildReplyPayloads(params: {
         sentMediaUrls: messagingToolSentMediaUrls,
       })
     : dedupedPayloads;
+  // Filter out payloads already sent via pipeline or directly during tool flush.
   const filteredPayloads = shouldDropFinalPayloads
     ? []
     : params.blockStreamingEnabled
       ? mediaFilteredPayloads.filter(
+          (payload) => !params.blockReplyPipeline?.hasSentPayload(payload),
         )
       : params.directlySentBlockKeys?.size
         ? mediaFilteredPayloads.filter(

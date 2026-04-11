@@ -60,6 +60,7 @@ function consumeLongOptionToken(params: {
   args: string[];
   index: number;
   flag: string;
+  inlineValue: string | undefined;
   allowedValueFlags: ReadonlySet<string>;
   deniedFlags: ReadonlySet<string>;
   knownLongFlagsSet: ReadonlySet<string>;
@@ -77,9 +78,11 @@ function consumeLongOptionToken(params: {
     return -1;
   }
   const expectsValue = params.allowedValueFlags.has(canonicalFlag);
+  if (params.inlineValue !== undefined) {
     if (!expectsValue) {
       return -1;
     }
+    return isSafeLiteralToken(params.inlineValue) ? params.index + 1 : -1;
   }
   if (!expectsValue) {
     return params.index + 1;
@@ -103,6 +106,9 @@ function consumeShortOptionClusterToken(params: {
     if (!params.allowedValueFlags.has(flag)) {
       continue;
     }
+    const inlineValue = params.cluster.slice(j + 1);
+    if (inlineValue) {
+      return isSafeLiteralToken(inlineValue) ? params.index + 1 : -1;
     }
     return isInvalidValueToken(params.args[params.index + 1]) ? -1 : params.index + 2;
   }
@@ -173,6 +179,7 @@ function collectPositionalTokens(args: string[], profile: SafeBinProfile): strin
         args,
         index: i,
         flag: token.flag,
+        inlineValue: token.inlineValue,
         allowedValueFlags,
         deniedFlags,
         knownLongFlagsSet,

@@ -56,6 +56,7 @@ export function registerModelsCli(program: Command) {
     .option("--local", "Filter to local models", false)
     .option("--provider <name>", "Filter by provider")
     .option("--json", "Output JSON", false)
+    .option("--plain", "Plain line output", false)
     .action(async (opts) => {
       await runModelsCommand(async () => {
         await modelsListCommand(opts, defaultRuntime);

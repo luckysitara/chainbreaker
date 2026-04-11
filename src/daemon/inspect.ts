@@ -63,10 +63,14 @@ function detectMarker(content: string): Marker | null {
 }
 
 export function detectMarkerLineWithGateway(contents: string): Marker | null {
+  // Join line continuations (trailing backslash) into single lines
   const lower = contents.replace(/\\\r?\n\s*/g, " ").toLowerCase();
+  for (const line of lower.split(/\r?\n/)) {
+    if (!line.includes("gateway")) {
       continue;
     }
     for (const marker of EXTRA_MARKERS) {
+      if (line.includes(marker)) {
         return marker;
       }
     }
@@ -279,15 +283,20 @@ function parseSchtasksList(output: string): ScheduledTaskInfo[] {
   let current: ScheduledTaskInfo | null = null;
 
   for (const rawLine of output.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) {
       if (current) {
         tasks.push(current);
         current = null;
       }
       continue;
     }
+    const idx = line.indexOf(":");
     if (idx <= 0) {
       continue;
     }
+    const key = line.slice(0, idx).trim().toLowerCase();
+    const value = line.slice(idx + 1).trim();
     if (!value) {
       continue;
     }

@@ -30,6 +30,7 @@ import { SILENT_REPLY_TOKEN } from "../tokens.js";
 import type { GetReplyOptions, ReplyPayload } from "../types.js";
 import { applySessionHints } from "./body.js";
 import type { buildCommandContext } from "./commands.js";
+import type { InlineDirectives } from "./directive-handling.js";
 import { buildGroupChatContext, buildGroupIntro } from "./groups.js";
 import { buildInboundMetaSystemPrompt, buildInboundUserContextPrefix } from "./inbound-meta.js";
 import type { createModelSelectionState } from "./model-selection.js";
@@ -164,6 +165,7 @@ type RunPreparedReplyParams = {
   command: ReturnType<typeof buildCommandContext>;
   commandSource?: string;
   allowTextCommands: boolean;
+  directives: InlineDirectives;
   defaultActivation: Parameters<typeof buildGroupIntro>[0]["defaultActivation"];
   resolvedThinkLevel: ThinkLevel | undefined;
   resolvedVerboseLevel: VerboseLevel | undefined;
@@ -176,15 +178,18 @@ type RunPreparedReplyParams = {
   blockReplyChunking?: {
     minChars: number;
     maxChars: number;
+    breakPreference: "paragraph" | "newline" | "sentence";
     flushOnParagraph?: boolean;
   };
   resolvedBlockStreamingBreak: "text_end" | "message_end";
   modelState: Awaited<ReturnType<typeof createModelSelectionState>>;
   provider: string;
   model: string;
+  perMessageQueueMode?: InlineDirectives["queueMode"];
   perMessageQueueOptions?: {
     debounceMs?: number;
     cap?: number;
+    dropPolicy?: InlineDirectives["dropPolicy"];
   };
   typing: TypingController;
   opts?: GetReplyOptions;
@@ -419,6 +424,7 @@ export async function runPreparedReply(
   const prefixedBody = [threadContextNote, prefixedBodyBase].filter(Boolean).join("\n\n");
   const mediaNote = buildInboundMediaNote(ctx);
   const mediaReplyHint = mediaNote
+    ? "To send an image back, prefer the message tool (media/path/filePath). If you must inline, use MEDIA:https://example.com/image.jpg (spaces ok, quote if needed) or a safe relative path like MEDIA:./image.jpg. Avoid absolute paths (MEDIA:/...) and ~ paths — they are blocked for security. Keep caption in the text body."
     : undefined;
   let prefixedCommandBody = mediaNote
     ? [mediaNote, mediaReplyHint, prefixedBody ?? ""].filter(Boolean).join("\n").trim()
@@ -477,6 +483,8 @@ export async function runPreparedReply(
     cfg,
     channel: sessionCtx.Provider,
     sessionEntry,
+    inlineMode: perMessageQueueMode,
+    inlineOptions: perMessageQueueOptions,
   });
   const {
     abortEmbeddedPiRun,

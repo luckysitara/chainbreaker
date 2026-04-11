@@ -50,8 +50,10 @@ type ModelsJson = {
 
 const MINIMAX_ENV_KEY = "MINIMAX_API_KEY";
 const MINIMAX_MODEL_ID = "MiniMax-M2.7";
+const MINIMAX_TEST_KEY = "sk-minimax-test";
 
 const baseMinimaxProvider = {
+  baseUrl: "https://api.minimax.io/anthropic",
   api: "anthropic-messages",
 } as const;
 
@@ -69,11 +71,10 @@ async function withMinimaxApiKey(run: () => Promise<void>) {
   }
 }
 
-async function generateAndReadMinimaxModel(
-  cfg: ChainbreakerConfig,
-): Promise<ModelEntry | undefined> {
+async function generateAndReadMinimaxModel(cfg: ChainbreakerConfig): Promise<ModelEntry | undefined> {
   await ensureChainbreakerModelsJson(cfg);
   const parsed = await readGeneratedModelsJson<ModelsJson>();
+  return parsed.providers.minimax?.models?.find((model) => model.id === MINIMAX_MODEL_ID);
 }
 
 describe("models-config: explicit reasoning override", () => {
@@ -85,6 +86,7 @@ describe("models-config: explicit reasoning override", () => {
         const cfg: ChainbreakerConfig = {
           models: {
             providers: {
+              minimax: {
                 ...baseMinimaxProvider,
                 models: [
                   {
@@ -127,6 +129,7 @@ describe("models-config: explicit reasoning override", () => {
         const cfg: ChainbreakerConfig = {
           models: {
             providers: {
+              minimax: {
                 ...baseMinimaxProvider,
                 // @ts-expect-error Intentional: emulate user config omitting reasoning.
                 models: [modelWithoutReasoning],

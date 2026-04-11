@@ -3,12 +3,14 @@ import { createHookRunnerWithRegistry } from "./hooks.test-helpers.js";
 
 const inboundClaimEvent = {
   content: "who are you",
+  channel: "discord",
   accountId: "default",
   conversationId: "channel:1",
   isGroup: true,
 };
 
 const inboundClaimCtx = {
+  channelId: "discord",
   accountId: "default",
   conversationId: "channel:1",
 };

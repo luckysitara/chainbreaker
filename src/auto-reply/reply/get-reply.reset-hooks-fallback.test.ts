@@ -4,6 +4,7 @@ import "./get-reply.test-runtime-mocks.js";
 
 const mocks = vi.hoisted(() => ({
   resolveReplyDirectives: vi.fn(),
+  handleInlineActions: vi.fn(),
   emitResetCommandHooks: vi.fn(),
   initSessionState: vi.fn(),
 }));
@@ -16,6 +17,8 @@ vi.mock("./commands-core.runtime.js", () => ({
 vi.mock("./get-reply-directives.js", () => ({
   resolveReplyDirectives: (...args: unknown[]) => mocks.resolveReplyDirectives(...args),
 }));
+vi.mock("./get-reply-inline-actions.js", () => ({
+  handleInlineActions: (...args: unknown[]) => mocks.handleInlineActions(...args),
 }));
 vi.mock("./session.js", () => ({
   initSessionState: (...args: unknown[]) => mocks.initSessionState(...args),
@@ -87,6 +90,7 @@ function createContinueDirectivesResult(resetHookTriggered: boolean) {
         resolveDefaultThinkingLevel: async () => undefined,
       },
       contextTokens: 0,
+      inlineStatusRequested: false,
       directiveAck: undefined,
       perMessageQueueMode: undefined,
       perMessageQueueOptions: undefined,
@@ -98,6 +102,7 @@ describe("getReplyFromConfig reset-hook fallback", () => {
   beforeEach(async () => {
     await loadFreshGetReplyModuleForTest();
     mocks.resolveReplyDirectives.mockReset();
+    mocks.handleInlineActions.mockReset();
     mocks.emitResetCommandHooks.mockReset();
     mocks.initSessionState.mockReset();
 
@@ -123,6 +128,8 @@ describe("getReplyFromConfig reset-hook fallback", () => {
     mocks.resolveReplyDirectives.mockResolvedValue(createContinueDirectivesResult(false));
   });
 
+  it("emits reset hooks when inline actions return early without marking resetHookTriggered", async () => {
+    mocks.handleInlineActions.mockResolvedValue({ kind: "reply", reply: undefined });
 
     await getReplyFromConfig(buildNativeResetContext(), undefined, {});
 
@@ -136,6 +143,7 @@ describe("getReplyFromConfig reset-hook fallback", () => {
   });
 
   it("does not emit fallback hooks when resetHookTriggered is already set", async () => {
+    mocks.handleInlineActions.mockResolvedValue({ kind: "reply", reply: undefined });
     mocks.resolveReplyDirectives.mockResolvedValue(createContinueDirectivesResult(true));
 
     await getReplyFromConfig(buildNativeResetContext(), undefined, {});

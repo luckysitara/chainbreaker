@@ -27,7 +27,16 @@ export type BuiltInAuthChoice =
   | "apiKey"
   | "gemini-api-key"
   | "google-gemini-cli"
+  | "zai-api-key"
+  | "zai-coding-global"
+  | "zai-coding-cn"
+  | "zai-global"
+  | "zai-cn"
   | "xiaomi-api-key"
+  | "minimax-global-oauth"
+  | "minimax-global-api"
+  | "minimax-cn-oauth"
+  | "minimax-cn-api"
   | "opencode-zen"
   | "opencode-go"
   | "github-copilot"
@@ -58,8 +67,10 @@ export type BuiltInAuthChoiceGroupId =
   | "ai-gateway"
   | "cloudflare-ai-gateway"
   | "moonshot"
+  | "zai"
   | "xiaomi"
   | "opencode"
+  | "minimax"
   | "synthetic"
   | "venice"
   | "mistral"
@@ -117,7 +128,9 @@ export type OnboardOptions = {
   moonshotApiKey?: string;
   kimiCodeApiKey?: string;
   geminiApiKey?: string;
+  zaiApiKey?: string;
   xiaomiApiKey?: string;
+  minimaxApiKey?: string;
   syntheticApiKey?: string;
   veniceApiKey?: string;
   togetherApiKey?: string;

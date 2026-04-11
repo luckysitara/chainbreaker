@@ -11,6 +11,7 @@ export {
 } from "./webhook-memory-guards.js";
 export {
   applyBasicWebhookRequestGuards,
+  beginWebhookRequestPipelineOrReject,
   createWebhookInFlightLimiter,
   isJsonContentType,
   isRequestBodyLimitError,
@@ -32,6 +33,7 @@ export {
   resolveWebhookTargetWithAuthOrReject,
   resolveWebhookTargetWithAuthOrRejectSync,
   resolveWebhookTargets,
+  withResolvedWebhookRequestPipeline,
   type RegisterWebhookPluginRouteOptions,
   type RegisterWebhookTargetOptions,
   type RegisteredWebhookTarget,

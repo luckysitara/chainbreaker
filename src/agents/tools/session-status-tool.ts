@@ -128,6 +128,7 @@ function formatSessionTaskLine(params: {
   if (!task) {
     return undefined;
   }
+  const headline =
     snapshot.activeCount > 0
       ? `${snapshot.activeCount} active`
       : snapshot.recentFailureCount > 0
@@ -135,6 +136,7 @@ function formatSessionTaskLine(params: {
         : `latest ${task.status.replaceAll("_", " ")}`;
   const title = formatTaskStatusTitle(task);
   const detail = formatTaskStatusDetail(task);
+  const parts = [headline, task.runtime, title, detail].filter(Boolean);
   return parts.length ? `📌 Tasks: ${parts.join(" · ")}` : undefined;
 }
 

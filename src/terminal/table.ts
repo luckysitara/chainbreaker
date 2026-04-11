@@ -70,6 +70,8 @@ function wrapLine(text: string, width: number): string[] {
   }
 
   // ANSI-aware wrapping: never split inside ANSI SGR/OSC-8 sequences.
+  // We don't attempt to re-open styling per line; terminals keep SGR state
+  // across newlines, so as long as we don't corrupt escape sequences we're safe.
   const ESC = "\u001b";
 
   type Token = { kind: "ansi" | "char"; value: string };
@@ -153,6 +155,7 @@ function wrapLine(text: string, width: number): string[] {
     .join("");
   const coreTokens = tokens.slice(firstCharIndex, lastCharIndex + 1);
 
+  const lines: string[] = [];
   const isBreakChar = (ch: string) =>
     ch === " " || ch === "\t" || ch === "/" || ch === "-" || ch === "_" || ch === ".";
   const isSpaceChar = (ch: string) => ch === " " || ch === "\t";
@@ -172,6 +175,7 @@ function wrapLine(text: string, width: number): string[] {
     if (cleaned.trim().length === 0) {
       return;
     }
+    lines.push(cleaned);
   };
 
   const trimLeadingSpaces = (tokens: Token[]) => {
@@ -247,11 +251,17 @@ function wrapLine(text: string, width: number): string[] {
   }
 
   flushAt(buf.length);
+  if (!lines.length) {
     return [""];
   }
   if (!prefixAnsi && !suffixAnsi) {
+    return lines;
   }
+  return lines.map((line) => {
+    if (!line) {
+      return line;
     }
+    return `${prefixAnsi}${line}${suffixAnsi}`;
   });
 }
 
@@ -281,6 +291,8 @@ export function renderTable(opts: RenderTableOptions): string {
   if (border === "none") {
     const columns = opts.columns;
     const header = columns.map((c) => c.header).join(" | ");
+    const lines = [header, ...rows.map((r) => columns.map((c) => r[c.key] ?? "").join(" | "))];
+    return `${lines.join("\n")}\n`;
   }
 
   const padding = Math.max(0, opts.padding ?? 1);
@@ -433,6 +445,8 @@ export function renderTable(opts: RenderTableOptions): string {
     const height = Math.max(...wrapped.map((w) => w.length));
     const out: string[] = [];
     for (let li = 0; li < height; li += 1) {
+      const parts = wrapped.map((lines, i) => {
+        const raw = lines[li] ?? "";
         const aligned = padCell(raw, contentWidthFor(i), columns[i]?.align ?? "left");
         return `${padStr}${aligned}${padStr}`;
       });
@@ -441,6 +455,13 @@ export function renderTable(opts: RenderTableOptions): string {
     return out;
   };
 
+  const lines: string[] = [];
+  lines.push(hLine(box.tl, box.t, box.tr));
+  lines.push(...renderRow({}, true));
+  lines.push(hLine(box.ml, box.m, box.mr));
   for (const row of rows) {
+    lines.push(...renderRow(row, false));
   }
+  lines.push(hLine(box.bl, box.b, box.br));
+  return `${lines.join("\n")}\n`;
 }

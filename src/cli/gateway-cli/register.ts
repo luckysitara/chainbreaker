@@ -63,11 +63,13 @@ function resolveGatewayRpcOptions<T extends { token?: string; password?: string 
 function renderCostUsageSummary(summary: CostUsageSummary, days: number, rich: boolean): string[] {
   const totalCost = formatUsd(summary.totals.totalCost) ?? "$0.00";
   const totalTokens = formatTokenCount(summary.totals.totalTokens) ?? "0";
+  const lines = [
     colorize(rich, theme.heading, `Usage cost (${days} days)`),
     `${colorize(rich, theme.muted, "Total:")} ${totalCost} · ${totalTokens} tokens`,
   ];
 
   if (summary.totals.missingCostEntries > 0) {
+    lines.push(
       `${colorize(rich, theme.muted, "Missing entries:")} ${summary.totals.missingCostEntries}`,
     );
   }
@@ -76,10 +78,12 @@ function renderCostUsageSummary(summary: CostUsageSummary, days: number, rich: b
   if (latest) {
     const latestCost = formatUsd(latest.totalCost) ?? "$0.00";
     const latestTokens = formatTokenCount(latest.totalTokens) ?? "0";
+    lines.push(
       `${colorize(rich, theme.muted, "Latest day:")} ${latest.date} · ${latestCost} · ${latestTokens} tokens`,
     );
   }
 
+  return lines;
 }
 
 export function registerGatewayCli(program: Command) {
@@ -149,6 +153,8 @@ export function registerGatewayCli(program: Command) {
           }
           const rich = isRich();
           const summary = result as CostUsageSummary;
+          for (const line of renderCostUsageSummary(summary, days, rich)) {
+            defaultRuntime.log(line);
           }
         }, "Gateway usage cost failed");
       }),
@@ -175,6 +181,8 @@ export function registerGatewayCli(program: Command) {
             `${colorize(rich, theme.success, "OK")}${durationMs != null ? ` (${durationMs}ms)` : ""}`,
           );
           if (obj.channels && typeof obj.channels === "object") {
+            for (const line of formatHealthChannelLines(obj as HealthSummary)) {
+              defaultRuntime.log(styleHealthChannelLine(line, rich));
             }
           }
         });
@@ -257,6 +265,8 @@ export function registerGatewayCli(program: Command) {
         }
 
         for (const beacon of deduped) {
+          for (const line of renderBeaconLines(beacon, rich)) {
+            defaultRuntime.log(line);
           }
         }
       }, "gateway discover failed");

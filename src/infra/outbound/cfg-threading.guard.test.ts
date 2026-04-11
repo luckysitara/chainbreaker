@@ -28,9 +28,11 @@ function listCoreOutboundEntryFiles(): string[] {
 
 function listExtensionFiles(): {
   adapterEntrypoints: string[];
+  inlineChannelEntrypoints: string[];
 } {
   const extensionsRoot = path.join(repoRoot, "extensions");
   const adapterEntrypoints: string[] = [];
+  const inlineChannelEntrypoints: string[] = [];
 
   for (const entry of readdirSync(extensionsRoot, { withFileTypes: true })) {
     if (!entry.isDirectory()) {
@@ -48,17 +50,22 @@ function listExtensionFiles(): {
     }
     const source = readFileSync(channelPath, "utf8");
     if (/\boutbound\s*:\s*\{/.test(source)) {
+      inlineChannelEntrypoints.push(toPosix(path.join("extensions", entry.name, "src/channel.ts")));
     }
   }
 
   return {
     adapterEntrypoints: adapterEntrypoints.toSorted(),
+    inlineChannelEntrypoints: inlineChannelEntrypoints.toSorted(),
   };
 }
 
 function listHighRiskRuntimeCfgFiles(): string[] {
   return [
     bundledPluginFile("telegram", "src/action-runtime.ts"),
+    bundledPluginFile("discord", "src/monitor/reply-delivery.ts"),
+    bundledPluginFile("discord", "src/monitor/thread-bindings.discord-api.ts"),
+    bundledPluginFile("discord", "src/monitor/thread-bindings.manager.ts"),
   ];
 }
 
@@ -69,10 +76,12 @@ function extractOutboundBlock(source: string, file: string): string {
   expect(braceStart, `${file} should define outbound object`).toBeGreaterThanOrEqual(0);
 
   let depth = 0;
+  let state: "code" | "single" | "double" | "template" | "lineComment" | "blockComment" = "code";
   for (let i = braceStart; i < source.length; i += 1) {
     const current = source[i];
     const next = source[i + 1];
 
+    if (state === "lineComment") {
       if (current === "\n") {
         state = "code";
       }
@@ -117,6 +126,7 @@ function extractOutboundBlock(source: string, file: string): string {
     }
 
     if (current === "/" && next === "/") {
+      state = "lineComment";
       i += 1;
       continue;
     }
@@ -166,6 +176,9 @@ describe("outbound cfg-threading guard", () => {
     }
   });
 
+  it("keeps inline channel outbound blocks free of loadConfig calls", () => {
+    const inlineFiles = listExtensionFiles().inlineChannelEntrypoints;
+    for (const file of inlineFiles) {
       const source = readRepoFile(file);
       const outboundBlock = extractOutboundBlock(source, file);
       expect(outboundBlock, `${file} outbound block must not call loadConfig`).not.toMatch(

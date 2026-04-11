@@ -192,17 +192,25 @@ async function resolveProviderUsageAuthFallback(params: {
       const auth = await resolveOAuthToken(params);
       return auth ? { ...auth, token: parseGoogleUsageToken(auth.token) } : null;
     }
+    case "zai": {
       const apiKey = resolveProviderApiKeyFromConfigAndStore({
         state: params.state,
+        providerIds: ["zai", "z-ai"],
         envDirect: [params.state.env.ZAI_API_KEY, params.state.env.Z_AI_API_KEY],
       });
       if (apiKey) {
+        return { provider: "zai", token: apiKey };
       }
+      const legacyToken = resolveLegacyPiAgentAccessToken(params.state.env, ["z-ai", "zai"]);
+      return legacyToken ? { provider: "zai", token: legacyToken } : null;
     }
+    case "minimax": {
       const apiKey = resolveProviderApiKeyFromConfigAndStore({
         state: params.state,
+        providerIds: ["minimax"],
         envDirect: [params.state.env.MINIMAX_CODE_PLAN_KEY, params.state.env.MINIMAX_API_KEY],
       });
+      return apiKey ? { provider: "minimax", token: apiKey } : null;
     }
     case "xiaomi": {
       const apiKey = resolveProviderApiKeyFromConfigAndStore({

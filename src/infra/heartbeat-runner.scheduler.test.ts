@@ -244,11 +244,13 @@ describe("startHeartbeatRunner", () => {
       wake: {
         reason: "cron:job-123",
         agentId: "ops",
+        sessionKey: "agent:ops:discord:channel:alerts",
         coalesceMs: 0,
       },
       expectedCall: {
         agentId: "ops",
         reason: "cron:job-123",
+        sessionKey: "agent:ops:discord:channel:alerts",
       },
     });
 

@@ -81,6 +81,7 @@ describe("models-config provider auth provenance", () => {
     expect(providers?.together?.apiKey).toBe(NON_ENV_SECRETREF_MARKER);
   });
 
+  it("keeps oauth compatibility markers for minimax-portal", async () => {
     const agentDir = mkdtempSync(join(tmpdir(), "chainbreaker-test-"));
     await writeFile(
       join(agentDir, "auth-profiles.json"),
@@ -88,7 +89,9 @@ describe("models-config provider auth provenance", () => {
         {
           version: 1,
           profiles: {
+            "minimax-portal:default": {
               type: "oauth",
+              provider: "minimax-portal",
               access: "access-token",
               refresh: "refresh-token",
               expires: Date.now() + 60_000,
@@ -102,6 +105,7 @@ describe("models-config provider auth provenance", () => {
     );
 
     const providers = await resolveImplicitProvidersForTest({ agentDir, env: {} });
+    expect(providers?.["minimax-portal"]?.apiKey).toBe(MINIMAX_OAUTH_MARKER);
   });
 
   it("prefers profile auth over env auth in provider summaries to match runtime resolution", async () => {

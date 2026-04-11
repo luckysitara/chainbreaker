@@ -1,4 +1,5 @@
 /**
+ * Telegram inline button utilities for model selection.
  *
  * Callback data patterns (max 64 bytes for Telegram):
  * - mdl_prov              - show providers list

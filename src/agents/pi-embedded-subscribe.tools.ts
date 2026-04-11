@@ -354,6 +354,7 @@ export function extractToolErrorMessage(result: unknown): string | undefined {
       return fromJson;
     }
   } catch {
+    // Fall through to first-line text fallback.
   }
   return normalizeToolErrorText(text);
 }

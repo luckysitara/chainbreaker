@@ -16,6 +16,7 @@ vi.mock("../infra/shell-env.js", async (importOriginal) => {
 });
 
 type ToolWithExecute = {
+  execute: (toolCallId: string, args: unknown, signal?: AbortSignal) => Promise<unknown>;
 };
 type CodingToolsInput = NonNullable<Parameters<typeof createChainbreakerCodingTools>[0]>;
 
@@ -62,11 +63,7 @@ describe("tools.fs.workspaceOnly", () => {
       await fs.writeFile(path.join(agentRoot, "secret.txt"), "shh", "utf8");
 
       const cfg = { tools: { fs: { workspaceOnly: true } } } as unknown as ChainbreakerConfig;
-      const tools = createChainbreakerCodingTools({
-        sandbox,
-        workspaceDir: sandboxRoot,
-        config: cfg,
-      });
+      const tools = createChainbreakerCodingTools({ sandbox, workspaceDir: sandboxRoot, config: cfg });
       const { readTool, writeTool, editTool } = expectReadWriteEditTools(tools);
 
       await expect(readTool?.execute("t1", { path: "/agent/secret.txt" })).rejects.toThrow(

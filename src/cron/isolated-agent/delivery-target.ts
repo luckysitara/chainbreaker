@@ -158,13 +158,13 @@ export async function resolveDeliveryTarget(
     const configuredAllowFromRaw =
       resolveWhatsAppAccount({ cfg, accountId: resolvedAccountId }).allowFrom ?? [];
     const configuredAllowFrom = configuredAllowFromRaw
-      .map((entry: unknown) => String(entry).trim())
-      .filter((entry: string): entry is string => Boolean(entry) && entry !== "*")
-      .map((entry: string) => normalizeWhatsAppTarget(entry))
-      .filter((entry: string | null | undefined): entry is string => Boolean(entry));
+      .map((entry) => String(entry).trim())
+      .filter((entry) => entry && entry !== "*")
+      .map((entry) => normalizeWhatsAppTarget(entry))
+      .filter((entry): entry is string => Boolean(entry));
     const storeAllowFrom = readChannelAllowFromStoreSync("whatsapp", process.env, resolvedAccountId)
-      .map((entry: string) => normalizeWhatsAppTarget(entry))
-      .filter((entry: string | null | undefined): entry is string => Boolean(entry));
+      .map((entry) => normalizeWhatsAppTarget(entry))
+      .filter((entry): entry is string => Boolean(entry));
     allowFromOverride = [...new Set([...configuredAllowFrom, ...storeAllowFrom])];
 
     if (toCandidate && mode === "implicit" && allowFromOverride.length > 0) {

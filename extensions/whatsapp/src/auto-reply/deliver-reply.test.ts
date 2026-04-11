@@ -102,6 +102,7 @@ describe("deliverWebReply", () => {
     const msg = makeMsg();
 
     await deliverWebReply({
+      replyResult: { text: "Intro line\nReasoning: appears in content but is not a prefix" },
       msg,
       maxMediaBytes: 1024 * 1024,
       textLimit: 200,
@@ -111,6 +112,7 @@ describe("deliverWebReply", () => {
 
     expect(msg.reply).toHaveBeenCalledTimes(1);
     expect(msg.reply).toHaveBeenCalledWith(
+      "Intro line\nReasoning: appears in content but is not a prefix",
     );
   });
 

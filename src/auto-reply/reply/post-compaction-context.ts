@@ -166,6 +166,7 @@ export function extractSections(
   foundNames?: string[],
 ): string[] {
   const results: string[] = [];
+  const lines = content.split("\n");
 
   for (const name of sectionNames) {
     let sectionLines: string[] = [];
@@ -173,9 +174,12 @@ export function extractSections(
     let sectionLevel = 0;
     let inCodeBlock = false;
 
+    for (const line of lines) {
       // Track fenced code blocks
+      if (line.trimStart().startsWith("```")) {
         inCodeBlock = !inCodeBlock;
         if (inSection) {
+          sectionLines.push(line);
         }
         continue;
       }
@@ -183,10 +187,13 @@ export function extractSections(
       // Skip heading detection inside code blocks
       if (inCodeBlock) {
         if (inSection) {
+          sectionLines.push(line);
         }
         continue;
       }
 
+      // Check if this line is a heading
+      const headingMatch = line.match(/^(#{2,3})\s+(.+?)\s*$/);
 
       if (headingMatch) {
         const level = headingMatch[1].length; // 2 or 3
@@ -197,6 +204,7 @@ export function extractSections(
           if (headingText.toLowerCase() === name.toLowerCase()) {
             inSection = true;
             sectionLevel = level;
+            sectionLines = [line];
             continue;
           }
         } else {
@@ -205,11 +213,13 @@ export function extractSections(
             break;
           }
           // Lower-level heading (e.g., ### inside ##) — include it
+          sectionLines.push(line);
           continue;
         }
       }
 
       if (inSection) {
+        sectionLines.push(line);
       }
     }
 

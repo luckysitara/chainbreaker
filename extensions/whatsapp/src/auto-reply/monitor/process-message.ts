@@ -4,6 +4,7 @@ import {
   toLocationContext,
 } from "chainbreaker/plugin-sdk/channel-inbound";
 import { formatInboundEnvelope } from "chainbreaker/plugin-sdk/channel-inbound";
+import { createChannelReplyPipeline } from "chainbreaker/plugin-sdk/channel-reply-pipeline";
 import { shouldComputeCommandAuthorized } from "chainbreaker/plugin-sdk/command-auth";
 import type { loadConfig } from "chainbreaker/plugin-sdk/config-runtime";
 import { resolveMarkdownTableMode } from "chainbreaker/plugin-sdk/config-runtime";
@@ -47,6 +48,7 @@ import { elide } from "../util.js";
 import { maybeSendAckReaction } from "./ack-reaction.js";
 import { formatGroupMembers } from "./group-members.js";
 import { trackBackgroundTask, updateLastRouteInBackground } from "./last-route.js";
+import { buildInboundLine } from "./message-line.js";
 
 export type GroupHistoryEntry = {
   sender: string;
@@ -277,6 +279,7 @@ export async function processMessage(params: {
     ? await resolveWhatsAppCommandAuthorized({ cfg: params.cfg, msg: params.msg })
     : undefined;
   const configuredResponsePrefix = params.cfg.messages?.responsePrefix;
+  const { onModelSelected, ...replyPipeline } = createChannelReplyPipeline({
     cfg: params.cfg,
     agentId: params.route.agentId,
     channel: "whatsapp",
@@ -287,6 +290,7 @@ export async function processMessage(params: {
     Boolean(self.e164) &&
     normalizeE164(params.msg.from) === normalizeE164(self.e164 ?? "");
   const responsePrefix =
+    replyPipeline.responsePrefix ??
     (configuredResponsePrefix === undefined && isSelfChat
       ? resolveIdentityNamePrefix(params.cfg, params.route.agentId)
       : undefined);
@@ -400,6 +404,7 @@ export async function processMessage(params: {
     cfg: params.cfg,
     replyResolver: params.replyResolver,
     dispatcherOptions: {
+      ...replyPipeline,
       responsePrefix,
       onHeartbeatStrip: () => {
         if (!didLogHeartbeatStrip) {

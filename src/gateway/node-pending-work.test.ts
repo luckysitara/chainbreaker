@@ -12,9 +12,11 @@ describe("node pending work", () => {
     resetNodePendingWorkForTests();
   });
 
+  it("returns a baseline status request even when no explicit work is queued", () => {
     const drained = drainNodePendingWork("node-1");
     expect(drained.items).toEqual([
       expect.objectContaining({
+        id: "baseline-status",
         type: "status.request",
         priority: "default",
       }),
@@ -35,12 +37,15 @@ describe("node pending work", () => {
 
     const acked = acknowledgeNodePendingWork({
       nodeId: "node-2",
+      itemIds: [first.item.id, "baseline-status"],
     });
     expect(acked.removedItemIds).toEqual([first.item.id]);
 
     const afterAck = drainNodePendingWork("node-2");
+    expect(afterAck.items.map((item) => item.id)).toEqual(["baseline-status"]);
   });
 
+  it("keeps hasMore true when the baseline status item is deferred by maxItems", () => {
     enqueueNodePendingWork({ nodeId: "node-3", type: "location.request" });
 
     const drained = drainNodePendingWork("node-3", { maxItems: 1 });
@@ -53,7 +58,9 @@ describe("node pending work", () => {
     expect(getNodePendingWorkStateCountForTests()).toBe(0);
 
     const drained = drainNodePendingWork("node-4");
+    const acked = acknowledgeNodePendingWork({ nodeId: "node-4", itemIds: ["baseline-status"] });
 
+    expect(drained.items.map((item) => item.id)).toEqual(["baseline-status"]);
     expect(acked).toEqual({ revision: 0, removedItemIds: [] });
     expect(getNodePendingWorkStateCountForTests()).toBe(0);
   });

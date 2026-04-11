@@ -36,7 +36,15 @@ export {
   normalizeTelegramCommandName,
   resolveTelegramCustomCommands,
 } from "../config/telegram-custom-commands.js";
-export { resolveTelegramPreviewStreamMode, type StreamingMode } from "../config/streaming.js";
+export {
+  mapStreamingModeToSlackLegacyDraftStreamMode,
+  resolveDiscordPreviewStreamMode,
+  resolveSlackNativeStreaming,
+  resolveSlackStreamingMode,
+  resolveTelegramPreviewStreamMode,
+  type SlackLegacyDraftStreamMode,
+  type StreamingMode,
+} from "../config/streaming.js";
 export { resolveActiveTalkProviderConfig } from "../config/talk.js";
 export { resolveAgentMaxConcurrent } from "../config/agent-limits.js";
 export { loadCronStore, resolveCronStorePath, saveCronStore } from "../cron/store.js";
@@ -48,16 +56,30 @@ export {
   resolveRequiredConfiguredSecretRefInputString,
 } from "../gateway/resolve-configured-secret-input-string.js";
 export type {
+  DiscordAccountConfig,
+  DiscordActionConfig,
+  DiscordAutoPresenceConfig,
+  DiscordExecApprovalConfig,
+  DiscordGuildChannelConfig,
+  DiscordGuildEntry,
+  DiscordIntentsConfig,
+  DiscordSlashCommandConfig,
   DmPolicy,
   GroupPolicy,
   MarkdownTableMode,
   ChainbreakerConfig,
   ReplyToMode,
+  SignalReactionNotificationMode,
+  SlackAccountConfig,
+  SlackChannelConfig,
+  SlackReactionNotificationMode,
+  SlackSlashCommandConfig,
   TelegramAccountConfig,
   TelegramActionConfig,
   TelegramDirectConfig,
   TelegramExecApprovalConfig,
   TelegramGroupConfig,
+  TelegramInlineButtonsScope,
   TelegramNetworkConfig,
   TelegramTopicConfig,
   TtsAutoMode,

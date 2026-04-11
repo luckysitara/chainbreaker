@@ -23,6 +23,7 @@ import {
   resolveProviderEndpointLabel,
 } from "./directive-handling.model-picker.js";
 export { resolveModelSelectionFromDirective } from "./directive-handling.model-selection.js";
+import type { InlineDirectives } from "./directive-handling.parse.js";
 
 function pushUniqueCatalogEntry(params: {
   keys: Set<string>;
@@ -186,6 +187,7 @@ function buildModelPickerCatalog(params: {
 }
 
 export async function maybeHandleModelDirectiveInfo(params: {
+  directives: InlineDirectives;
   cfg: ChainbreakerConfig;
   agentDir: string;
   activeAgentId: string;
@@ -305,12 +307,15 @@ export async function maybeHandleModelDirectiveInfo(params: {
   });
   const current = modelRefs.selected.label;
   const defaultLabel = `${params.defaultProvider}/${params.defaultModel}`;
+  const lines = [
     `Current: ${current}${modelRefs.activeDiffers ? " (selected)" : ""}`,
     modelRefs.activeDiffers ? `Active: ${modelRefs.active.label} (runtime)` : null,
     `Default: ${defaultLabel}`,
     `Agent: ${params.activeAgentId}`,
     `Auth file: ${formatPath(resolveAuthStorePathForDisplay(params.agentDir))}`,
+  ].filter((line): line is string => Boolean(line));
   if (params.resetModelOverride) {
+    lines.push(`(previous selection reset to default)`);
   }
 
   const byProvider = new Map<string, ModelPickerCatalogEntry[]>();
@@ -335,10 +340,14 @@ export async function maybeHandleModelDirectiveInfo(params: {
       ? ` endpoint: ${endpoint.endpoint}`
       : " endpoint: default";
     const apiSuffix = endpoint.api ? ` api: ${endpoint.api}` : "";
+    lines.push("");
+    lines.push(`[${provider}]${endpointSuffix}${apiSuffix} auth: ${authLabel}`);
     for (const entry of models) {
       const label = `${provider}/${entry.id}`;
       const aliases = params.aliasIndex.byKey.get(label);
       const aliasSuffix = aliases && aliases.length > 0 ? ` (${aliases.join(", ")})` : "";
+      lines.push(`  • ${label}${aliasSuffix}`);
     }
   }
+  return { text: lines.join("\n") };
 }

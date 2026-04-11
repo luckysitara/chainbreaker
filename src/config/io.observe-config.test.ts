@@ -48,6 +48,7 @@ describe("config io observe", () => {
           auth: { mode: "token", token: "secret-token" },
         },
         channels: {
+          discord: {
             enabled: true,
             dmPolicy: "pairing",
           },
@@ -67,6 +68,10 @@ describe("config io observe", () => {
       expect(snapshot.config.gateway?.mode).toBe("local");
       await expect(fs.readFile(configPath, "utf-8")).resolves.not.toBe(clobberedRaw);
 
+      const lines = (await fs.readFile(auditPath, "utf-8")).trim().split("\n").filter(Boolean);
+      const observe = lines
+        .map((line) => JSON.parse(line) as Record<string, unknown>)
+        .filter((line) => line.event === "config.observe")
         .at(-1);
 
       expect(observe).toBeDefined();
@@ -123,12 +128,17 @@ describe("config io observe", () => {
       await io.readConfigFileSnapshot();
       await io.readConfigFileSnapshot();
 
+      const lines = (await fs.readFile(auditPath, "utf-8")).trim().split("\n").filter(Boolean);
+      const observeEvents = lines
+        .map((line) => JSON.parse(line) as Record<string, unknown>)
+        .filter((line) => line.event === "config.observe");
 
       expect(observeEvents).toHaveLength(1);
       expect(observeEvents[0]?.restoredFromBackup).toBe(true);
     });
   });
 
+  it("loadConfig auto-restores from backup when only the backup file provides the baseline", async () => {
     await withSuiteHome(async (home) => {
       const { io, configPath, auditPath, warn } = await makeIo(home);
 
@@ -151,6 +161,10 @@ describe("config io observe", () => {
       const loaded = io.loadConfig();
       expect(loaded.gateway?.mode).toBe("local");
 
+      const lines = (await fs.readFile(auditPath, "utf-8")).trim().split("\n").filter(Boolean);
+      const observe = lines
+        .map((line) => JSON.parse(line) as Record<string, unknown>)
+        .filter((line) => line.event === "config.observe")
         .at(-1);
 
       expect(observe).toBeDefined();

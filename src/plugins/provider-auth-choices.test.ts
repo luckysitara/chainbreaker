@@ -125,8 +125,12 @@ describe("provider auth choice manifest helpers", () => {
     {
       name: "resolves deprecated auth-choice aliases through manifest metadata",
       plugins: [
+        createManifestPlugin("minimax", [
           createProviderAuthChoice({
+            provider: "minimax",
             method: "api-global",
+            choiceId: "minimax-global-api",
+            deprecatedChoiceIds: ["minimax", "minimax-api"],
           }),
         ]),
       ],
@@ -134,10 +138,17 @@ describe("provider auth choice manifest helpers", () => {
         expectResolvedProviderAuthChoices({
           expectedFlattened: [
             {
+              pluginId: "minimax",
+              providerId: "minimax",
               methodId: "api-global",
+              choiceId: "minimax-global-api",
+              choiceLabel: "minimax-global-api",
+              deprecatedChoiceIds: ["minimax", "minimax-api"],
             },
           ],
           deprecatedChoiceIds: {
+            minimax: "minimax-global-api",
+            "minimax-api": "minimax-global-api",
             openai: undefined,
           },
         }),

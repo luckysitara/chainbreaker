@@ -3,6 +3,7 @@ import type { CommandHandlerResult } from "../commands-types.js";
 import {
   resolveMatrixConversationId,
   resolveMatrixParentConversationId,
+} from "../matrix-context.js";
 import {
   type SubagentsCommandContext,
   isDiscordSurface,
@@ -19,6 +20,7 @@ export async function handleSubagentsUnfocusAction(
 ): Promise<CommandHandlerResult> {
   const { params } = ctx;
   const channel = resolveCommandSurfaceChannel(params);
+  if (channel !== "discord" && channel !== "matrix" && channel !== "telegram") {
     return stopWithText("⚠️ /unfocus is only available on Discord, Matrix, and Telegram.");
   }
 
@@ -64,8 +66,10 @@ export async function handleSubagentsUnfocusAction(
   })();
 
   if (!conversationId) {
+    if (channel === "discord") {
       return stopWithText("⚠️ /unfocus must be run inside a Discord thread.");
     }
+    if (channel === "matrix") {
       return stopWithText("⚠️ /unfocus must be run inside a Matrix thread.");
     }
     return stopWithText(
@@ -83,7 +87,9 @@ export async function handleSubagentsUnfocusAction(
   });
   if (!binding) {
     return stopWithText(
+      channel === "discord"
         ? "ℹ️ This thread is not currently focused."
+        : channel === "matrix"
           ? "ℹ️ This thread is not currently focused."
           : "ℹ️ This conversation is not currently focused.",
     );
@@ -94,7 +100,9 @@ export async function handleSubagentsUnfocusAction(
     typeof binding.metadata?.boundBy === "string" ? binding.metadata.boundBy.trim() : "";
   if (boundBy && boundBy !== "system" && senderId && senderId !== boundBy) {
     return stopWithText(
+      channel === "discord"
         ? `⚠️ Only ${boundBy} can unfocus this thread.`
+        : channel === "matrix"
           ? `⚠️ Only ${boundBy} can unfocus this thread.`
           : `⚠️ Only ${boundBy} can unfocus this conversation.`,
     );
@@ -105,6 +113,7 @@ export async function handleSubagentsUnfocusAction(
     reason: "manual",
   });
   return stopWithText(
+    channel === "discord" || channel === "matrix"
       ? "✅ Thread unfocused."
       : "✅ Conversation unfocused.",
   );

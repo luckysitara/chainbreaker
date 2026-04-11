@@ -8,13 +8,18 @@ import {
 describe("doctor config analysis helpers", () => {
   it("formats config paths predictably", () => {
     expect(formatConfigPath([])).toBe("<root>");
+    expect(formatConfigPath(["channels", "slack", "accounts", 0, "token"])).toBe(
+      "channels.slack.accounts[0].token",
     );
   });
 
   it("resolves nested config targets without throwing", () => {
     const target = resolveConfigPathTarget(
+      { channels: { slack: { accounts: [{ token: "x" }] } } },
+      ["channels", "slack", "accounts", 0],
     );
     expect(target).toEqual({ token: "x" });
+    expect(resolveConfigPathTarget({ channels: null }, ["channels", "slack"])).toBeNull();
   });
 
   it("strips unknown config keys while keeping known values", () => {

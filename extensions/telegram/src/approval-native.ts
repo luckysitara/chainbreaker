@@ -3,10 +3,7 @@ import {
   resolveApprovalRequestOriginTarget,
 } from "chainbreaker/plugin-sdk/approval-runtime";
 import type { ChainbreakerConfig } from "chainbreaker/plugin-sdk/config-runtime";
-import type {
-  ExecApprovalRequest,
-  PluginApprovalRequest,
-} from "chainbreaker/plugin-sdk/infra-runtime";
+import type { ExecApprovalRequest, PluginApprovalRequest } from "chainbreaker/plugin-sdk/infra-runtime";
 import { listTelegramAccountIds } from "./accounts.js";
 import {
   getTelegramExecApprovalApprovers,

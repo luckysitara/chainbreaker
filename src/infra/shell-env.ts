@@ -43,6 +43,8 @@ function readEtcShells(): Set<string> | null {
     const raw = fs.readFileSync("/etc/shells", "utf8");
     const entries = raw
       .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith("#") && path.isAbsolute(line));
     cachedEtcShells = new Set(entries);
   } catch {
     cachedEtcShells = null;

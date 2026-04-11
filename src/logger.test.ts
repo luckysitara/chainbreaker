@@ -123,8 +123,12 @@ describe("globals", () => {
 
 describe("stripRedundantSubsystemPrefixForConsole", () => {
   it.each([
+    { input: "discord: hello", subsystem: "discord", expected: "hello" },
     { input: "WhatsApp: hello", subsystem: "whatsapp", expected: "hello" },
+    { input: "discord gateway: closed", subsystem: "discord", expected: "gateway: closed" },
     {
+      input: "[discord] connection stalled",
+      subsystem: "discord",
       expected: "connection stalled",
     },
   ] as const)("drops known subsystem prefix for $input", ({ input, subsystem, expected }) => {
@@ -132,6 +136,8 @@ describe("stripRedundantSubsystemPrefixForConsole", () => {
   });
 
   it("keeps messages that do not start with the subsystem", () => {
+    expect(stripRedundantSubsystemPrefixForConsole("discordant: hello", "discord")).toBe(
+      "discordant: hello",
     );
   });
 });

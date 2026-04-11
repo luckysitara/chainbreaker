@@ -42,12 +42,14 @@ describe("model-pricing-cache", () => {
       },
       channels: {
         modelByChannel: {
+          slack: {
             C123: "gpt",
           },
         },
       },
       hooks: {
         gmail: { model: "anthropic/claude-opus-4-6" },
+        mappings: [{ model: "zai/glm-5" }],
       },
       tools: {
         subagents: { model: { primary: "anthropic/claude-haiku-4-5" } },
@@ -78,6 +80,7 @@ describe("model-pricing-cache", () => {
         "xai/grok-4",
         "openrouter/anthropic/claude-opus-4-6",
         "openrouter/auto",
+        "zai/glm-5",
         "anthropic/claude-haiku-4-5",
         "google/gemini-2.5-pro",
       ]),
@@ -102,6 +105,7 @@ describe("model-pricing-cache", () => {
         mappings: [{ model: "xai/grok-4.20-experimental-beta-0304-reasoning" }],
       },
       tools: {
+        subagents: { model: { primary: "zai/glm-5" } },
       },
     } as unknown as ChainbreakerConfig;
 
@@ -190,6 +194,7 @@ describe("model-pricing-cache", () => {
         cacheWrite: 0,
       },
     );
+    expect(getCachedGatewayModelPricing({ provider: "zai", model: "glm-5" })).toEqual({
       input: 1,
       output: 4,
       cacheRead: 0,

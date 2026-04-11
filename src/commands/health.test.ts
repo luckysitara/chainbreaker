@@ -75,10 +75,13 @@ describe("healthCommand", () => {
           configured: true,
           probe: { ok: true, elapsedMs: 1 },
         },
+        discord: { accountId: "default", configured: false },
       },
+      channelOrder: ["whatsapp", "telegram", "discord"],
       channelLabels: {
         whatsapp: "WhatsApp",
         telegram: "Telegram",
+        discord: "Discord",
       },
       sessions: agentSessions,
     });
@@ -100,10 +103,13 @@ describe("healthCommand", () => {
         channels: {
           whatsapp: { accountId: "default", linked: false, authAgeMs: null },
           telegram: { accountId: "default", configured: false },
+          discord: { accountId: "default", configured: false },
         },
+        channelOrder: ["whatsapp", "telegram", "discord"],
         channelLabels: {
           whatsapp: "WhatsApp",
           telegram: "Telegram",
+          discord: "Discord",
         },
       }),
     );
@@ -144,6 +150,8 @@ describe("healthCommand", () => {
       channelLabels: { telegram: "Telegram" },
     });
 
+    const lines = formatHealthChannelLines(summary, { accountMode: "all" });
+    expect(lines).toContain(
       "Telegram: ok (@pinguini_ugi_bot:main:196ms, @flurry_ugi_bot:flurry:190ms, @poe_ugi_bot:poe:188ms)",
     );
   });
@@ -157,6 +165,7 @@ describe("formatHealthCheckFailure", () => {
     );
   });
 
+  it("formats gateway connection details as indented key/value lines", () => {
     const err = new Error(
       [
         "gateway closed (1006 abnormal closure (no close frame)): no close reason",

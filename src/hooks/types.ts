@@ -35,11 +35,7 @@ export type ParsedHookFrontmatter = Record<string, string>;
 export type Hook = {
   name: string;
   description: string;
-  source:
-    | "chainbreaker-bundled"
-    | "chainbreaker-managed"
-    | "chainbreaker-workspace"
-    | "chainbreaker-plugin";
+  source: "chainbreaker-bundled" | "chainbreaker-managed" | "chainbreaker-workspace" | "chainbreaker-plugin";
   pluginId?: string;
   filePath: string; // Path to HOOK.md
   baseDir: string; // Directory containing hook

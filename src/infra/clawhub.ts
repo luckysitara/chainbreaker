@@ -369,6 +369,7 @@ async function clawhubRequest(
   try {
     const response = await (params.fetchImpl ?? fetch)(url, {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      signal: controller.signal,
     });
     return { response, url };
   } finally {

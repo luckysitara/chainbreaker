@@ -52,6 +52,7 @@ import { resolveGatewayService } from "../daemon/service.js";
 import { hasAmbiguousGatewayAuthModeConfig } from "../gateway/auth-mode-policy.js";
 import { resolveGatewayAuth } from "../gateway/auth.js";
 import { buildGatewayConnectionDetails } from "../gateway/call.js";
+import { runStartupMatrixMigration } from "../gateway/server-startup-matrix-migration.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { note } from "../terminal/note.js";
 import { shortenHomePath } from "../utils.js";
@@ -112,12 +113,15 @@ function createDoctorHealthContribution(params: {
 
 async function runGatewayConfigHealth(ctx: DoctorHealthFlowContext): Promise<void> {
   if (!ctx.cfg.gateway?.mode) {
+    const lines = [
       "gateway.mode is unset; gateway start will be blocked.",
       `Fix: run ${formatCliCommand("chainbreaker configure")} and set Gateway mode (local/remote).`,
       `Or set directly: ${formatCliCommand("chainbreaker config set gateway.mode local")}`,
     ];
     if (!fs.existsSync(ctx.configPath)) {
+      lines.push(`Missing config: run ${formatCliCommand("chainbreaker setup")} first.`);
     }
+    note(lines.join("\n"), "Gateway");
   }
   if (resolveDoctorMode(ctx.cfg) === "local" && hasAmbiguousGatewayAuthModeConfig(ctx.cfg)) {
     note(
@@ -530,6 +534,8 @@ export function resolveDoctorHealthContributions(): DoctorHealthContribution[] {
       run: runGatewayServicesHealth,
     }),
     createDoctorHealthContribution({
+      id: "doctor:startup-matrix",
+      label: "Startup matrix",
       run: runStartupMatrixHealth,
     }),
     createDoctorHealthContribution({

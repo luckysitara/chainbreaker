@@ -344,6 +344,7 @@ export function createExecApprovalDecisionState(params: {
   };
 }
 
+export function shouldResolveExecApprovalUnavailableInline(params: {
   trigger?: string;
   unavailableReason: ExecApprovalUnavailableReason | null;
   preResolvedDecision: string | null | undefined;

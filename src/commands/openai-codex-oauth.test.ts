@@ -96,6 +96,7 @@ describe("loginOpenAICodexOAuth", () => {
     mocks.loginOpenAICodex.mockImplementation(
       async (opts: { onAuth: (event: { url: string }) => Promise<void> }) => {
         await opts.onAuth({
+          url: "https://auth.openai.com/oauth/authorize?scope=openid+profile+email+offline_access&state=abc",
         });
         return creds;
       },
@@ -105,8 +106,10 @@ describe("loginOpenAICodexOAuth", () => {
     const { runtime } = await runCodexOAuth({ isRemote: false, openUrl });
 
     expect(openUrl).toHaveBeenCalledWith(
+      "https://auth.openai.com/oauth/authorize?scope=openid+profile+email+offline_access&state=abc",
     );
     expect(runtime.log).toHaveBeenCalledWith(
+      "Open: https://auth.openai.com/oauth/authorize?scope=openid+profile+email+offline_access&state=abc",
     );
   });
 

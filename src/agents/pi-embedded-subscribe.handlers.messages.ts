@@ -3,6 +3,7 @@ import { resolveSendableOutboundReplyParts } from "chainbreaker/plugin-sdk/reply
 import { parseReplyDirectives } from "../auto-reply/reply/reply-directives.js";
 import { isSilentReplyText, SILENT_REPLY_TOKEN } from "../auto-reply/tokens.js";
 import { emitAgentEvent } from "../infra/agent-events.js";
+import { createInlineCodeState } from "../markdown/code-spans.js";
 import {
   isMessagingToolDuplicateNormalized,
   normalizeTextForComparison,
@@ -68,9 +69,7 @@ function isTranscriptOnlyChainbreakerAssistantMessage(message: AgentMessage | un
   }
   const provider = typeof message.provider === "string" ? message.provider.trim() : "";
   const model = typeof message.model === "string" ? message.model.trim() : "";
-  return (
-    provider === "chainbreaker" && (model === "delivery-mirror" || model === "gateway-injected")
-  );
+  return provider === "chainbreaker" && (model === "delivery-mirror" || model === "gateway-injected");
 }
 
 function emitReasoningEnd(ctx: EmbeddedPiSubscribeContext) {
@@ -182,6 +181,7 @@ export function handleMessageStart(
   // may deliver late text_end updates after message_end, which would otherwise
   // re-trigger block replies.
   ctx.resetAssistantMessageState(ctx.state.assistantTexts.length);
+  // Use assistant message_start as the earliest "writing" signal for typing.
   void ctx.params.onAssistantMessageStart?.();
 }
 
@@ -290,6 +290,7 @@ export function handleMessageUpdate(
     .stripBlockTags(ctx.state.deltaBuffer, {
       thinking: false,
       final: false,
+      inlineCode: createInlineCodeState(),
     })
     .trim();
   if (next) {
@@ -447,6 +448,7 @@ export function handleMessageEnd(
   const silentExpectedWithoutSentinel =
     ctx.params.silentExpected && !isSilentReplyText(trimmedText, SILENT_REPLY_TOKEN);
   const finalAssistantText = silentExpectedWithoutSentinel ? "" : text;
+  const addedDuringMessage = ctx.state.assistantTexts.length > ctx.state.assistantTextBaseline;
   const chunkerHasBuffered = ctx.blockChunker?.hasBuffered() ?? false;
   ctx.finalizeAssistantTexts({
     text: finalAssistantText,
@@ -566,6 +568,7 @@ export function handleMessageEnd(
   ctx.blockChunker?.reset();
   ctx.state.blockState.thinking = false;
   ctx.state.blockState.final = false;
+  ctx.state.blockState.inlineCode = createInlineCodeState();
   ctx.state.lastStreamedAssistant = undefined;
   ctx.state.lastStreamedAssistantCleaned = undefined;
   ctx.state.reasoningStreamOpen = false;

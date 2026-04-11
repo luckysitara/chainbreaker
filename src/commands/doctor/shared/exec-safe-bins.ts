@@ -180,36 +180,45 @@ export function collectExecSafeBinCoverageWarnings(params: {
     (hit) => hit.kind === "missingProfile" && !hit.isInterpreter,
   );
   const riskyHits = params.hits.filter((hit) => hit.kind === "riskySemantics");
+  const lines: string[] = [];
   if (interpreterHits.length > 0) {
     for (const hit of interpreterHits.slice(0, 5)) {
+      lines.push(
         `- ${sanitizeForLog(hit.scopePath)}.safeBins includes interpreter/runtime '${sanitizeForLog(hit.bin)}' without profile.`,
       );
     }
     if (interpreterHits.length > 5) {
+      lines.push(
         `- ${interpreterHits.length - 5} more interpreter/runtime safeBins entries are missing profiles.`,
       );
     }
   }
   if (customHits.length > 0) {
     for (const hit of customHits.slice(0, 5)) {
+      lines.push(
         `- ${sanitizeForLog(hit.scopePath)}.safeBins entry '${sanitizeForLog(hit.bin)}' is missing safeBinProfiles.${sanitizeForLog(hit.bin)}.`,
       );
     }
     if (customHits.length > 5) {
+      lines.push(`- ${customHits.length - 5} more custom safeBins entries are missing profiles.`);
     }
   }
   if (riskyHits.length > 0) {
     for (const hit of riskyHits.slice(0, 5)) {
+      lines.push(
         `- ${sanitizeForLog(hit.scopePath)}.safeBins includes '${sanitizeForLog(hit.bin)}': ${sanitizeForLog(hit.warning ?? "prefer explicit allowlist entries or approval-gated runs.")}`,
       );
     }
     if (riskyHits.length > 5) {
+      lines.push(
         `- ${riskyHits.length - 5} more safeBins entries should not use the low-risk safeBins fast path.`,
       );
     }
   }
+  lines.push(
     `- Run "${params.doctorFixCommand}" to scaffold missing custom safeBinProfiles entries.`,
   );
+  return lines;
 }
 
 export function collectExecSafeBinTrustedDirHintWarnings(
@@ -218,15 +227,19 @@ export function collectExecSafeBinTrustedDirHintWarnings(
   if (hits.length === 0) {
     return [];
   }
+  const lines = hits
     .slice(0, 5)
     .map(
       (hit) =>
         `- ${sanitizeForLog(hit.scopePath)}.safeBins entry '${sanitizeForLog(hit.bin)}' resolves to '${sanitizeForLog(hit.resolvedPath)}' outside trusted safe-bin dirs.`,
     );
   if (hits.length > 5) {
+    lines.push(`- ${hits.length - 5} more safeBins entries resolve outside trusted safe-bin dirs.`);
   }
+  lines.push(
     "- If intentional, add the binary directory to tools.exec.safeBinTrustedDirs (global or agent scope).",
   );
+  return lines;
 }
 
 export function maybeRepairExecSafeBinProfiles(cfg: ChainbreakerConfig): {

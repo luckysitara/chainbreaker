@@ -46,6 +46,7 @@ describe("resolveExecApprovalInitiatingSurfaceState", () => {
       typeof value === "string" ? value.trim().toLowerCase() : undefined,
     );
     isDeliverableMessageChannelMock.mockImplementation(
+      (value?: string) => value === "slack" || value === "discord" || value === "telegram",
     );
   });
 
@@ -78,6 +79,7 @@ describe("resolveExecApprovalInitiatingSurfaceState", () => {
     expect(resolveExecApprovalInitiatingSurfaceState({ channel })).toEqual(expected);
   });
 
+  it("uses the provided cfg for telegram and discord client enablement", () => {
     getChannelPluginMock.mockImplementation((channel: string) =>
       channel === "telegram"
         ? {
@@ -85,6 +87,7 @@ describe("resolveExecApprovalInitiatingSurfaceState", () => {
               getActionAvailabilityState: () => ({ kind: "enabled" }),
             },
           }
+        : channel === "discord"
           ? {
               auth: {
                 getActionAvailabilityState: () => ({ kind: "disabled" }),
@@ -107,11 +110,13 @@ describe("resolveExecApprovalInitiatingSurfaceState", () => {
     });
     expect(
       resolveExecApprovalInitiatingSurfaceState({
+        channel: "discord",
         accountId: "main",
         cfg: cfg as never,
       }),
     ).toEqual({
       kind: "disabled",
+      channel: "discord",
       channelLabel: "Discord",
     });
 
@@ -142,13 +147,17 @@ describe("resolveExecApprovalInitiatingSurfaceState", () => {
     });
     expect(loadConfigMock).toHaveBeenCalledOnce();
 
+    expect(resolveExecApprovalInitiatingSurfaceState({ channel: "signal" })).toEqual({
       kind: "unsupported",
+      channel: "signal",
       channelLabel: "Signal",
     });
   });
 
   it("treats deliverable chat channels without a custom adapter as enabled", () => {
+    expect(resolveExecApprovalInitiatingSurfaceState({ channel: "slack" })).toEqual({
       kind: "enabled",
+      channel: "slack",
       channelLabel: "Slack",
     });
   });
@@ -165,6 +174,7 @@ describe("hasConfiguredExecApprovalDmRoute", () => {
       typeof value === "string" ? value.trim().toLowerCase() : undefined,
     );
     isDeliverableMessageChannelMock.mockImplementation(
+      (value?: string) => value === "slack" || value === "discord" || value === "telegram",
     );
   });
 

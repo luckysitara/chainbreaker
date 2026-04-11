@@ -174,6 +174,7 @@ describe("createPluginApprovalHandlers", () => {
             title: "Sensitive action",
             description: "Desc",
             twoPhase: true,
+            turnSourceChannel: "slack",
             turnSourceTo: "C123",
           },
           {

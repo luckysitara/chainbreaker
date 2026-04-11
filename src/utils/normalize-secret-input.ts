@@ -1,6 +1,8 @@
 /**
  * Secret normalization for copy/pasted credentials.
  *
+ * Common footgun: line breaks (especially `\r`) embedded in API keys/tokens.
+ * We strip line breaks anywhere, then trim whitespace at the ends.
  *
  * Another frequent source of runtime failures is rich-text/Unicode artifacts
  * (smart punctuation, box-drawing chars, etc.) pasted into API keys. These can

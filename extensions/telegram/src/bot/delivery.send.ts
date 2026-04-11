@@ -1,9 +1,10 @@
+import { type Bot, GrammyError } from "grammy";
 import type { RuntimeEnv } from "chainbreaker/plugin-sdk/runtime-env";
 import { formatErrorMessage } from "chainbreaker/plugin-sdk/ssrf-runtime";
-import { type Bot, GrammyError } from "grammy";
 import { withTelegramApiErrorLogging } from "../api-logging.js";
 import { markdownToTelegramHtml } from "../format.js";
 import { normalizeTelegramReplyToMessageId } from "../outbound-params.js";
+import { buildInlineKeyboard } from "../send.js";
 import { buildTelegramThreadParams, type TelegramThreadSpec } from "./helpers.js";
 
 const PARSE_ERR_RE = /can't parse entities|parse entities|find end of the entity/i;
@@ -109,6 +110,7 @@ export async function sendTelegramText(
     plainText?: string;
     linkPreview?: boolean;
     silent?: boolean;
+    replyMarkup?: ReturnType<typeof buildInlineKeyboard>;
   },
 ): Promise<number> {
   const baseParams = buildTelegramSendParams({

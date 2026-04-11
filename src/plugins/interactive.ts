@@ -127,9 +127,11 @@ export function registerPluginInteractiveHandler(
       pluginName: opts?.pluginName,
       pluginRoot: opts?.pluginRoot,
     });
+  } else if (registration.channel === "slack") {
     interactiveHandlers.set(key, {
       ...registration,
       namespace,
+      channel: "slack",
       pluginId,
       pluginName: opts?.pluginName,
       pluginRoot: opts?.pluginRoot,
@@ -138,6 +140,7 @@ export function registerPluginInteractiveHandler(
     interactiveHandlers.set(key, {
       ...registration,
       namespace,
+      channel: "discord",
       pluginId,
       pluginName: opts?.pluginName,
       pluginRoot: opts?.pluginRoot,
@@ -177,6 +180,7 @@ export async function dispatchPluginInteractiveHandler(params: {
   onMatched?: () => Promise<void> | void;
 }): Promise<InteractiveDispatchResult>;
 export async function dispatchPluginInteractiveHandler(params: {
+  channel: "discord";
   data: string;
   interactionId: string;
   ctx: DiscordInteractiveDispatchContext;
@@ -184,6 +188,7 @@ export async function dispatchPluginInteractiveHandler(params: {
   onMatched?: () => Promise<void> | void;
 }): Promise<InteractiveDispatchResult>;
 export async function dispatchPluginInteractiveHandler(params: {
+  channel: "slack";
   data: string;
   interactionId: string;
   ctx: SlackInteractiveDispatchContext;
@@ -191,6 +196,7 @@ export async function dispatchPluginInteractiveHandler(params: {
   onMatched?: () => Promise<void> | void;
 }): Promise<InteractiveDispatchResult>;
 export async function dispatchPluginInteractiveHandler(params: {
+  channel: "telegram" | "discord" | "slack";
   data: string;
   callbackId?: string;
   interactionId?: string;
@@ -241,6 +247,7 @@ export async function dispatchPluginInteractiveHandler(params: {
       ctx: params.ctx as TelegramInteractiveDispatchContext,
       respond: params.respond as PluginInteractiveTelegramHandlerContext["respond"],
     });
+  } else if (params.channel === "discord") {
     result = dispatchDiscordInteractiveHandler({
       registration: match.registration as RegisteredInteractiveHandler &
         PluginInteractiveDiscordHandlerRegistration,

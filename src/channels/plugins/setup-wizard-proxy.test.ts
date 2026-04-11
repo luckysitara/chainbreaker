@@ -181,6 +181,7 @@ describe("createDelegatedSetupWizardProxy", () => {
             configuredScore: 1,
             unconfiguredScore: 0,
             resolveConfigured: async ({ cfg }) => Boolean(cfg.channels?.demo),
+            resolveStatusLines: async () => ["line"],
             resolveSelectionHint: async () => "hint",
             resolveQuickstartScore: async () => 3,
           },
@@ -202,12 +203,14 @@ describe("createDelegatedSetupWizardProxy", () => {
       },
       credentials: [],
       textInputs: [],
+      completionNote: { title: "Done", lines: ["line"] },
       delegatePrepare: true,
       delegateFinalize: true,
     });
 
     expect(await wizard.status.resolveConfigured({ cfg: {} })).toBe(false);
     expect(await wizard.status.resolveStatusLines?.({ cfg: {}, configured: false })).toEqual([
+      "line",
     ]);
     expect(await runSetupWizardPrepare({ prepare: wizard.prepare })).toEqual({
       cfg: {

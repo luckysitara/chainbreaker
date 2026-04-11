@@ -69,6 +69,7 @@ describe("ChatLog", () => {
     expect(chatLog.children.length).toBe(20);
   });
 
+  it("renders BTW inline and removes it when dismissed", () => {
     const chatLog = new ChatLog(40);
 
     chatLog.addSystem("session agent:main:main");

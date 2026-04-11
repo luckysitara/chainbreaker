@@ -4,6 +4,7 @@ import { findFenceSpanAt, isSafeFenceBreak, parseFenceSpans } from "../markdown/
 export type BlockReplyChunking = {
   minChars: number;
   maxChars: number;
+  breakPreference?: "paragraph" | "newline" | "sentence";
   /** When true, prefer \n\n paragraph boundaries once minChars has been satisfied. */
   flushOnParagraph?: boolean;
 };
@@ -74,6 +75,7 @@ function findSafeParagraphBreakIndex(params: {
   return -1;
 }
 
+function findSafeNewlineBreakIndex(params: {
   text: string;
   fenceSpans: FenceSpan[];
   minChars: number;
@@ -81,7 +83,14 @@ function findSafeParagraphBreakIndex(params: {
   offset?: number;
 }): number {
   const { text, fenceSpans, minChars, reverse, offset = 0 } = params;
+  let newlineIdx = reverse ? text.lastIndexOf("\n") : text.indexOf("\n");
+  while (reverse ? newlineIdx >= minChars : newlineIdx !== -1) {
+    if (newlineIdx >= minChars && isSafeFenceBreak(fenceSpans, offset + newlineIdx)) {
+      return newlineIdx;
     }
+    newlineIdx = reverse
+      ? text.lastIndexOf("\n", newlineIdx - 1)
+      : text.indexOf("\n", newlineIdx + 1);
   }
   return -1;
 }
@@ -153,6 +162,7 @@ export class EmbeddedBlockChunker {
           if (chunk.trim().length > 0) {
             emit(chunk);
           }
+          start = skipLeadingNewlines(source, paragraphBreak.index + paragraphBreak.length);
           reopenFence = undefined;
           continue;
         }
@@ -199,6 +209,7 @@ export class EmbeddedBlockChunker {
     }
     this.#buffer = reopenFence
       ? `${reopenFence.openLine}\n${source.slice(start)}`
+      : stripLeadingNewlines(source.slice(start));
   }
 
   #emitBreakResult(params: {
@@ -217,6 +228,7 @@ export class EmbeddedBlockChunker {
     const absoluteBreakIdx = start + breakIdx;
     let rawChunk = `${reopenPrefix}${source.slice(start, absoluteBreakIdx)}`;
     if (rawChunk.trim().length === 0) {
+      return { start: skipLeadingNewlines(source, absoluteBreakIdx), reopenFence: undefined };
     }
 
     const fenceSplit = breakResult.fenceSplit;
@@ -237,6 +249,7 @@ export class EmbeddedBlockChunker {
       absoluteBreakIdx < source.length && /\s/.test(source[absoluteBreakIdx])
         ? absoluteBreakIdx + 1
         : absoluteBreakIdx;
+    return { start: skipLeadingNewlines(source, nextStart), reopenFence: undefined };
   }
 
   #pickSoftBreakIndex(
@@ -264,15 +277,20 @@ export class EmbeddedBlockChunker {
       }
     }
 
+    if (preference === "paragraph" || preference === "newline") {
+      const newlineIdx = findSafeNewlineBreakIndex({
         text: buffer,
         fenceSpans,
         minChars,
         reverse: false,
         offset,
       });
+      if (newlineIdx !== -1) {
+        return { index: newlineIdx };
       }
     }
 
+    if (preference !== "newline") {
       const sentenceIdx = findSafeSentenceBreakIndex(buffer, fenceSpans, minChars, offset);
       if (sentenceIdx !== -1) {
         return { index: sentenceIdx };
@@ -309,21 +327,27 @@ export class EmbeddedBlockChunker {
       }
     }
 
+    if (preference === "paragraph" || preference === "newline") {
+      const newlineIdx = findSafeNewlineBreakIndex({
         text: window,
         fenceSpans,
         minChars,
         reverse: true,
         offset,
       });
+      if (newlineIdx !== -1) {
+        return { index: newlineIdx };
       }
     }
 
+    if (preference !== "newline") {
       const sentenceIdx = findSafeSentenceBreakIndex(window, fenceSpans, minChars, offset);
       if (sentenceIdx !== -1) {
         return { index: sentenceIdx };
       }
     }
 
+    if (preference === "newline" && buffer.length < maxChars) {
       return { index: -1 };
     }
 
@@ -355,6 +379,7 @@ export class EmbeddedBlockChunker {
   }
 }
 
+function skipLeadingNewlines(value: string, start = 0): number {
   let i = start;
   while (i < value.length && value[i] === "\n") {
     i++;
@@ -362,6 +387,8 @@ export class EmbeddedBlockChunker {
   return i;
 }
 
+function stripLeadingNewlines(value: string): string {
+  const start = skipLeadingNewlines(value);
   return start > 0 ? value.slice(start) : value;
 }
 

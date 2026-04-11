@@ -26,18 +26,26 @@ import type { MsgContext } from "../templating.js";
 function normalizeDiscordDirectApproverId(value: string | number): string | undefined {
   const normalized = String(value)
     .trim()
+    .replace(/^(discord|user|pk):/i, "")
     .replace(/^<@!?(\d+)>$/, "$1")
     .toLowerCase();
   return normalized || undefined;
 }
 
 function getDiscordExecApprovalApproversForTests(params: { cfg: ChainbreakerConfig }): string[] {
+  const discord = params.cfg.channels?.discord;
   return resolveApprovalApprovers({
+    explicit: discord?.execApprovals?.approvers,
+    allowFrom: discord?.allowFrom,
+    extraAllowFrom: discord?.dm?.allowFrom,
+    defaultTo: discord?.defaultTo,
     normalizeApprover: normalizeDiscordDirectApproverId,
     normalizeDefaultTo: (value) => normalizeDiscordDirectApproverId(value),
   });
 }
 
+const discordNativeApprovalAdapterForTests = createApproverRestrictedNativeApprovalAdapter({
+  channel: "discord",
   channelLabel: "Discord",
   listAccountIds: () => [DEFAULT_ACCOUNT_ID],
   hasApprovers: ({ cfg }) => getDiscordExecApprovalApproversForTests({ cfg }).length > 0,
@@ -52,11 +60,16 @@ function getDiscordExecApprovalApproversForTests(params: { cfg: ChainbreakerConf
     );
   },
   isNativeDeliveryEnabled: ({ cfg }) =>
+    Boolean(cfg.channels?.discord?.execApprovals?.enabled) &&
     getDiscordExecApprovalApproversForTests({ cfg }).length > 0,
+  resolveNativeDeliveryMode: ({ cfg }) => cfg.channels?.discord?.execApprovals?.target ?? "dm",
 });
 
+const discordCommandTestPlugin: ChannelPlugin = {
   ...createChannelTestPluginBase({
+    id: "discord",
     label: "Discord",
+    docsPath: "/channels/discord",
     capabilities: {
       chatTypes: ["direct", "group", "thread"],
       reactions: true,
@@ -65,7 +78,10 @@ function getDiscordExecApprovalApproversForTests(params: { cfg: ChainbreakerConf
       nativeCommands: true,
     },
   }),
+  auth: discordNativeApprovalAdapterForTests.auth,
   allowlist: buildLegacyDmAccountAllowlistAdapter({
+    channelId: "discord",
+    resolveAccount: ({ cfg }) => cfg.channels?.discord ?? {},
     normalize: ({ values }) => values.map((value) => String(value).trim()).filter(Boolean),
     resolveDmAllowFrom: (account) => account.allowFrom ?? account.dm?.allowFrom,
     resolveGroupPolicy: (account) => account.groupPolicy,
@@ -73,8 +89,11 @@ function getDiscordExecApprovalApproversForTests(params: { cfg: ChainbreakerConf
   }),
 };
 
+const slackCommandTestPlugin: ChannelPlugin = {
   ...createChannelTestPluginBase({
+    id: "slack",
     label: "Slack",
+    docsPath: "/channels/slack",
     capabilities: {
       chatTypes: ["direct", "group", "thread"],
       reactions: true,
@@ -83,6 +102,8 @@ function getDiscordExecApprovalApproversForTests(params: { cfg: ChainbreakerConf
     },
   }),
   allowlist: buildLegacyDmAccountAllowlistAdapter({
+    channelId: "slack",
+    resolveAccount: ({ cfg }) => cfg.channels?.slack ?? {},
     normalize: ({ values }) => values.map((value) => String(value).trim()).filter(Boolean),
     resolveDmAllowFrom: (account) => account.allowFrom ?? account.dm?.allowFrom,
     resolveGroupPolicy: (account) => account.groupPolicy,
@@ -206,6 +227,7 @@ vi.mock("./commands-context-report.js", () => ({
     if (normalized === "/context detail") {
       return { text: "Context breakdown (detailed)\nTop tools (schema size):" };
     }
+    return { text: "/context\n- /context list\nInline shortcut" };
   },
 }));
 
@@ -225,6 +247,7 @@ const { extractMessageText } = await import("./commands-subagents.js");
 const { buildCommandTestParams } = await import("./commands.test-harness.js");
 const { parseConfigCommand } = await import("./config-commands.js");
 const { parseDebugCommand } = await import("./debug-commands.js");
+const { parseInlineDirectives } = await import("./directive-handling.js");
 const { buildCommandContext, handleCommands } = await import("./commands.js");
 const { createTaskRecord, resetTaskRegistryForTests } =
   await import("../../tasks/task-registry.js");
@@ -475,9 +498,13 @@ function setMinimalChannelPluginRegistryForTests(): void {
   setActivePluginRegistry(
     createTestRegistry([
       {
+        pluginId: "discord",
+        plugin: discordCommandTestPlugin,
         source: "test",
       },
       {
+        pluginId: "slack",
+        plugin: slackCommandTestPlugin,
         source: "test",
       },
       {
@@ -567,11 +594,7 @@ async function readJsonFile<T>(filePath: string): Promise<T> {
   return JSON.parse(await fs.readFile(filePath, "utf-8")) as T;
 }
 
-function buildParams(
-  commandBody: string,
-  cfg: ChainbreakerConfig,
-  ctxOverrides?: Partial<MsgContext>,
-) {
+function buildParams(commandBody: string, cfg: ChainbreakerConfig, ctxOverrides?: Partial<MsgContext>) {
   return buildCommandTestParams(commandBody, cfg, ctxOverrides, { workspaceDir: testWorkspaceDir });
 }
 
@@ -737,6 +760,7 @@ describe("/approve command", () => {
     return {
       commands: { text: true },
       channels: {
+        discord: {
           allowFrom: ["*"],
           ...(execApprovals ? { execApprovals } : {}),
         },
@@ -778,8 +802,11 @@ describe("/approve command", () => {
   it("accepts bare approve text for Slack-style manual approvals", async () => {
     const cfg = {
       commands: { text: true },
+      channels: { slack: { allowFrom: ["*"] } },
     } as ChainbreakerConfig;
     const params = buildParams("approve abc allow-once", cfg, {
+      Provider: "slack",
+      Surface: "slack",
       SenderId: "U123",
     });
 
@@ -861,7 +888,9 @@ describe("/approve command", () => {
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "slack",
           plugin: {
+            ...createChannelTestPluginBase({ id: "slack", label: "Slack" }),
             auth: {
               authorizeActorAction: () => ({ authorized: true }),
               getActionAvailabilityState: () => ({ kind: "disabled" }),
@@ -875,8 +904,11 @@ describe("/approve command", () => {
       "/approve abc12345 allow-once",
       {
         commands: { text: true },
+        channels: { slack: { allowFrom: ["*"] } },
       } as ChainbreakerConfig,
       {
+        Provider: "slack",
+        Surface: "slack",
         SenderId: "U123",
       },
     );
@@ -927,6 +959,7 @@ describe("/approve command", () => {
   it("requires configured Discord approvers for exec approvals", async () => {
     for (const testCase of [
       {
+        name: "discord no approver policy",
         cfg: createDiscordApproveCfg(null),
         senderId: "123",
         expectedText: "not authorized to approve",
@@ -934,6 +967,7 @@ describe("/approve command", () => {
         expectedGatewayCalls: 0,
       },
       {
+        name: "discord non approver",
         cfg: createDiscordApproveCfg({ enabled: true, approvers: ["999"], target: "channel" }),
         senderId: "123",
         expectedText: "not authorized to approve",
@@ -941,6 +975,7 @@ describe("/approve command", () => {
         expectedGatewayCalls: 0,
       },
       {
+        name: "discord approver with rich client disabled",
         cfg: createDiscordApproveCfg({ enabled: false, approvers: ["123"], target: "channel" }),
         senderId: "123",
         expectedText: "Approval allow-once submitted",
@@ -949,6 +984,7 @@ describe("/approve command", () => {
         expectedMethod: "exec.approval.resolve",
       },
       {
+        name: "discord approver",
         cfg: createDiscordApproveCfg({ enabled: true, approvers: ["123"], target: "channel" }),
         senderId: "123",
         expectedText: "Approval allow-once submitted",
@@ -960,6 +996,8 @@ describe("/approve command", () => {
       callGatewayMock.mockReset();
       testCase.setup?.();
       const params = buildParams("/approve abc12345 allow-once", testCase.cfg, {
+        Provider: "discord",
+        Surface: "discord",
         SenderId: testCase.senderId,
       });
 
@@ -981,10 +1019,12 @@ describe("/approve command", () => {
   it("rejects legacy unprefixed plugin approval fallback on Discord before exec fallback", async () => {
     for (const testCase of [
       {
+        name: "discord legacy plugin approval with exec approvals disabled",
         cfg: createDiscordApproveCfg(null),
         senderId: "123",
       },
       {
+        name: "discord legacy plugin approval for non approver",
         cfg: createDiscordApproveCfg({ enabled: true, approvers: ["999"], target: "channel" }),
         senderId: "123",
       },
@@ -992,6 +1032,8 @@ describe("/approve command", () => {
       callGatewayMock.mockReset();
       callGatewayMock.mockResolvedValue({ ok: true });
       const params = buildParams("/approve legacy-plugin-123 allow-once", testCase.cfg, {
+        Provider: "discord",
+        Surface: "discord",
         SenderId: testCase.senderId,
       });
 
@@ -1009,6 +1051,8 @@ describe("/approve command", () => {
       "/approve legacy-plugin-123 allow-once",
       createDiscordApproveCfg({ enabled: true, approvers: ["123"], target: "channel" }),
       {
+        Provider: "discord",
+        Surface: "discord",
         SenderId: "123",
       },
     );
@@ -1030,7 +1074,9 @@ describe("/approve command", () => {
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "matrix",
           plugin: {
+            ...createChannelTestPluginBase({ id: "matrix", label: "Matrix" }),
             auth: {
               authorizeActorAction: ({ approvalKind }: { approvalKind: "exec" | "plugin" }) =>
                 approvalKind === "plugin"
@@ -1050,8 +1096,11 @@ describe("/approve command", () => {
       "/approve abc123 allow-once",
       {
         commands: { text: true },
+        channels: { matrix: { allowFrom: ["*"] } },
       } as ChainbreakerConfig,
       {
+        Provider: "matrix",
+        Surface: "matrix",
         SenderId: "123",
       },
     );
@@ -1072,12 +1121,14 @@ describe("/approve command", () => {
   it("requires configured Discord approvers for plugin approvals", async () => {
     for (const testCase of [
       {
+        name: "discord plugin non approver",
         cfg: createDiscordApproveCfg({ enabled: false, approvers: ["999"], target: "channel" }),
         senderId: "123",
         expectedText: "not authorized to approve plugin requests",
         expectedGatewayCalls: 0,
       },
       {
+        name: "discord plugin approver",
         cfg: createDiscordApproveCfg({ enabled: false, approvers: ["123"], target: "channel" }),
         senderId: "123",
         expectedText: "Approval allow-once submitted",
@@ -1087,6 +1138,8 @@ describe("/approve command", () => {
       callGatewayMock.mockReset();
       callGatewayMock.mockResolvedValue({ ok: true });
       const params = buildParams("/approve plugin:abc123 allow-once", testCase.cfg, {
+        Provider: "discord",
+        Surface: "discord",
         SenderId: testCase.senderId,
       });
 
@@ -1521,8 +1574,11 @@ describe("handleCommands owner gating for privileged show commands", () => {
       "/config show",
       {
         commands: { config: true, text: true },
+        channels: { discord: { dm: { enabled: true, policy: "open" } } },
       } as ChainbreakerConfig,
       {
+        Provider: "discord",
+        Surface: "discord",
         CommandSource: "native",
       },
     );
@@ -1538,8 +1594,11 @@ describe("handleCommands owner gating for privileged show commands", () => {
       "/plugins list",
       {
         commands: { plugins: true, text: true },
+        channels: { discord: { dm: { enabled: true, policy: "open" } } },
       } as ChainbreakerConfig,
       {
+        Provider: "discord",
+        Surface: "discord",
         CommandSource: "native",
       },
     );
@@ -1791,6 +1850,7 @@ function buildPolicyParams(
     ctx,
     cfg,
     command,
+    directives: parseInlineDirectives(commandBody),
     elevated: { enabled: true, allowed: true, failures: [] },
     sessionKey: "agent:main:main",
     workspaceDir: "/tmp",
@@ -1994,11 +2054,13 @@ describe("handleCommands /allowlist", () => {
   it("removes DM allowlist entries from canonical allowFrom and deletes legacy dm.allowFrom", async () => {
     const cases = [
       {
+        provider: "slack",
         removeId: "U111",
         initialAllowFrom: ["U111", "U222"],
         expectedAllowFrom: ["U222"],
       },
       {
+        provider: "discord",
         removeId: "111",
         initialAllowFrom: ["111", "222"],
         expectedAllowFrom: ["222"],
@@ -2059,6 +2121,7 @@ describe("/models command", () => {
     agents: { defaults: { model: { primary: "anthropic/claude-opus-4-5" } } },
   } as unknown as ChainbreakerConfig;
 
+  it.each(["discord", "whatsapp"])("lists providers on %s (text)", async (surface) => {
     const params = buildPolicyParams("/models", cfg, { Provider: surface, Surface: surface });
     const result = await handleCommands(params);
     expect(result.shouldContinue).toBe(false);
@@ -2068,6 +2131,7 @@ describe("/models command", () => {
   });
 
   it("rejects unauthorized /models commands", async () => {
+    const params = buildPolicyParams("/models", cfg, { Provider: "discord", Surface: "discord" });
     const result = await handleCommands({
       ...params,
       command: {
@@ -2125,8 +2189,11 @@ describe("/models command", () => {
     ] as const;
 
     for (const testCase of cases) {
+      // Use discord surface for deterministic text-based output assertions.
       const result = await handleCommands(
         buildPolicyParams(testCase.command, cfg, {
+          Provider: "discord",
+          Surface: "discord",
         }),
       );
       expect(result.shouldContinue, testCase.name).toBe(false);
@@ -2153,12 +2220,15 @@ describe("/models command", () => {
       },
     } as unknown as ChainbreakerConfig;
 
+    // Use discord surface for text-based output tests
     const providerList = await handleCommands(
+      buildPolicyParams("/models", customCfg, { Surface: "discord" }),
     );
     expect(providerList.reply?.text).toContain("localai");
     expect(providerList.reply?.text).toContain("visionpro");
 
     const result = await handleCommands(
+      buildPolicyParams("/models localai", customCfg, { Surface: "discord" }),
     );
     expect(result.shouldContinue).toBe(false);
     expect(result.reply?.text).toContain("Models (localai");
@@ -2175,6 +2245,8 @@ describe("/models command", () => {
       },
     } as unknown as ChainbreakerConfig;
     const params = buildPolicyParams("/models", scopedCfg, {
+      Provider: "discord",
+      Surface: "discord",
     });
 
     const result = await handleCommands({
@@ -2293,6 +2365,7 @@ describe("handleCommands context", () => {
     const cases = [
       {
         commandBody: "/context",
+        expectedText: ["/context list", "Inline shortcut"],
       },
       {
         commandBody: "/context list",
@@ -2377,6 +2450,8 @@ describe("handleCommands subagents", () => {
     addSubagentRunForTests({
       runId: "run-slash",
       childSessionKey: "agent:main:subagent:slash",
+      requesterSessionKey: "agent:main:slack:slash:u1",
+      requesterDisplayKey: "agent:main:slack:slash:u1",
       task: "slash run",
       cleanup: "keep",
       createdAt: 2000,
@@ -2390,6 +2465,7 @@ describe("handleCommands subagents", () => {
       CommandSource: "native",
       CommandTargetSessionKey: "agent:main:main",
     });
+    params.sessionKey = "agent:main:slack:slash:u1";
     const result = await handleCommands(params);
     expect(result.shouldContinue).toBe(false);
     expect(result.reply?.text).toContain("active subagents:");
@@ -2473,6 +2549,7 @@ describe("handleCommands subagents", () => {
 
   it.each([
     {
+      name: "omits subagent status line when none exist",
       seedRuns: () => undefined,
       verboseLevel: "on" as const,
       expectedText: [] as string[],

@@ -80,6 +80,7 @@ describe("chutes-models", () => {
       ok: true,
       json: async () => ({
         data: [
+          { id: "zai-org/GLM-4.7-TEE" },
           {
             id: "new-provider/new-model-r1",
             supported_features: ["reasoning"],
@@ -96,6 +97,7 @@ describe("chutes-models", () => {
       const models = await discoverChutesModels("test-token-real-fetch");
       expect(models.length).toBeGreaterThan(0);
       if (models.length === 3) {
+        expect(models[0]?.id).toBe("zai-org/GLM-4.7-TEE");
         expect(models[1]?.reasoning).toBe(true);
         expect(models[1]?.compat?.supportsUsageInStreaming).toBe(false);
       }

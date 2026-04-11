@@ -51,6 +51,7 @@ import {
   buildEmbeddedRunExecutionParams,
   resolveModelFallbackOptions,
 } from "./agent-runner-utils.js";
+import { type BlockReplyPipeline } from "./block-reply-pipeline.js";
 import type { FollowupRun } from "./queue.js";
 import { createBlockReplyDeliveryHandler } from "./reply-delivery.js";
 import { createReplyMediaPathNormalizer } from "./reply-media-paths.runtime.js";
@@ -81,6 +82,7 @@ export type AgentRunLoopResult =
       fallbackAttempts: RuntimeFallbackAttempt[];
       didLogHeartbeatStrip: boolean;
       autoCompactionCount: number;
+      /** Payload keys sent directly (not via pipeline) during tool flush. */
       directlySentBlockKeys?: Set<string>;
     }
   | { kind: "final"; payload: ReplyPayload };
@@ -123,10 +125,12 @@ export async function runAgentTurnWithFallback(params: {
   sessionCtx: TemplateContext;
   opts?: GetReplyOptions;
   typingSignals: TypingSignaler;
+  blockReplyPipeline: BlockReplyPipeline | null;
   blockStreamingEnabled: boolean;
   blockReplyChunking?: {
     minChars: number;
     maxChars: number;
+    breakPreference: "paragraph" | "newline" | "sentence";
     flushOnParagraph?: boolean;
   };
   resolvedBlockStreamingBreak: "text_end" | "message_end";
@@ -146,6 +150,7 @@ export async function runAgentTurnWithFallback(params: {
   const TRANSIENT_HTTP_RETRY_DELAY_MS = 2_500;
   let didLogHeartbeatStrip = false;
   let autoCompactionCount = 0;
+  // Track payloads sent directly (not via pipeline) during tool flush to avoid duplicates.
   const directlySentBlockKeys = new Set<string>();
 
   const runId = params.opts?.runId ?? crypto.randomUUID();
@@ -239,8 +244,10 @@ export async function runAgentTurnWithFallback(params: {
         if (skip || !text) {
           return undefined;
         }
+        await params.typingSignals.signalTextDelta(text);
         return text;
       };
+      const blockReplyPipeline = params.blockReplyPipeline;
       // Build the delivery handler once so both onAgentEvent (compaction start
       // notice) and the onBlockReply field share the same instance.  This
       // ensures replyToId threading (replyToMode=all|first) is applied to
@@ -254,6 +261,7 @@ export async function runAgentTurnWithFallback(params: {
             normalizeMediaPaths: normalizeReplyMediaPaths,
             typingSignals: params.typingSignals,
             blockStreamingEnabled: params.blockStreamingEnabled,
+            blockReplyPipeline,
             directlySentBlockKeys,
           })
         : undefined;
@@ -432,6 +440,7 @@ export async function runAgentTurnWithFallback(params: {
                   });
                 },
                 onAssistantMessageStart: async () => {
+                  await params.typingSignals.signalMessageStart();
                   await params.opts?.onAssistantMessageStart?.();
                 },
                 onReasoningStream:
@@ -440,6 +449,7 @@ export async function runAgentTurnWithFallback(params: {
                         if (params.followupRun.run.silentExpected) {
                           return;
                         }
+                        await params.typingSignals.signalReasoningDelta();
                         await params.opts?.onReasoningStream?.({
                           text: payload.text,
                           mediaUrls: payload.mediaUrls,
@@ -460,6 +470,7 @@ export async function runAgentTurnWithFallback(params: {
                     const phase = typeof evt.data.phase === "string" ? evt.data.phase : "";
                     const name = typeof evt.data.name === "string" ? evt.data.name : undefined;
                     if (phase === "start" || phase === "update") {
+                      await params.typingSignals.signalToolStart();
                       await params.opts?.onToolStart?.({ name, phase });
                     }
                   }
@@ -471,6 +482,7 @@ export async function runAgentTurnWithFallback(params: {
                         await params.opts.onCompactionStart();
                       } else if (params.opts?.onBlockReply) {
                         // Send directly via opts.onBlockReply (bypassing the
+                        // pipeline) so the notice does not cause final payloads
                         // to be discarded on non-streaming model paths.
                         const currentMessageId =
                           params.sessionCtx.MessageSidFull ?? params.sessionCtx.MessageSid;
@@ -500,9 +512,12 @@ export async function runAgentTurnWithFallback(params: {
                 },
                 // Always pass onBlockReply so flushBlockReplyBuffer works before tool execution,
                 // even when regular block streaming is disabled. The handler sends directly
+                // via opts.onBlockReply when the pipeline isn't available.
                 onBlockReply: blockReplyHandler,
                 onBlockReplyFlush:
+                  params.blockStreamingEnabled && blockReplyPipeline
                     ? async () => {
+                        await blockReplyPipeline.flush({ force: true });
                       }
                     : undefined,
                 shouldEmitToolResult: params.shouldEmitToolResult,
@@ -515,6 +530,7 @@ export async function runAgentTurnWithFallback(params: {
                 onToolResult: onToolResult
                   ? (() => {
                       // Serialize tool result delivery to preserve message ordering.
+                      // Without this, concurrent tool callbacks race through typing signals
                       // and message sends, causing out-of-order delivery to the user.
                       // See: https://github.com/chainbreaker/chainbreaker/issues/11044
                       let toolResultChain: Promise<void> = Promise.resolve();
@@ -526,6 +542,7 @@ export async function runAgentTurnWithFallback(params: {
                               return;
                             }
                             if (text !== undefined) {
+                              await params.typingSignals.signalTextDelta(text);
                             }
                             await onToolResult({
                               ...payload,

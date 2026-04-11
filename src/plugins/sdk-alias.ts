@@ -65,9 +65,7 @@ function hasTrustedChainbreakerRootIndicator(params: {
     (typeof params.packageJson.bin === "object" &&
       params.packageJson.bin !== null &&
       typeof params.packageJson.bin.chainbreaker === "string");
-  const hasChainbreakerEntrypoint = fs.existsSync(
-    path.join(params.packageRoot, "chainbreaker.mjs"),
-  );
+  const hasChainbreakerEntrypoint = fs.existsSync(path.join(params.packageRoot, "chainbreaker.mjs"));
   return hasCliEntryExport || hasChainbreakerBin || hasChainbreakerEntrypoint;
 }
 

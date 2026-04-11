@@ -204,6 +204,8 @@ describe("web monitor inbox", () => {
     });
 
     const { listener, sock } = await startInboxMonitor(onMessage as InboxOnMessage);
+    const getPNForLID = vi.spyOn(sock.signalRepository.lidMapping, "getPNForLID");
+    sock.signalRepository.lidMapping.getPNForLID.mockResolvedValueOnce("999:0@s.whatsapp.net");
     const upsert = buildNotifyMessageUpsert({
       id: nextMessageId("lid-store"),
       remoteJid: "999@lid",
@@ -233,6 +235,7 @@ describe("web monitor inbox", () => {
     );
 
     const { listener, sock } = await startInboxMonitor(onMessage as InboxOnMessage);
+    const getPNForLID = vi.spyOn(sock.signalRepository.lidMapping, "getPNForLID");
     const upsert = buildNotifyMessageUpsert({
       id: nextMessageId("lid-authdir"),
       remoteJid: "555@lid",
@@ -258,6 +261,8 @@ describe("web monitor inbox", () => {
     });
 
     const { listener, sock } = await startInboxMonitor(onMessage as InboxOnMessage);
+    const getPNForLID = vi.spyOn(sock.signalRepository.lidMapping, "getPNForLID");
+    sock.signalRepository.lidMapping.getPNForLID.mockResolvedValueOnce("444:0@s.whatsapp.net");
     const upsert = buildNotifyMessageUpsert({
       id: nextMessageId("group-lid"),
       remoteJid: "123@g.us",

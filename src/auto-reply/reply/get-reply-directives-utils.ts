@@ -1,3 +1,4 @@
+import type { InlineDirectives } from "./directive-handling.js";
 
 const CLEARED_EXEC_FIELDS = {
   hasExecDirective: false,
@@ -14,7 +15,9 @@ const CLEARED_EXEC_FIELDS = {
   invalidExecSecurity: false,
   invalidExecAsk: false,
   invalidExecNode: false,
+} satisfies Partial<InlineDirectives>;
 
+export function clearInlineDirectives(cleaned: string): InlineDirectives {
   return {
     cleaned,
     hasThinkDirective: false,
@@ -50,6 +53,7 @@ const CLEARED_EXEC_FIELDS = {
   };
 }
 
+export function clearExecInlineDirectives(directives: InlineDirectives): InlineDirectives {
   return {
     ...directives,
     ...CLEARED_EXEC_FIELDS,

@@ -17,6 +17,7 @@ import type { ChainbreakerPluginCommandDefinition } from "./types.js";
  * output chunk, so any module-level const/let would be uninitialized when
  * first accessed during plugin registration.
  */
+// eslint-disable-next-line no-var -- var avoids TDZ when bundler reorders module bodies in a chunk
 var reservedCommands: Set<string> | undefined;
 
 export type CommandRegistrationResult = {
@@ -127,6 +128,7 @@ export function listPluginInvocationKeys(command: ChainbreakerPluginCommandDefin
   push(command.name);
   push(command.nativeNames?.default);
   push(command.nativeNames?.telegram);
+  push(command.nativeNames?.discord);
 
   return [...keys];
 }

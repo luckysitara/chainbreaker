@@ -13,6 +13,8 @@ import {
 
 describe("unscopedPackageName", () => {
   it.each([
+    { value: "@chainbreaker/matrix", expected: "matrix" },
+    { value: " matrix ", expected: "matrix" },
     { value: "", expected: "" },
   ])("normalizes package names for %j", ({ value, expected }) => {
     expect(unscopedPackageName(value)).toBe(expected);
@@ -21,6 +23,11 @@ describe("unscopedPackageName", () => {
 
 describe("packageNameMatchesId", () => {
   it.each([
+    { packageName: "@chainbreaker/matrix", id: "matrix", expected: true },
+    { packageName: "@chainbreaker/matrix", id: "@chainbreaker/matrix", expected: true },
+    { packageName: "@chainbreaker/matrix", id: "signal", expected: false },
+    { packageName: " ", id: "matrix", expected: false },
+    { packageName: "@chainbreaker/matrix", id: " ", expected: false },
   ])("matches ids for %j", ({ packageName, id, expected }) => {
     expect(packageNameMatchesId(packageName, id)).toBe(expected);
   });
@@ -28,6 +35,8 @@ describe("packageNameMatchesId", () => {
 
 describe("safeDirName", () => {
   it.each([
+    { value: " matrix ", expected: "matrix" },
+    { value: "../matrix/plugin", expected: "..__matrix__plugin" },
     { value: "dir\\plugin", expected: "dir__plugin" },
   ])("normalizes install dir names for %j", ({ value, expected }) => {
     expect(safeDirName(value)).toBe(expected);
@@ -65,10 +74,12 @@ describe("resolveSafeInstallDir", () => {
     expect(
       resolveSafeInstallDir({
         baseDir: "/tmp/plugins",
+        id: "@chainbreaker/matrix",
         invalidNameMessage: "invalid plugin name",
       }),
     ).toEqual({
       ok: true,
+      path: path.join("/tmp/plugins", "@chainbreaker__matrix"),
     });
   });
 
@@ -159,9 +170,7 @@ describe("assertCanonicalPathWithinBase", () => {
     "rejects symlinked candidate directories that escape the base",
     async () => {
       const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), "chainbreaker-install-safe-"));
-      const outsideDir = await fs.mkdtemp(
-        path.join(os.tmpdir(), "chainbreaker-install-safe-outside-"),
-      );
+      const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "chainbreaker-install-safe-outside-"));
       try {
         const linkDir = path.join(baseDir, "alias");
         await fs.symlink(outsideDir, linkDir);

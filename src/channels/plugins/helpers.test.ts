@@ -6,10 +6,7 @@ import {
   parseOptionalDelimitedEntries,
 } from "./helpers.js";
 
-function cfgWithChannel(
-  channelKey: string,
-  accounts?: Record<string, unknown>,
-): ChainbreakerConfig {
+function cfgWithChannel(channelKey: string, accounts?: Record<string, unknown>): ChainbreakerConfig {
   return {
     channels: {
       [channelKey]: accounts ? { accounts } : {},
@@ -107,6 +104,7 @@ describe("parseOptionalDelimitedEntries", () => {
     expect(parseOptionalDelimitedEntries("  ")).toBeUndefined();
   });
 
+  it("splits comma, newline, and semicolon separated entries", () => {
     expect(parseOptionalDelimitedEntries("alpha, beta\ngamma; delta")).toEqual([
       "alpha",
       "beta",

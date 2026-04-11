@@ -598,6 +598,7 @@ export const agentsHandlers: GatewayRequestHandlers = {
     const safeName = sanitizeIdentityLine(rawName);
     const emoji = resolveOptionalStringParam(params.emoji);
     const avatar = resolveOptionalStringParam(params.avatar);
+    const lines = [
       "",
       `- Name: ${safeName}`,
       ...(emoji ? [`- Emoji: ${sanitizeIdentityLine(emoji)}`] : []),
@@ -619,6 +620,7 @@ export const agentsHandlers: GatewayRequestHandlers = {
         respond,
         workspaceDir,
         name: DEFAULT_IDENTITY_FILENAME,
+        content: lines.join("\n"),
       }))
     ) {
       return;

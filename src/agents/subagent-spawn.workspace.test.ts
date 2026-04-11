@@ -169,6 +169,7 @@ describe("spawnSubagentDirect workspace inheritance", () => {
       },
       {
         agentSessionKey: "agent:main:main",
+        agentChannel: "discord",
         agentAccountId: "acct-1",
         agentTo: "user-1",
         workspaceDir: "/tmp/requester-workspace",
@@ -236,6 +237,7 @@ describe("spawnSubagentDirect workspace inheritance", () => {
       },
       {
         agentSessionKey: "agent:main:main",
+        agentChannel: "discord",
         agentAccountId: "acct-1",
         agentTo: "user-1",
         workspaceDir: "/tmp/requester-workspace",

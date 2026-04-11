@@ -35,6 +35,7 @@ describe("resolveSessionAgentIds", () => {
 
   it("keeps the agent id for provider-qualified agent sessions", () => {
     const { sessionAgentId } = resolveSessionAgentIds({
+      sessionKey: "agent:beta:slack:channel:c1",
       config: cfg,
     });
     expect(sessionAgentId).toBe("beta");

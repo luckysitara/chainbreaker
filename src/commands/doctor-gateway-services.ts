@@ -432,8 +432,10 @@ export async function maybeScanExtraGatewayServices(
       }
 
       if (removed.length > 0) {
+        note(removed.map((line) => `- ${line}`).join("\n"), "Legacy gateway removed");
       }
       if (failed.length > 0) {
+        note(failed.map((line) => `- ${line}`).join("\n"), "Legacy gateway cleanup skipped");
       }
       if (removed.length > 0) {
         runtime.log("Legacy gateway services removed. Installing Chainbreaker gateway next.");

@@ -8,8 +8,10 @@ import {
 describe("resolveEffectiveBlockStreamingConfig", () => {
   it("applies ACP-style overrides while preserving chunk/coalescer bounds", () => {
     const cfg = {} as ChainbreakerConfig;
+    const baseChunking = resolveBlockStreamingChunking(cfg, "discord");
     const resolved = resolveEffectiveBlockStreamingConfig({
       cfg,
+      provider: "discord",
       maxChunkChars: 64,
       coalesceIdleMs: 25,
     });
@@ -42,9 +44,11 @@ describe("resolveEffectiveBlockStreamingConfig", () => {
     expect(resolved.coalescing.idleMs).toBe(0);
   });
 
+  it("honors newline chunkMode for plugin channels even before the plugin registry is loaded", () => {
     const cfg = {
       channels: {
         bluebubbles: {
+          chunkMode: "newline",
         },
       },
       agents: {
@@ -71,15 +75,18 @@ describe("resolveEffectiveBlockStreamingConfig", () => {
   it("allows ACP maxChunkChars overrides above base defaults up to provider text limits", () => {
     const cfg = {
       channels: {
+        discord: {
           textChunkLimit: 4096,
         },
       },
     } as ChainbreakerConfig;
 
+    const baseChunking = resolveBlockStreamingChunking(cfg, "discord");
     expect(baseChunking.maxChars).toBeLessThan(1800);
 
     const resolved = resolveEffectiveBlockStreamingConfig({
       cfg,
+      provider: "discord",
       maxChunkChars: 1800,
     });
 

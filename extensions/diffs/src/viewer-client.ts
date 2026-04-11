@@ -107,12 +107,15 @@ function createToolbarButton(params: {
 }
 
 function applyToolbarStyles(toolbar: HTMLElement): void {
+  toolbar.style.display = "inline-flex";
   toolbar.style.alignItems = "center";
   toolbar.style.gap = "6px";
+  toolbar.style.marginInlineStart = "6px";
   toolbar.style.flex = "0 0 auto";
 }
 
 function applyToolbarButtonStyles(button: HTMLButtonElement, active: boolean): void {
+  button.style.display = "inline-flex";
   button.style.alignItems = "center";
   button.style.justifyContent = "center";
   button.style.width = "24px";
@@ -123,6 +126,7 @@ function applyToolbarButtonStyles(button: HTMLButtonElement, active: boolean): v
   button.style.borderRadius = "0";
   button.style.background = "transparent";
   button.style.boxShadow = "none";
+  button.style.lineHeight = "0";
   button.style.cursor = "pointer";
   button.style.overflow = "visible";
   button.style.flex = "0 0 auto";
@@ -178,6 +182,7 @@ function backgroundIcon(active: boolean): string {
     <path fill="currentColor" opacity="0.34" d="M0 2.25a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H.75A.75.75 0 0 1 0 2.25"></path>
     <path fill="currentColor" opacity="0.34" fill-rule="evenodd" d="M15 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2.5 9a.5.5 0 0 0 0 1h8a.5.5 0 0 0 0-1zm0-2a.5.5 0 0 0 0 1h11a.5.5 0 0 0 0-1z" clip-rule="evenodd"></path>
     <path fill="currentColor" opacity="0.34" d="M0 14.75A.75.75 0 0 1 .75 14h5.5a.75.75 0 0 1 0 1.5H.75a.75.75 0 0 1-.75-.75"></path>
+    <path d="M2.5 13.5 13.5 2.5" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"></path>
   </svg>`;
 }
 

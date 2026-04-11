@@ -250,6 +250,7 @@ describe("createTelegramBot", () => {
     expect(registered.some((command) => reserved.has(command.command))).toBe(false);
   });
 
+  it("blocks callback_query when inline buttons are allowlist-only and sender not authorized", async () => {
     onSpy.mockClear();
     replySpy.mockClear();
     sendMessageSpy.mockClear();
@@ -260,6 +261,7 @@ describe("createTelegramBot", () => {
         channels: {
           telegram: {
             dmPolicy: "pairing",
+            capabilities: { inlineButtons: "allowlist" },
             allowFrom: [],
           },
         },
@@ -289,6 +291,7 @@ describe("createTelegramBot", () => {
     expect(answerCallbackQuerySpy).toHaveBeenCalledWith("cbq-2");
   });
 
+  it("blocks DM model-selection callbacks for unpaired users when inline buttons are DM-scoped", async () => {
     onSpy.mockClear();
     replySpy.mockClear();
     editMessageTextSpy.mockClear();
@@ -310,6 +313,7 @@ describe("createTelegramBot", () => {
         channels: {
           telegram: {
             dmPolicy: "pairing",
+            capabilities: { inlineButtons: "dm" },
           },
         },
         session: {
@@ -364,6 +368,7 @@ describe("createTelegramBot", () => {
         channels: {
           telegram: {
             dmPolicy: "open",
+            capabilities: { inlineButtons: "allowlist" },
             allowFrom: [],
             groupPolicy: "open",
             groups: { "*": { requireMention: false } },
@@ -451,6 +456,7 @@ describe("createTelegramBot", () => {
     const [chatId, messageId, replyMarkup] = editMessageReplyMarkupSpy.mock.calls[0] ?? [];
     expect(chatId).toBe(1234);
     expect(messageId).toBe(21);
+    expect(replyMarkup).toEqual({ reply_markup: { inline_keyboard: [] } });
     expect(resolveExecApprovalSpy).toHaveBeenCalledWith({
       cfg: expect.objectContaining({
         channels: expect.objectContaining({
@@ -473,6 +479,7 @@ describe("createTelegramBot", () => {
     expect(answerCallbackQuerySpy).toHaveBeenCalledWith("cbq-approve-style");
   });
 
+  it("allows approval callbacks when exec approvals are enabled even without generic inlineButtons capability", async () => {
     onSpy.mockClear();
     editMessageReplyMarkupSpy.mockClear();
     editMessageTextSpy.mockClear();
@@ -933,6 +940,7 @@ describe("createTelegramBot", () => {
         channels: {
           telegram: {
             dmPolicy: "pairing",
+            capabilities: { inlineButtons: "allowlist" },
             allowFrom: [],
           },
         },

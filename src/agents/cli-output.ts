@@ -132,15 +132,20 @@ export function parseCliJsonl(
   backend: CliBackendConfig,
   providerId: string,
 ): CliOutput | null {
+  const lines = raw
     .split(/\r?\n/g)
+    .map((line) => line.trim())
     .filter(Boolean);
+  if (lines.length === 0) {
     return null;
   }
   let sessionId: string | undefined;
   let usage: CliUsage | undefined;
   const texts: string[] = [];
+  for (const line of lines) {
     let parsed: unknown;
     try {
+      parsed = JSON.parse(line);
     } catch {
       continue;
     }

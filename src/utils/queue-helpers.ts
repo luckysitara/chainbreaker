@@ -203,10 +203,15 @@ export function buildQueueSummaryPrompt(params: {
   const title =
     params.title ??
     `[Queue overflow] Dropped ${params.state.droppedCount} ${noun}${params.state.droppedCount === 1 ? "" : "s"} due to cap.`;
+  const lines = [title];
   if (params.state.summaryLines.length > 0) {
+    lines.push("Summary:");
+    for (const line of params.state.summaryLines) {
+      lines.push(`- ${line}`);
     }
   }
   clearQueueSummaryState(params.state);
+  return lines.join("\n");
 }
 
 export function buildCollectPrompt<T>(params: {

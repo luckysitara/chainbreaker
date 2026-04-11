@@ -126,10 +126,12 @@ describe("handleControlUiHttpRequest", () => {
         expect(typeof csp).toBe("string");
         expect(String(csp)).toContain("frame-ancestors 'none'");
         expect(String(csp)).toContain("script-src 'self'");
+        expect(String(csp)).not.toContain("script-src 'self' 'unsafe-inline'");
       },
     });
   });
 
+  it("includes CSP hash for inline scripts in index.html", async () => {
     const scriptContent = "(function(){ var x = 1; })();";
     const html = `<html><head><script>${scriptContent}</script></head><body></body></html>\n`;
     const expectedHash = createHash("sha256").update(scriptContent, "utf8").digest("base64");
@@ -145,10 +147,12 @@ describe("handleControlUiHttpRequest", () => {
         );
         const lastCsp = String(cspCalls[cspCalls.length - 1]?.[1] ?? "");
         expect(lastCsp).toContain(`'sha256-${expectedHash}'`);
+        expect(lastCsp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
       },
     });
   });
 
+  it("does not inject inline scripts into index.html", async () => {
     const html = "<html><head></head><body>Hello</body></html>\n";
     await withControlUiRoot({
       indexHtml: html,
@@ -202,10 +206,7 @@ describe("handleControlUiHttpRequest", () => {
       fn: async (tmp) => {
         const { res, end } = makeMockHttpResponse();
         const handled = handleControlUiHttpRequest(
-          {
-            url: `/chainbreaker${CONTROL_UI_BOOTSTRAP_CONFIG_PATH}`,
-            method: "GET",
-          } as IncomingMessage,
+          { url: `/chainbreaker${CONTROL_UI_BOOTSTRAP_CONFIG_PATH}`, method: "GET" } as IncomingMessage,
           res,
           {
             basePath: "/chainbreaker",
@@ -336,9 +337,7 @@ describe("handleControlUiHttpRequest", () => {
   it("rejects symlinked SPA fallback index.html outside control-ui root", async () => {
     await withControlUiRoot({
       fn: async (tmp) => {
-        const outsideDir = await fs.mkdtemp(
-          path.join(os.tmpdir(), "chainbreaker-ui-index-outside-"),
-        );
+        const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "chainbreaker-ui-index-outside-"));
         try {
           const outsideIndex = path.join(outsideDir, "index.html");
           await fs.writeFile(outsideIndex, "<html>outside</html>\n");
@@ -361,9 +360,7 @@ describe("handleControlUiHttpRequest", () => {
   it("rejects hardlinked index.html for non-package control-ui roots", async () => {
     await withControlUiRoot({
       fn: async (tmp) => {
-        const outsideDir = await fs.mkdtemp(
-          path.join(os.tmpdir(), "chainbreaker-ui-index-hardlink-"),
-        );
+        const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "chainbreaker-ui-index-hardlink-"));
         try {
           const outsideIndex = path.join(outsideDir, "index.html");
           await fs.writeFile(outsideIndex, "<html>outside-hardlink</html>\n");

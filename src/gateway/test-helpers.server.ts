@@ -938,6 +938,8 @@ export async function rpcReq<T extends Record<string, unknown>>(
 
 export async function waitForSystemEvent(timeoutMs = 2000) {
   const sessionKeys = resolveGatewayTestMainSessionKeys();
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
     for (const sessionKey of sessionKeys) {
       const events = peekSystemEvents(sessionKey);
       if (events.length > 0) {

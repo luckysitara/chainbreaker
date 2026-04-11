@@ -8,6 +8,7 @@ const installPluginFromPathMock = vi.fn();
 const fetchWithSsrFGuardMock = vi.hoisted(() =>
   vi.fn(async (params: { url: string; init?: RequestInit }) => {
     // Keep unit tests focused on guarded call sites, not AbortSignal timer behavior.
+    const { signal: _signal, ...init } = params.init ?? {};
     const response = await fetch(params.url, init);
     return {
       response,

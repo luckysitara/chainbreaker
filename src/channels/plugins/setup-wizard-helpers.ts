@@ -191,11 +191,13 @@ export function createStandardChannelSetupStatus(params: {
 
   if (params.includeStatusLine || params.resolveExtraStatusLines) {
     status.resolveStatusLines = async ({ cfg, configured }) => {
+      const lines = params.includeStatusLine
         ? [
             `${params.channelLabel}: ${configured ? params.configuredLabel : params.unconfiguredLabel}`,
           ]
         : [];
       const extraLines = (await params.resolveExtraStatusLines?.({ cfg, configured })) ?? [];
+      return [...lines, ...extraLines];
     };
   }
 
@@ -235,6 +237,7 @@ export async function resolveAccountIdForConfigure(params: {
 
 export function setAccountAllowFromForChannel(params: {
   cfg: ChainbreakerConfig;
+  channel: "imessage" | "signal";
   accountId: string;
   allowFrom: string[];
 }): ChainbreakerConfig {
@@ -518,10 +521,7 @@ export function createNestedChannelAllowFromSetter(params: {
 export function createTopLevelChannelGroupPolicySetter(params: {
   channel: string;
   enabled?: boolean;
-}): (
-  cfg: ChainbreakerConfig,
-  groupPolicy: "open" | "allowlist" | "disabled",
-) => ChainbreakerConfig {
+}): (cfg: ChainbreakerConfig, groupPolicy: "open" | "allowlist" | "disabled") => ChainbreakerConfig {
   return (cfg, groupPolicy) =>
     setTopLevelChannelGroupPolicy({
       cfg,
@@ -533,6 +533,7 @@ export function createTopLevelChannelGroupPolicySetter(params: {
 
 export function setChannelDmPolicyWithAllowFrom(params: {
   cfg: ChainbreakerConfig;
+  channel: "imessage" | "signal" | "telegram";
   dmPolicy: DmPolicy;
 }): ChainbreakerConfig {
   const { cfg, channel, dmPolicy } = params;
@@ -592,6 +593,7 @@ export function setLegacyChannelAllowFrom(params: {
 
 export function setAccountGroupPolicyForChannel(params: {
   cfg: ChainbreakerConfig;
+  channel: "discord" | "slack";
   accountId: string;
   groupPolicy: GroupPolicy;
 }): ChainbreakerConfig {
@@ -605,6 +607,7 @@ export function setAccountGroupPolicyForChannel(params: {
 
 export function setAccountDmAllowFromForChannel(params: {
   cfg: ChainbreakerConfig;
+  channel: "discord" | "slack";
   accountId: string;
   allowFrom: string[];
 }): ChainbreakerConfig {
@@ -680,6 +683,7 @@ export async function resolveGroupAllowlistWithLookupNotes<TResolved>(params: {
 }
 
 export function createAccountScopedAllowFromSection(params: {
+  channel: "discord" | "slack";
   credentialInputKey?: NonNullable<ChannelSetupWizard["allowFrom"]>["credentialInputKey"];
   helpTitle?: string;
   helpLines?: string[];
@@ -709,6 +713,7 @@ export function createAccountScopedAllowFromSection(params: {
 }
 
 export function createAccountScopedGroupAccessSection<TResolved>(params: {
+  channel: "discord" | "slack";
   label: string;
   placeholder: string;
   helpTitle?: string;
@@ -773,7 +778,13 @@ export function createAccountScopedGroupAccessSection<TResolved>(params: {
 
 type AccountScopedChannel =
   | "bluebubbles"
+  | "discord"
+  | "imessage"
+  | "line"
+  | "signal"
+  | "slack"
   | "telegram";
+type LegacyDmChannel = "discord" | "slack";
 
 export function patchLegacyDmChannelConfig(params: {
   cfg: ChainbreakerConfig;
@@ -856,6 +867,7 @@ export function patchChannelConfigForAccount(params: {
 
 export function applySingleTokenPromptResult(params: {
   cfg: ChainbreakerConfig;
+  channel: "discord" | "telegram";
   accountId: string;
   tokenPatchKey: "token" | "botToken";
   tokenResult: {
@@ -1192,6 +1204,7 @@ export function createPromptParsedAllowFromForAccount<TConfig extends Chainbreak
 
 export async function promptParsedAllowFromForScopedChannel(params: {
   cfg: ChainbreakerConfig;
+  channel: "imessage" | "signal";
   accountId?: string;
   defaultAccountId: string;
   prompter: Pick<WizardPrompter, "note" | "text">;
@@ -1345,13 +1358,18 @@ export async function noteChannelLookupSummary(params: {
   resolvedSections: Array<{ title: string; values: string[] }>;
   unresolved?: string[];
 }): Promise<void> {
+  const lines: string[] = [];
   for (const section of params.resolvedSections) {
     if (section.values.length === 0) {
       continue;
     }
+    lines.push(`${section.title}: ${section.values.join(", ")}`);
   }
   if (params.unresolved && params.unresolved.length > 0) {
+    lines.push(`Unresolved (kept as typed): ${params.unresolved.join(", ")}`);
   }
+  if (lines.length > 0) {
+    await params.prompter.note(lines.join("\n"), params.label);
   }
 }
 

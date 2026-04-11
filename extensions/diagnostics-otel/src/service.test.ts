@@ -89,6 +89,7 @@ vi.mock("@opentelemetry/sdk-trace-base", () => ({
 vi.mock("@opentelemetry/resources", () => ({
   resourceFromAttributes: vi.fn((attrs: Record<string, unknown>) => attrs),
   Resource: class {
+    // eslint-disable-next-line @typescript-eslint/no-useless-constructor
     constructor(_value?: unknown) {}
   },
 }));
@@ -273,6 +274,7 @@ describe("diagnostics-otel service", () => {
     await service.stop?.(ctx);
   });
 
+  test("appends signal path when endpoint contains non-signal /v1 segment", async () => {
     const service = createDiagnosticsOtelService();
     const ctx = createTraceOnlyContext("https://www.comet.com/opik/api/v1/private/otel");
     await service.start(ctx);
@@ -282,6 +284,7 @@ describe("diagnostics-otel service", () => {
     await service.stop?.(ctx);
   });
 
+  test("keeps already signal-qualified endpoint unchanged", async () => {
     const service = createDiagnosticsOtelService();
     const ctx = createTraceOnlyContext("https://collector.example.com/v1/traces");
     await service.start(ctx);
@@ -291,6 +294,7 @@ describe("diagnostics-otel service", () => {
     await service.stop?.(ctx);
   });
 
+  test("keeps signal-qualified endpoint unchanged when it has query params", async () => {
     const service = createDiagnosticsOtelService();
     const ctx = createTraceOnlyContext("https://collector.example.com/v1/traces?timeout=30s");
     await service.start(ctx);
@@ -300,6 +304,7 @@ describe("diagnostics-otel service", () => {
     await service.stop?.(ctx);
   });
 
+  test("keeps signal-qualified endpoint unchanged when signal path casing differs", async () => {
     const service = createDiagnosticsOtelService();
     const ctx = createTraceOnlyContext("https://collector.example.com/v1/Traces");
     await service.start(ctx);

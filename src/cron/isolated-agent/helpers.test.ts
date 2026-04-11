@@ -90,9 +90,12 @@ describe("pickLastDeliverablePayload", () => {
 describe("pickDeliverablePayloads", () => {
   it("preserves all successful deliverable payloads", () => {
     const payloads = [
+      { text: "line 1" },
       { text: "temporary error", isError: true as const },
+      { text: "line 2" },
     ];
 
+    expect(pickDeliverablePayloads(payloads)).toEqual([{ text: "line 1" }, { text: "line 2" }]);
   });
 
   it("returns only the last error payload when all payloads are errors", () => {
@@ -123,6 +126,7 @@ describe("isHeartbeatOnlyResponse", () => {
   });
 
   it("returns true when multiple payloads include narration followed by HEARTBEAT_OK", () => {
+    // Agent narrates its work then signals nothing needs attention.
     expect(
       isHeartbeatOnlyResponse(
         [

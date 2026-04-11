@@ -53,9 +53,7 @@ describe("provider attribution", () => {
   });
 
   it("returns a hidden-spec OpenAI attribution policy", () => {
-    expect(
-      resolveProviderAttributionPolicy("openai", { CHAINBREAKER_VERSION: "2026.3.22" }),
-    ).toEqual({
+    expect(resolveProviderAttributionPolicy("openai", { CHAINBREAKER_VERSION: "2026.3.22" })).toEqual({
       provider: "openai",
       enabledByDefault: true,
       verification: "vendor-hidden-api-spec",
@@ -70,9 +68,7 @@ describe("provider attribution", () => {
         "User-Agent": "chainbreaker/2026.3.22",
       },
     });
-    expect(
-      resolveProviderAttributionHeaders("openai", { CHAINBREAKER_VERSION: "2026.3.22" }),
-    ).toEqual({
+    expect(resolveProviderAttributionHeaders("openai", { CHAINBREAKER_VERSION: "2026.3.22" })).toEqual({
       originator: "chainbreaker",
       version: "2026.3.22",
       "User-Agent": "chainbreaker/2026.3.22",
@@ -99,6 +95,7 @@ describe("provider attribution", () => {
     });
   });
 
+  it("lists the current attribution support matrix", () => {
     expect(
       listProviderAttributionPolicies({ CHAINBREAKER_VERSION: "2026.3.22" }).map((policy) => [
         policy.provider,

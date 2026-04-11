@@ -215,12 +215,14 @@ async function runSignalDeliveryResult(bestEffort: boolean) {
     mockAgentPayloads([{ text: "hello from cron" }]);
     const res = await runCronIsolatedAgentTurn({
       cfg: makeCfg(home, storePath, {
+        channels: { signal: {} },
       }),
       deps,
       job: {
         ...makeJob({ kind: "agentTurn", message: "do it" }),
         delivery: {
           mode: "announce",
+          channel: "signal",
           to: "+15551234567",
           bestEffort,
         },
@@ -232,6 +234,7 @@ async function runSignalDeliveryResult(bestEffort: boolean) {
     outcome = { res, deps };
   });
   if (!outcome) {
+    throw new Error("signal delivery did not produce an outcome");
   }
   return outcome;
 }
@@ -546,6 +549,7 @@ describe("runCronIsolatedAgentTurn", () => {
     });
   });
 
+  it("delivers text directly for signal when best-effort is enabled", async () => {
     const { res, deps } = await runSignalDeliveryResult(true);
     expect(res.status).toBe("ok");
     expect(res.delivered).toBe(true);

@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import * as readline from "node:readline";
 import { Readable, Writable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import {
@@ -27,6 +28,7 @@ type PermissionOption = RequestPermissionRequest["options"][number];
 
 type PermissionResolverDeps = {
   prompt?: (toolName: string | undefined, toolTitle?: string) => Promise<boolean>;
+  log?: (line: string) => void;
   cwd?: string;
 };
 
@@ -74,6 +76,7 @@ function promptUserPermission(toolName: string | undefined, toolTitle?: string):
   }
   return new Promise((resolve) => {
     let settled = false;
+    const rl = readline.createInterface({
       input: process.stdin,
       output: process.stderr,
     });
@@ -110,6 +113,7 @@ export async function resolvePermissionRequest(
   params: RequestPermissionRequest,
   deps: PermissionResolverDeps = {},
 ): Promise<RequestPermissionResponse> {
+  const log = deps.log ?? ((line: string) => console.error(line));
   const prompt = deps.prompt ?? promptUserPermission;
   const cwd = deps.cwd ?? process.cwd();
   const options = params.options ?? [];
@@ -411,6 +415,7 @@ export async function createAcpClient(opts: AcpClientOptions = {}): Promise<AcpC
 export async function runAcpClientInteractive(opts: AcpClientOptions = {}): Promise<void> {
   const { client, agent, sessionId } = await createAcpClient(opts);
 
+  const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });

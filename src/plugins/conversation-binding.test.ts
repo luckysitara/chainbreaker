@@ -167,6 +167,7 @@ function createDiscordCodexBindRequest(
     pluginRoot: "/plugins/codex-a",
     requestedBySenderId: "user-1",
     conversation: {
+      channel: "discord",
       accountId,
       conversationId,
     },
@@ -197,6 +198,7 @@ function createTelegramCodexBindRequest(
 }
 
 function createCodexBindRequest(params: {
+  channel: "discord" | "telegram";
   accountId: string;
   conversationId: string;
   summary: string;
@@ -410,7 +412,13 @@ describe("plugin conversation binding approvals", () => {
     __testing.reset();
     setActivePluginRegistry(createEmptyPluginRegistry());
     fs.rmSync(approvalsPath, { force: true });
+    unregisterSessionBindingAdapter({ channel: "discord", accountId: "default" });
+    unregisterSessionBindingAdapter({ channel: "discord", accountId: "work" });
+    unregisterSessionBindingAdapter({ channel: "discord", accountId: "isolated" });
     unregisterSessionBindingAdapter({ channel: "telegram", accountId: "default" });
+    registerSessionBindingAdapter(createAdapter("discord", "default"));
+    registerSessionBindingAdapter(createAdapter("discord", "work"));
+    registerSessionBindingAdapter(createAdapter("discord", "isolated"));
     registerSessionBindingAdapter(createAdapter("telegram", "default"));
   });
 
@@ -574,6 +582,7 @@ describe("plugin conversation binding approvals", () => {
   it("persists detachHint on approved plugin bindings", async () => {
     const binding = await requestResolvedBinding(
       createCodexBindRequest({
+        channel: "discord",
         accountId: "isolated",
         conversationId: "channel:detach-hint",
         summary: "Bind this conversation to Codex thread 999.",
@@ -586,6 +595,7 @@ describe("plugin conversation binding approvals", () => {
     const currentBinding = await getCurrentPluginConversationBinding({
       pluginRoot: "/plugins/codex-a",
       conversation: {
+        channel: "discord",
         accountId: "isolated",
         conversationId: "channel:detach-hint",
       },
@@ -604,6 +614,7 @@ describe("plugin conversation binding approvals", () => {
         pluginRoot: "/plugins/callback-test",
         requestedBySenderId: "user-1",
         conversation: {
+          channel: "discord",
           accountId: "isolated",
           conversationId: "channel:callback-test",
         },
@@ -624,6 +635,7 @@ describe("plugin conversation binding approvals", () => {
           detachHint: undefined,
           requestedBySenderId: "user-1",
           conversation: {
+            channel: "discord",
             accountId: "isolated",
             conversationId: "channel:callback-test",
           },
@@ -677,6 +689,7 @@ describe("plugin conversation binding approvals", () => {
         pluginRoot: "/plugins/callback-slow-approve",
         requestedBySenderId: "user-1",
         conversation: {
+          channel: "discord",
           accountId: "isolated",
           conversationId: "channel:slow-approve",
         },
@@ -714,6 +727,7 @@ describe("plugin conversation binding approvals", () => {
       pluginRoot: "/plugins/codex-a",
       requestedBySenderId: "user-1",
       conversation: {
+        channel: "discord",
         accountId: "isolated",
         conversationId: "channel:1",
       },
@@ -723,6 +737,7 @@ describe("plugin conversation binding approvals", () => {
     const current = await getCurrentPluginConversationBinding({
       pluginRoot: "/plugins/codex-a",
       conversation: {
+        channel: "discord",
         accountId: "isolated",
         conversationId: "channel:1",
       },
@@ -739,6 +754,7 @@ describe("plugin conversation binding approvals", () => {
     const otherPluginView = await getCurrentPluginConversationBinding({
       pluginRoot: "/plugins/codex-b",
       conversation: {
+        channel: "discord",
         accountId: "isolated",
         conversationId: "channel:1",
       },
@@ -750,6 +766,7 @@ describe("plugin conversation binding approvals", () => {
       await detachPluginConversationBinding({
         pluginRoot: "/plugins/codex-b",
         conversation: {
+          channel: "discord",
           accountId: "isolated",
           conversationId: "channel:1",
         },
@@ -760,6 +777,7 @@ describe("plugin conversation binding approvals", () => {
       await detachPluginConversationBinding({
         pluginRoot: "/plugins/codex-a",
         conversation: {
+          channel: "discord",
           accountId: "isolated",
           conversationId: "channel:1",
         },
@@ -770,8 +788,10 @@ describe("plugin conversation binding approvals", () => {
   it("refuses to claim a conversation already bound by core", async () => {
     sessionBindingState.setRecord({
       bindingId: "binding-core",
+      targetSessionKey: "agent:main:discord:channel:1",
       targetKind: "session",
       conversation: {
+        channel: "discord",
         accountId: "default",
         conversationId: "channel:1",
       },
@@ -786,6 +806,7 @@ describe("plugin conversation binding approvals", () => {
       pluginRoot: "/plugins/codex-a",
       requestedBySenderId: "user-1",
       conversation: {
+        channel: "discord",
         accountId: "default",
         conversationId: "channel:1",
       },

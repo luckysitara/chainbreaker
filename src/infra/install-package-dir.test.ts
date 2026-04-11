@@ -299,6 +299,7 @@ describe("installPackageDir", () => {
       stdout: "",
       stderr: "",
       code: 0,
+      signal: null,
       killed: false,
       termination: "exit",
     });
@@ -354,6 +355,7 @@ describe("installPackageDir", () => {
         stdout: "",
         stderr: "",
         code: 0,
+        signal: null,
         killed: false,
         termination: "exit",
       };

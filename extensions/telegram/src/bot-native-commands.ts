@@ -1,3 +1,4 @@
+import type { Bot, Context } from "grammy";
 import {
   resolveCommandAuthorization,
   resolveCommandAuthorizedFromAuthorizers,
@@ -47,7 +48,6 @@ import { resolveThreadSessionKeys } from "chainbreaker/plugin-sdk/routing";
 import { danger, logVerbose } from "chainbreaker/plugin-sdk/runtime-env";
 import { getChildLogger } from "chainbreaker/plugin-sdk/runtime-env";
 import type { RuntimeEnv } from "chainbreaker/plugin-sdk/runtime-env";
-import type { Bot, Context } from "grammy";
 import { resolveTelegramAccount } from "./accounts.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import { isSenderAllowed, normalizeDmAllowFromWithStore } from "./bot-access.js";
@@ -83,6 +83,7 @@ import {
   evaluateTelegramGroupPolicyAccess,
 } from "./group-access.js";
 import { resolveTelegramGroupPromptSettings } from "./group-config-helpers.js";
+import { buildInlineKeyboard } from "./send.js";
 
 const EMPTY_RESPONSE_FALLBACK = "No response generated. Please try again.";
 const TELEGRAM_NATIVE_COMMAND_CALLBACK_PREFIX = "tgcmd:";
@@ -714,6 +715,7 @@ export const registerTelegramNativeCommands = ({
               }),
             );
           }
+          const replyMarkup = buildInlineKeyboard(rows);
           await withTelegramApiErrorLogging({
             operation: "sendMessage",
             runtime,
@@ -820,7 +822,9 @@ export const registerTelegramNativeCommands = ({
           skippedNonSilent: 0,
         };
 
+        const { createChannelReplyPipeline, deliverReplies } =
           await loadTelegramNativeCommandDeliveryRuntime();
+        const { onModelSelected, ...replyPipeline } = createChannelReplyPipeline({
           cfg: executionCfg,
           agentId: route.agentId,
           channel: "telegram",
@@ -831,6 +835,7 @@ export const registerTelegramNativeCommands = ({
           ctx: ctxPayload,
           cfg: executionCfg,
           dispatcherOptions: {
+            ...replyPipeline,
             deliver: async (payload, _info) => {
               if (
                 shouldSuppressLocalTelegramExecApprovalPrompt({

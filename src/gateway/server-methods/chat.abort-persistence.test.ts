@@ -51,7 +51,10 @@ async function readTranscriptLines(transcriptPath: string): Promise<TranscriptLi
   const raw = await fs.readFile(transcriptPath, "utf-8");
   return raw
     .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0)
+    .map((line) => {
       try {
+        return JSON.parse(line) as TranscriptLine;
       } catch {
         return {};
       }
@@ -78,9 +81,7 @@ afterEach(() => {
 
 describe("chat abort transcript persistence", () => {
   it("persists run-scoped abort partial with rpc metadata and idempotency", async () => {
-    const { transcriptPath, sessionId } = await createTranscriptFixture(
-      "chainbreaker-chat-abort-run-",
-    );
+    const { transcriptPath, sessionId } = await createTranscriptFixture("chainbreaker-chat-abort-run-");
     const runId = "idem-abort-run-1";
     const respond = vi.fn();
     const context = createChatAbortContext({
@@ -121,6 +122,9 @@ describe("chat abort transcript persistence", () => {
       respond,
     });
 
+    const lines = await readTranscriptLines(transcriptPath);
+    const persisted = lines
+      .map((line) => line.message)
       .filter(
         (message): message is Record<string, unknown> =>
           Boolean(message) && message?.idempotencyKey === `${runId}:assistant`,
@@ -170,7 +174,12 @@ describe("chat abort transcript persistence", () => {
     expect(payload).toMatchObject({ aborted: true });
     expect(payload.runIds).toEqual(expect.arrayContaining(["run-a", "run-b"]));
 
+    const lines = await readTranscriptLines(transcriptPath);
+    const runAPersisted = lines
+      .map((line) => line.message)
       .find((message) => message?.idempotencyKey === "run-a:assistant");
+    const runBPersisted = lines
+      .map((line) => line.message)
       .find((message) => message?.idempotencyKey === "run-b:assistant");
 
     expect(runAPersisted).toMatchObject({
@@ -215,6 +224,9 @@ describe("chat abort transcript persistence", () => {
     expect(ok).toBe(true);
     expect(payload).toMatchObject({ aborted: true, runIds: ["run-stop-1"] });
 
+    const lines = await readTranscriptLines(transcriptPath);
+    const persisted = lines
+      .map((line) => line.message)
       .find((message) => message?.idempotencyKey === "run-stop-1:assistant");
 
     expect(persisted).toMatchObject({
@@ -250,6 +262,9 @@ describe("chat abort transcript persistence", () => {
     expect(ok).toBe(true);
     expect(payload).toMatchObject({ aborted: true, runIds: [runId] });
 
+    const lines = await readTranscriptLines(transcriptPath);
+    const persisted = lines
+      .map((line) => line.message)
       .find((message) => message?.idempotencyKey === `${runId}:assistant`);
     expect(persisted).toBeUndefined();
   });

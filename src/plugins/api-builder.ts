@@ -59,14 +59,12 @@ const noopRegisterMediaUnderstandingProvider: ChainbreakerPluginApi["registerMed
 const noopRegisterImageGenerationProvider: ChainbreakerPluginApi["registerImageGenerationProvider"] =
   () => {};
 const noopRegisterWebSearchProvider: ChainbreakerPluginApi["registerWebSearchProvider"] = () => {};
-const noopRegisterInteractiveHandler: ChainbreakerPluginApi["registerInteractiveHandler"] =
-  () => {};
+const noopRegisterInteractiveHandler: ChainbreakerPluginApi["registerInteractiveHandler"] = () => {};
 const noopOnConversationBindingResolved: ChainbreakerPluginApi["onConversationBindingResolved"] =
   () => {};
 const noopRegisterCommand: ChainbreakerPluginApi["registerCommand"] = () => {};
 const noopRegisterContextEngine: ChainbreakerPluginApi["registerContextEngine"] = () => {};
-const noopRegisterMemoryPromptSection: ChainbreakerPluginApi["registerMemoryPromptSection"] =
-  () => {};
+const noopRegisterMemoryPromptSection: ChainbreakerPluginApi["registerMemoryPromptSection"] = () => {};
 const noopRegisterMemoryFlushPlan: ChainbreakerPluginApi["registerMemoryFlushPlan"] = () => {};
 const noopRegisterMemoryRuntime: ChainbreakerPluginApi["registerMemoryRuntime"] = () => {};
 const noopRegisterMemoryEmbeddingProvider: ChainbreakerPluginApi["registerMemoryEmbeddingProvider"] =

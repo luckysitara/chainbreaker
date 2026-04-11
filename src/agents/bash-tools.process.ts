@@ -46,6 +46,7 @@ function defaultTailNote(totalLines: number, usingDefaultTail: boolean) {
   if (!usingDefaultTail || totalLines <= DEFAULT_LOG_TAIL_LINES) {
     return "";
   }
+  return `\n\n[showing last ${DEFAULT_LOG_TAIL_LINES} of ${totalLines} lines; pass offset/limit to page]`;
 }
 
 const processSchema = Type.Object({
@@ -117,6 +118,7 @@ function resetPollRetrySuggestion(sessionId: string): void {
 
 export function createProcessTool(
   defaults?: ProcessToolDefaults,
+  // oxlint-disable-next-line typescript/no-explicit-any
 ): AgentTool<any, unknown> {
   if (defaults?.cleanupMs !== undefined) {
     setJobTtlMs(defaults.cleanupMs);
@@ -150,6 +152,7 @@ export function createProcessTool(
     description:
       "Manage running exec sessions: list, poll, log, write, send-keys, submit, paste, kill.",
     parameters: processSchema,
+    execute: async (_toolCallId, args, _signal, _onUpdate): Promise<AgentToolResult<unknown>> => {
       const params = args as {
         action:
           | "list"
@@ -206,6 +209,7 @@ export function createProcessTool(
             exitCode: s.exitCode ?? undefined,
             exitSignal: s.exitSignal ?? undefined,
           }));
+        const lines = [...running, ...finished]
           .toSorted((a, b) => b.startedAt - a.startedAt)
           .map((s) => {
             const label = s.name ? truncateMiddle(s.name, 80) : truncateMiddle(s.command, 120);
@@ -215,6 +219,7 @@ export function createProcessTool(
           content: [
             {
               type: "text",
+              text: lines.join("\n") || "No running or recent sessions.",
             },
           ],
           details: { status: "completed", sessions: [...running, ...finished] },
@@ -301,6 +306,7 @@ export function createProcessTool(
                         })`) +
                       `\n\nProcess exited with ${
                         scopedFinished.exitSignal
+                          ? `signal ${scopedFinished.exitSignal}`
                           : `code ${scopedFinished.exitCode ?? 0}`
                       }.`,
                   },
@@ -322,7 +328,10 @@ export function createProcessTool(
           }
           const pollWaitMs = resolvePollWaitMs(params.timeout);
           if (pollWaitMs > 0 && !scopedSession.exited) {
+            const deadline = Date.now() + pollWaitMs;
+            while (!scopedSession.exited && Date.now() < deadline) {
               await new Promise((resolve) =>
+                setTimeout(resolve, Math.max(0, Math.min(250, deadline - Date.now()))),
               );
             }
           }
@@ -360,6 +369,7 @@ export function createProcessTool(
                   (output || "(no new output)") +
                   (exited
                     ? `\n\nProcess exited with ${
+                        exitSignal ? `signal ${exitSignal}` : `code ${exitCode}`
                       }.`
                     : "\n\nProcess still running."),
               },

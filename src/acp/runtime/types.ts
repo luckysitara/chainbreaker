@@ -51,6 +51,7 @@ export type AcpRuntimeTurnInput = {
   attachments?: AcpRuntimeTurnAttachment[];
   mode: AcpRuntimePromptMode;
   requestId: string;
+  signal?: AbortSignal;
 };
 
 export type AcpRuntimeCapabilities = {
@@ -123,6 +124,7 @@ export interface AcpRuntime {
     handle?: AcpRuntimeHandle;
   }): Promise<AcpRuntimeCapabilities> | AcpRuntimeCapabilities;
 
+  getStatus?(input: { handle: AcpRuntimeHandle; signal?: AbortSignal }): Promise<AcpRuntimeStatus>;
 
   setMode?(input: { handle: AcpRuntimeHandle; mode: string }): Promise<void>;
 

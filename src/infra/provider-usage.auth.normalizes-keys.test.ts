@@ -12,6 +12,7 @@ vi.mock("../agents/auth-profiles.js", () => {
     String(provider ?? "")
       .trim()
       .toLowerCase()
+      .replace(/^z-ai$/, "zai");
   const dedupeProfileIds = (profileIds: string[]): string[] => [...new Set(profileIds)];
   const listProfilesForProvider = (
     store: { profiles?: Record<string, { provider?: string } | undefined> },
@@ -329,6 +330,8 @@ describe("resolveProviderAuths key normalization", () => {
       const config = {
         models: {
           providers: {
+            minimax: {
+              baseUrl: "https://api.minimaxi.com",
               models: [createTestModelDefinition()],
               apiKey,
             },
@@ -338,6 +341,7 @@ describe("resolveProviderAuths key normalization", () => {
       await writeConfig(home, config);
 
       return await resolveProviderAuths({
+        providers: ["minimax"],
         agentDir: agentDirForHome(home),
         config,
         env: buildSuiteEnv(home),
@@ -369,10 +373,15 @@ describe("resolveProviderAuths key normalization", () => {
 
   it("strips embedded CR/LF from env keys", async () => {
     await expectResolvedAuthsFromSuiteHome({
+      providers: ["zai", "minimax", "xiaomi"],
       env: {
+        ZAI_API_KEY: "zai-\r\nkey",
+        MINIMAX_API_KEY: "minimax-\r\nkey",
         XIAOMI_API_KEY: "xiaomi-\r\nkey",
       },
       expected: [
+        { provider: "zai", token: "zai-key" },
+        { provider: "minimax", token: "minimax-key" },
         { provider: "xiaomi", token: "xiaomi-key" },
       ],
     });
@@ -380,35 +389,47 @@ describe("resolveProviderAuths key normalization", () => {
 
   it("accepts z-ai env alias and normalizes embedded CR/LF", async () => {
     await expectResolvedAuthsFromSuiteHome({
+      providers: ["zai"],
       env: {
+        Z_AI_API_KEY: "zai-\r\nkey",
       },
+      expected: [{ provider: "zai", token: "zai-key" }],
     });
   });
 
   it("prefers ZAI_API_KEY over the z-ai alias when both are set", async () => {
     await expectResolvedAuthsFromSuiteHome({
+      providers: ["zai"],
       env: {
+        ZAI_API_KEY: "direct-zai-key",
+        Z_AI_API_KEY: "alias-zai-key",
       },
+      expected: [{ provider: "zai", token: "direct-zai-key" }],
     });
   });
 
   it("prefers MINIMAX_CODE_PLAN_KEY over MINIMAX_API_KEY", async () => {
     await expectResolvedAuthsFromSuiteHome({
+      providers: ["minimax"],
       env: {
         MINIMAX_CODE_PLAN_KEY: "code-plan-key",
         MINIMAX_API_KEY: "api-key",
       },
+      expected: [{ provider: "minimax", token: "code-plan-key" }],
     });
   });
 
   it("strips embedded CR/LF from stored auth profiles (token + api_key)", async () => {
     await expectResolvedAuthsFromSuiteHome({
+      providers: ["minimax", "xiaomi"],
       setup: async (home) => {
         await writeAuthProfiles(home, {
+          "minimax:default": { type: "token", provider: "minimax", token: "mini-\r\nmax" },
           "xiaomi:default": { type: "api_key", provider: "xiaomi", key: "xiao-\r\nmi" },
         });
       },
       expected: [
+        { provider: "minimax", token: "mini-max" },
         { provider: "xiaomi", token: "xiao-mi" },
       ],
     });
@@ -422,14 +443,18 @@ describe("resolveProviderAuths key normalization", () => {
     expect(auths).toEqual([{ provider: "anthropic", token: "token-1", accountId: "acc-1" }]);
   });
 
+  it("falls back to legacy .pi auth file for zai keys even after os.homedir() is primed", async () => {
     // Prime os.homedir() to simulate long-lived workers that may have touched it before HOME changes.
     os.homedir();
     await expectResolvedAuthsFromSuiteHome({
+      providers: ["zai"],
       setup: async (home) => {
         await writeLegacyPiAuth(
           home,
+          `${JSON.stringify({ "z-ai": { access: "legacy-zai-key" } }, null, 2)}\n`,
         );
       },
+      expected: [{ provider: "zai", token: "legacy-zai-key" }],
     });
   });
 
@@ -464,10 +489,15 @@ describe("resolveProviderAuths key normalization", () => {
     const config = {
       models: {
         providers: {
+          zai: {
             baseUrl: "https://api.z.ai",
             models: [createTestModelDefinition()],
+            apiKey: "cfg-zai-key", // pragma: allowlist secret
           },
+          minimax: {
+            baseUrl: "https://api.minimaxi.com",
             models: [createTestModelDefinition()],
+            apiKey: "cfg-minimax-key", // pragma: allowlist secret
           },
           xiaomi: {
             baseUrl: "https://api.xiaomi.example",
@@ -478,11 +508,14 @@ describe("resolveProviderAuths key normalization", () => {
       },
     } satisfies ChainbreakerConfig;
     await expectResolvedAuthsFromSuiteHome({
+      providers: ["zai", "minimax", "xiaomi"],
       setup: async (home) => {
         await writeConfig(home, config);
       },
       config,
       expected: [
+        { provider: "zai", token: "cfg-zai-key" },
+        { provider: "minimax", token: "cfg-minimax-key" },
         { provider: "xiaomi", token: "cfg-xiaomi-key" },
       ],
     });
@@ -490,20 +523,26 @@ describe("resolveProviderAuths key normalization", () => {
 
   it("returns no auth when providers have no configured credentials", async () => {
     await expectResolvedAuthsFromSuiteHome({
+      providers: ["zai", "minimax", "xiaomi"],
       expected: [],
     });
   });
 
+  it("uses zai api_key auth profiles when env and config are missing", async () => {
     await expectResolvedAuthsFromSuiteHome({
+      providers: ["zai"],
       setup: async (home) => {
         await writeAuthProfiles(home, {
+          "zai:default": { type: "api_key", provider: "zai", key: "profile-zai-key" },
         });
       },
+      expected: [{ provider: "zai", token: "profile-zai-key" }],
     });
   });
 
   it("ignores invalid legacy z-ai auth files", async () => {
     await expectResolvedAuthsFromSuiteHome({
+      providers: ["zai"],
       setup: async (home) => {
         await writeLegacyPiAuth(home, "{not-json");
       },
@@ -524,6 +563,7 @@ describe("resolveProviderAuths key normalization", () => {
       await writeAuthProfiles(home, {
         "anthropic:default": {
           type: "token",
+          provider: "zai",
           token: "mismatched-provider-token",
         },
       });
@@ -598,5 +638,6 @@ describe("resolveProviderAuths key normalization", () => {
 
   it("keeps all-caps plaintext config keys eligible for provider usage auth resolution", async () => {
     const auths = await resolveMinimaxAuthFromConfiguredKey("ALLCAPS_SAMPLE");
+    expect(auths).toEqual([{ provider: "minimax", token: "ALLCAPS_SAMPLE" }]);
   });
 });

@@ -68,14 +68,18 @@ vi.mock("./embeddings.js", () => {
                     text: string;
                     parts?: Array<
                       | { type: "text"; text: string }
+                      | { type: "inline-data"; mimeType: string; data: string }
                     >;
                   }>,
                 ) => {
                   embedBatchInputCalls += 1;
                   return inputs.map((input) => {
+                    const inlineData = input.parts?.find((part) => part.type === "inline-data");
+                    if (inlineData?.type === "inline-data" && inlineData.data.length > 9000) {
                       throw new Error("payload too large");
                     }
                     const mimeType =
+                      inlineData?.type === "inline-data" ? inlineData.mimeType : undefined;
                     if (mimeType?.startsWith("image/")) {
                       return [0, 0, 1, 0];
                     }
@@ -126,12 +130,14 @@ describe("memory index", () => {
       type: "message",
       message: {
         role: "user",
+        content: [{ type: "text", text: "session change test user line" }],
       },
     }),
     JSON.stringify({
       type: "message",
       message: {
         role: "assistant",
+        content: [{ type: "text", text: "session change test assistant line" }],
       },
     }),
   ].join("\n");
@@ -163,6 +169,7 @@ describe("memory index", () => {
     await fs.mkdir(memoryDir, { recursive: true });
     await fs.writeFile(
       path.join(memoryDir, "2026-01-12.md"),
+      "# Log\nAlpha memory line.\nZebra memory line.",
     );
   });
 
@@ -1038,6 +1045,7 @@ describe("memory index", () => {
   });
 
   it("snapshots builtin file hashes with a single sqlite query per sync", async () => {
+    await fs.writeFile(path.join(memoryDir, "2026-01-13.md"), "beta line\n");
     const cfg = createCfg({
       storePath: path.join(workspaceDir, `index-prepare-reuse-${randomUUID()}.sqlite`),
       onSearch: false,
@@ -1085,6 +1093,7 @@ describe("memory index", () => {
       onSearch: false,
     });
 
+    await fs.writeFile(path.join(memoryDir, "2026-01-13.md"), "beta line\n");
 
     const stateDir = path.join(fixtureRoot, `state-status-${randomUUID()}`);
     vi.stubEnv("CHAINBREAKER_STATE_DIR", stateDir);
@@ -1094,6 +1103,7 @@ describe("memory index", () => {
       path.join(sessionDir, "status.jsonl"),
       JSON.stringify({
         type: "message",
+        message: { role: "user", content: [{ type: "text", text: "session status line" }] },
       }) + "\n",
     );
 
@@ -1406,6 +1416,7 @@ describe("memory index", () => {
 
     await fs.writeFile(
       path.join(memoryDir, "2026-01-12.md"),
+      "# Log\nAlpha memory line.\nZebra memory line.",
     );
     await manager.sync({ reason: "test" });
 

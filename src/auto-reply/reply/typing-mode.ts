@@ -46,6 +46,11 @@ export type TypingSignaler = {
   shouldStartOnMessageStart: boolean;
   shouldStartOnText: boolean;
   shouldStartOnReasoning: boolean;
+  signalRunStart: () => Promise<void>;
+  signalMessageStart: () => Promise<void>;
+  signalTextDelta: (text?: string) => Promise<void>;
+  signalReasoningDelta: () => Promise<void>;
+  signalToolStart: () => Promise<void>;
 };
 
 export function createTypingSignaler(params: {
@@ -69,12 +74,14 @@ export function createTypingSignaler(params: {
     return !isSilentReplyText(trimmed, SILENT_REPLY_TOKEN);
   };
 
+  const signalRunStart = async () => {
     if (disabled || !shouldStartImmediately) {
       return;
     }
     await typing.startTypingLoop();
   };
 
+  const signalMessageStart = async () => {
     if (disabled || !shouldStartOnMessageStart) {
       return;
     }
@@ -84,6 +91,7 @@ export function createTypingSignaler(params: {
     await typing.startTypingLoop();
   };
 
+  const signalTextDelta = async (text?: string) => {
     if (disabled) {
       return;
     }
@@ -107,6 +115,7 @@ export function createTypingSignaler(params: {
     }
   };
 
+  const signalReasoningDelta = async () => {
     if (disabled || !shouldStartOnReasoning) {
       return;
     }
@@ -117,6 +126,7 @@ export function createTypingSignaler(params: {
     typing.refreshTypingTtl();
   };
 
+  const signalToolStart = async () => {
     if (disabled) {
       return;
     }
@@ -136,5 +146,10 @@ export function createTypingSignaler(params: {
     shouldStartOnMessageStart,
     shouldStartOnText,
     shouldStartOnReasoning,
+    signalRunStart,
+    signalMessageStart,
+    signalTextDelta,
+    signalReasoningDelta,
+    signalToolStart,
   };
 }

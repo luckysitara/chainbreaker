@@ -43,19 +43,29 @@ function formatVoiceMeta(voice: SpeechVoiceOption): string | undefined {
 
 function formatVoiceList(voices: SpeechVoiceOption[], limit: number, providerId: string): string {
   const sliced = voices.slice(0, Math.max(1, Math.min(limit, 50)));
+  const lines: string[] = [];
+  lines.push(`${resolveProviderLabel(providerId)} voices: ${voices.length}`);
+  lines.push("");
   for (const v of sliced) {
     const name = (v.name ?? "").trim() || "(unnamed)";
     const category = (v.category ?? "").trim();
     const meta = category ? ` · ${category}` : "";
+    lines.push(`- ${name}${meta}`);
+    lines.push(`  id: ${v.id}`);
     const details = formatVoiceMeta(v);
     if (details) {
+      lines.push(`  meta: ${details}`);
     }
     const description = (v.description ?? "").trim();
     if (description) {
+      lines.push(`  note: ${description}`);
     }
   }
   if (voices.length > sliced.length) {
+    lines.push("");
+    lines.push(`(showing first ${sliced.length})`);
   }
+  return lines.join("\n");
 }
 
 function findVoice(voices: SpeechVoiceOption[], query: string): SpeechVoiceOption | null {
@@ -81,6 +91,7 @@ function asTrimmedString(value: unknown): string {
 }
 
 function resolveCommandLabel(channel: string): string {
+  return channel === "discord" ? "/talkvoice" : "/voice";
 }
 
 function asProviderBaseUrl(value: unknown): string | undefined {
@@ -108,6 +119,7 @@ export default definePluginEntry({
     api.registerCommand({
       name: "voice",
       nativeNames: {
+        discord: "talkvoice",
       },
       description: "List/set Talk provider voices (affects iOS Talk playback).",
       acceptsArgs: true,
@@ -165,6 +177,7 @@ export default definePluginEntry({
 
         if (action === "set") {
           // Gateway callers can override messageChannel, so scope presence is
+          // the reliable signal for internal admin-only mutations.
           if (requiresAdminToSetVoice(ctx.channel, ctx.gatewayClientScopes)) {
             return { text: `⚠️ ${commandLabel} set requires operator.admin.` };
           }

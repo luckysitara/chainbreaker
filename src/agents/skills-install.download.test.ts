@@ -124,6 +124,7 @@ function runCommandResult(params?: Partial<Record<"code" | "stdout" | "stderr", 
     code: 0,
     stdout: "",
     stderr: "",
+    signal: null,
     killed: false,
     ...params,
   };

@@ -25,11 +25,13 @@ describe("ACP binding cutover schema", () => {
         {
           type: "route",
           agentId: "main",
+          match: { channel: "discord", accountId: "default" },
         },
         {
           type: "acp",
           agentId: "coding",
           match: {
+            channel: "discord",
             accountId: "default",
             peer: { kind: "channel", id: "1478836151241412759" },
           },
@@ -47,6 +49,7 @@ describe("ACP binding cutover schema", () => {
   it("rejects legacy Discord channel-local ACP binding fields", () => {
     const parsed = ChainbreakerSchema.safeParse({
       channels: {
+        discord: {
           guilds: {
             "1459246755253325866": {
               channels: {
@@ -98,6 +101,7 @@ describe("ACP binding cutover schema", () => {
         {
           type: "acp",
           agentId: "codex",
+          match: { channel: "discord", accountId: "default" },
         },
       ],
     });
@@ -112,6 +116,7 @@ describe("ACP binding cutover schema", () => {
           type: "acp",
           agentId: "codex",
           match: {
+            channel: "slack",
             accountId: "default",
             peer: { kind: "channel", id: "C123456" },
           },

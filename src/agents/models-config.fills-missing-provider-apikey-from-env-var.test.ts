@@ -300,9 +300,12 @@ describe("models-config", () => {
 
   it("fills missing provider.apiKey from env var name when models exist", async () => {
     await withTempHome(async () => {
+      await withEnvVar("MINIMAX_API_KEY", "sk-minimax-test", async () => {
         const cfg: ChainbreakerConfig = {
           models: {
             providers: {
+              minimax: {
+                baseUrl: "https://api.minimax.io/anthropic",
                 api: "anthropic-messages",
                 models: [
                   {
@@ -325,6 +328,7 @@ describe("models-config", () => {
         const parsed = await readGeneratedModelsJson<{
           providers: Record<string, { apiKey?: string; models?: Array<{ id: string }> }>;
         }>();
+        expect(parsed.providers.minimax?.apiKey).toBe("MINIMAX_API_KEY"); // pragma: allowlist secret
       });
     });
   });
@@ -478,7 +482,9 @@ describe("models-config", () => {
           {
             version: 1,
             profiles: {
+              "minimax:default": {
                 type: "api_key",
+                provider: "minimax",
                 keyRef: { source: "env", provider: "default", id: "MINIMAX_API_KEY" }, // pragma: allowlist secret
               },
             },
@@ -490,6 +496,8 @@ describe("models-config", () => {
       );
       await writeAgentModelsJson({
         providers: {
+          minimax: {
+            baseUrl: "https://api.minimax.io/anthropic",
             apiKey: "STALE_AGENT_KEY", // pragma: allowlist secret
             api: "anthropic-messages",
             models: [{ id: "MiniMax-M2.7", name: "MiniMax M2.7", input: ["text"] }],
@@ -507,6 +515,7 @@ describe("models-config", () => {
       const parsed = await readGeneratedModelsJson<{
         providers: Record<string, { apiKey?: string }>;
       }>();
+      expect(parsed.providers.minimax?.apiKey).toBe("MINIMAX_API_KEY"); // pragma: allowlist secret
     });
   });
 

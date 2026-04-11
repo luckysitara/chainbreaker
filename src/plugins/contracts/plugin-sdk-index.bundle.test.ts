@@ -8,10 +8,15 @@ import { buildPluginSdkEntrySources, pluginSdkEntrypoints } from "../../plugin-s
 
 const require = createRequire(import.meta.url);
 const tsdownModuleUrl = pathToFileURL(require.resolve("tsdown")).href;
+const bundledRepresentativeEntrypoints = ["matrix-runtime-heavy"] as const;
+const matrixRuntimeCoverageEntries = {
+  "matrix-runtime-sdk": bundledPluginFile("matrix", "src/matrix/sdk.ts"),
 } as const;
 const bundledCoverageEntrySources = {
   ...buildPluginSdkEntrySources(bundledRepresentativeEntrypoints),
+  ...matrixRuntimeCoverageEntries,
 };
+const bareMatrixSdkImportPattern = /(?:from|require|import)\s*\(?\s*["']matrix-js-sdk["']/;
 
 async function listBuiltJsFiles(rootDir: string): Promise<string[]> {
   const entries = await fs.readdir(rootDir, { withFileTypes: true });
@@ -46,6 +51,8 @@ describe("plugin-sdk bundled exports", () => {
       deps: {
         // Match the production host build contract: Matrix SDK packages stay
         // external so the heavy runtime surface does not fold multiple
+        // matrix-js-sdk entrypoints into one bundle artifact.
+        neverBundle: ["@lancedb/lancedb", "@matrix-org/matrix-sdk-crypto-nodejs", "matrix-js-sdk"],
       },
       // Full plugin-sdk coverage belongs to `pnpm build`, package contract
       // guardrails, and `plugin-sdk-subpaths.test.ts`. This file only keeps the expensive
@@ -67,6 +74,7 @@ describe("plugin-sdk bundled exports", () => {
       }),
     );
     await Promise.all(
+      Object.keys(matrixRuntimeCoverageEntries).map(async (entry) => {
         await expect(fs.stat(path.join(outDir, `${entry}.js`))).resolves.toBeTruthy();
       }),
     );

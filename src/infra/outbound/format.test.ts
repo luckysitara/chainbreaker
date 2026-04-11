@@ -18,6 +18,7 @@ describe("formatOutboundDeliverySummary", () => {
       expected: "✅ Sent via Telegram. Message ID: unknown",
     },
     {
+      channel: "imessage" as const,
       result: undefined,
       expected: "✅ Sent via iMessage. Message ID: unknown",
     },
@@ -31,14 +32,18 @@ describe("formatOutboundDeliverySummary", () => {
       expected: "✅ Sent via Telegram. Message ID: m1 (chat c1)",
     },
     {
+      channel: "discord" as const,
       result: {
+        channel: "discord" as const,
         messageId: "d1",
         channelId: "chan",
       },
       expected: "✅ Sent via Discord. Message ID: d1 (channel chan)",
     },
     {
+      channel: "slack" as const,
       result: {
+        channel: "slack" as const,
         messageId: "s1",
         roomId: "room-1",
       },
@@ -93,9 +98,12 @@ describe("buildOutboundDeliveryJson", () => {
     },
     {
       input: {
+        channel: "signal" as const,
         to: "+1",
+        result: { channel: "signal" as const, messageId: "s1", timestamp: 123 },
       },
       expected: {
+        channel: "signal",
         via: "direct",
         to: "+1",
         messageId: "s1",
@@ -105,6 +113,7 @@ describe("buildOutboundDeliveryJson", () => {
     },
     {
       input: {
+        channel: "discord" as const,
         to: "channel:1",
         via: "gateway" as const,
         result: {
@@ -114,6 +123,7 @@ describe("buildOutboundDeliveryJson", () => {
         },
       },
       expected: {
+        channel: "discord",
         via: "gateway",
         to: "channel:1",
         messageId: "g1",
@@ -134,6 +144,8 @@ describe("formatGatewaySummary", () => {
       expected: "✅ Sent via gateway (whatsapp). Message ID: m1",
     },
     {
+      input: { action: "Poll sent", channel: "discord", messageId: "p1" },
+      expected: "✅ Poll sent via gateway (discord). Message ID: p1",
     },
     {
       input: {},

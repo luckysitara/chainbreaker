@@ -26,6 +26,7 @@ vi.mock("./subcli-descriptors.js", () => ({
 vi.mock("../../plugins/cli.js", () => ({
   getPluginCliCommandDescriptors: async () => [
     {
+      name: "matrix",
       description: "Matrix channel utilities",
       hasSubcommands: true,
     },
@@ -38,6 +39,7 @@ describe("root help", () => {
 
     expect(text).toContain("status");
     expect(text).toContain("config");
+    expect(text).toContain("matrix");
     expect(text).toContain("Matrix channel utilities");
   });
 });

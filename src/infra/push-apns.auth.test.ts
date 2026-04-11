@@ -34,10 +34,12 @@ describe("push APNs auth and helper coverage", () => {
     expect(normalizeApnsEnvironment(null)).toBeNull();
   });
 
+  it("prefers inline APNs private key values and unescapes newlines", async () => {
     const resolved = await resolveApnsAuthConfigFromEnv({
       CHAINBREAKER_APNS_TEAM_ID: "TEAM123",
       CHAINBREAKER_APNS_KEY_ID: "KEY123",
       CHAINBREAKER_APNS_PRIVATE_KEY_P8:
+        "-----BEGIN PRIVATE KEY-----\\nline-a\\nline-b\\n-----END PRIVATE KEY-----", // pragma: allowlist secret
       CHAINBREAKER_APNS_PRIVATE_KEY: "ignored",
     } as NodeJS.ProcessEnv);
 
@@ -49,6 +51,7 @@ describe("push APNs auth and helper coverage", () => {
       },
     });
     if (resolved.ok) {
+      expect(resolved.value.privateKey).toContain("\nline-a\n");
       expect(resolved.value.privateKey).not.toBe("ignored");
     }
   });
@@ -59,6 +62,7 @@ describe("push APNs auth and helper coverage", () => {
       CHAINBREAKER_APNS_KEY_ID: "KEY123",
       CHAINBREAKER_APNS_PRIVATE_KEY_P8: "   ",
       CHAINBREAKER_APNS_PRIVATE_KEY:
+        "-----BEGIN PRIVATE KEY-----\\nline-c\\nline-d\\n-----END PRIVATE KEY-----", // pragma: allowlist secret
     } as NodeJS.ProcessEnv);
 
     expect(resolved).toMatchObject({
@@ -66,6 +70,7 @@ describe("push APNs auth and helper coverage", () => {
       value: {
         teamId: "TEAM123",
         keyId: "KEY123",
+        privateKey: "-----BEGIN PRIVATE KEY-----\nline-c\nline-d\n-----END PRIVATE KEY-----",
       },
     });
   });
@@ -75,6 +80,7 @@ describe("push APNs auth and helper coverage", () => {
     const keyPath = path.join(dir, "apns-key.p8");
     await fs.writeFile(
       keyPath,
+      "-----BEGIN PRIVATE KEY-----\\nline-e\\nline-f\\n-----END PRIVATE KEY-----\n",
       "utf8",
     );
 
@@ -89,6 +95,7 @@ describe("push APNs auth and helper coverage", () => {
       value: {
         teamId: "TEAM123",
         keyId: "KEY123",
+        privateKey: "-----BEGIN PRIVATE KEY-----\nline-e\nline-f\n-----END PRIVATE KEY-----",
       },
     });
   });

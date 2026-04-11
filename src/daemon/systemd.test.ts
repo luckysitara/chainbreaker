@@ -97,11 +97,7 @@ function mockReadGatewayServiceFile(
 }
 
 async function expectExecStartWithoutEnvironment(envFileLine: string) {
-  mockReadGatewayServiceFile([
-    "[Service]",
-    "ExecStart=/usr/bin/chainbreaker gateway run",
-    envFileLine,
-  ]);
+  mockReadGatewayServiceFile(["[Service]", "ExecStart=/usr/bin/chainbreaker gateway run", envFileLine]);
 
   const command = await readSystemdServiceExecStart({ HOME: TEST_SERVICE_HOME });
   expect(command?.programArguments).toEqual(["/usr/bin/chainbreaker", "gateway", "run"]);
@@ -429,9 +425,13 @@ describe("resolveSystemdUserUnitPath", () => {
 
 describe("splitArgsPreservingQuotes", () => {
   it("splits on whitespace outside quotes", () => {
-    expect(
-      splitArgsPreservingQuotes('/usr/bin/chainbreaker gateway start --name "My Bot"'),
-    ).toEqual(["/usr/bin/chainbreaker", "gateway", "start", "--name", "My Bot"]);
+    expect(splitArgsPreservingQuotes('/usr/bin/chainbreaker gateway start --name "My Bot"')).toEqual([
+      "/usr/bin/chainbreaker",
+      "gateway",
+      "start",
+      "--name",
+      "My Bot",
+    ]);
   });
 
   it("supports systemd-style backslash escaping", () => {
@@ -477,14 +477,8 @@ describe("readSystemdServiceExecStart", () => {
 
   it("loads CHAINBREAKER_GATEWAY_TOKEN from EnvironmentFile", async () => {
     const readFileSpy = mockReadGatewayServiceFile(
-      [
-        "[Service]",
-        "ExecStart=/usr/bin/chainbreaker gateway run",
-        "EnvironmentFile=%h/.chainbreaker/.env",
-      ],
-      {
-        [`${TEST_SERVICE_HOME}/.chainbreaker/.env`]: "CHAINBREAKER_GATEWAY_TOKEN=env-file-token\n",
-      },
+      ["[Service]", "ExecStart=/usr/bin/chainbreaker gateway run", "EnvironmentFile=%h/.chainbreaker/.env"],
+      { [`${TEST_SERVICE_HOME}/.chainbreaker/.env`]: "CHAINBREAKER_GATEWAY_TOKEN=env-file-token\n" },
     );
 
     const command = await readSystemdServiceExecStart({ HOME: TEST_SERVICE_HOME });
@@ -492,15 +486,15 @@ describe("readSystemdServiceExecStart", () => {
     expect(readFileSpy).toHaveBeenCalledTimes(2);
   });
 
+  it("lets EnvironmentFile override inline Environment values", async () => {
     mockReadGatewayServiceFile(
       [
         "[Service]",
         "ExecStart=/usr/bin/chainbreaker gateway run",
         "EnvironmentFile=%h/.chainbreaker/.env",
+        'Environment="CHAINBREAKER_GATEWAY_TOKEN=inline-token"',
       ],
-      {
-        [`${TEST_SERVICE_HOME}/.chainbreaker/.env`]: "CHAINBREAKER_GATEWAY_TOKEN=env-file-token\n",
-      },
+      { [`${TEST_SERVICE_HOME}/.chainbreaker/.env`]: "CHAINBREAKER_GATEWAY_TOKEN=env-file-token\n" },
     );
 
     const command = await readSystemdServiceExecStart({ HOME: TEST_SERVICE_HOME });

@@ -29,10 +29,7 @@ const SANDBOX_EXAMPLES = {
   recreate: [
     ["chainbreaker sandbox recreate --all", "Recreate all containers."],
     ["chainbreaker sandbox recreate --session main", "Recreate a specific session."],
-    [
-      "chainbreaker sandbox recreate --agent mybot",
-      "Recreate a specific agent (includes sub-agents).",
-    ],
+    ["chainbreaker sandbox recreate --agent mybot", "Recreate a specific agent (includes sub-agents)."],
     ["chainbreaker sandbox recreate --browser --all", "Recreate only browser containers."],
     ["chainbreaker sandbox recreate --all --force", "Skip confirmation."],
   ],

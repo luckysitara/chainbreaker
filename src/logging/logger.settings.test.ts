@@ -28,13 +28,7 @@ describe("shouldSkipMutatingLoggingConfigRead", () => {
 
   it("does not match other commands", () => {
     expect(
-      __test__.shouldSkipMutatingLoggingConfigRead([
-        "node",
-        "chainbreaker",
-        "config",
-        "get",
-        "foo",
-      ]),
+      __test__.shouldSkipMutatingLoggingConfigRead(["node", "chainbreaker", "config", "get", "foo"]),
     ).toBe(false);
     expect(__test__.shouldSkipMutatingLoggingConfigRead(["node", "chainbreaker", "status"])).toBe(
       false,

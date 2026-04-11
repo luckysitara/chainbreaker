@@ -107,6 +107,7 @@ describe("onboard auth credentials secret refs", () => {
 
   it("stores ${ENV} moonshot input as keyRef even when env value is unset", async () => {
     await expectStoredAuthKey({
+      prefix: "chainbreaker-onboard-auth-credentials-inline-ref-",
       profileId: "moonshot:default",
       apply: async () => {
         await setMoonshotApiKey("${MOONSHOT_API_KEY}");

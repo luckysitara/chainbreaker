@@ -47,6 +47,7 @@ export type SecurityAuditFinding = {
 
 type ExecDockerRawFn = (
   args: string[],
+  opts?: { allowFailure?: boolean; input?: Buffer | string; signal?: AbortSignal },
 ) => Promise<ExecDockerRawResult>;
 
 type CodeSafetySummaryCache = Map<string, Promise<unknown>>;
@@ -112,6 +113,7 @@ function formatCodeSafetyDetails(findings: SkillScanFinding[], rootDir: string):
           ? relPath
           : path.basename(finding.file);
       const normalizedPath = filePath.replaceAll("\\", "/");
+      return `  - [${finding.ruleId}] ${finding.message} (${normalizedPath}:${finding.line})`;
     })
     .join("\n");
 }
@@ -405,6 +407,8 @@ async function readSandboxBrowserHashLabels(params: {
   }
 }
 
+function parsePublishedHostFromDockerPortLine(line: string): string | null {
+  const trimmed = line.trim();
   const rhs = trimmed.includes("->") ? (trimmed.split("->").at(-1)?.trim() ?? "") : trimmed;
   if (!rhs) {
     return null;
@@ -478,6 +482,8 @@ export async function collectSandboxBrowserHashLabelFindings(params?: {
     if (!portMappings?.length) {
       continue;
     }
+    const exposedMappings = portMappings.filter((line) => {
+      const host = parsePublishedHostFromDockerPortLine(line);
       return Boolean(host && !isLoopbackPublishHost(host));
     });
     if (exposedMappings.length > 0) {
@@ -554,7 +560,11 @@ export async function collectPluginsTrustFindings(params: {
           hasSecretInput((account as Record<string, unknown>)[key]),
         );
 
+      const discordConfigured =
+        hasSecretInput(params.cfg.channels?.discord?.token) ||
         Boolean(
+          params.cfg.channels?.discord?.accounts &&
+          Object.values(params.cfg.channels.discord.accounts).some((a) =>
             hasAccountSecretInputKey(a, "token"),
           ),
         ) ||
@@ -571,7 +581,12 @@ export async function collectPluginsTrustFindings(params: {
         ) ||
         hasString(process.env.TELEGRAM_BOT_TOKEN);
 
+      const slackConfigured =
+        hasSecretInput(params.cfg.channels?.slack?.botToken) ||
+        hasSecretInput(params.cfg.channels?.slack?.appToken) ||
         Boolean(
+          params.cfg.channels?.slack?.accounts &&
+          Object.values(params.cfg.channels.slack.accounts).some(
             (a) =>
               hasAccountSecretInputKey(a, "botToken") || hasAccountSecretInputKey(a, "appToken"),
           ),
@@ -580,7 +595,10 @@ export async function collectPluginsTrustFindings(params: {
         hasString(process.env.SLACK_APP_TOKEN);
 
       const skillCommandsLikelyExposed =
+        (discordConfigured &&
           resolveNativeSkillsEnabled({
+            providerId: "discord",
+            providerSetting: params.cfg.channels?.discord?.commands?.nativeSkills,
             globalSetting: params.cfg.commands?.nativeSkills,
           })) ||
         (telegramConfigured &&
@@ -589,7 +607,10 @@ export async function collectPluginsTrustFindings(params: {
             providerSetting: params.cfg.channels?.telegram?.commands?.nativeSkills,
             globalSetting: params.cfg.commands?.nativeSkills,
           })) ||
+        (slackConfigured &&
           resolveNativeSkillsEnabled({
+            providerId: "slack",
+            providerSetting: params.cfg.channels?.slack?.commands?.nativeSkills,
             globalSetting: params.cfg.commands?.nativeSkills,
           }));
 
@@ -721,6 +742,7 @@ export async function collectPluginsTrustFindings(params: {
         continue;
       }
       const installPath = record.installPath ?? path.join(params.stateDir, "extensions", pluginId);
+      // eslint-disable-next-line no-await-in-loop
       const installedVersion = await readInstalledPackageVersion(installPath);
       if (!installedVersion || installedVersion === recordedVersion) {
         continue;
@@ -783,6 +805,7 @@ export async function collectPluginsTrustFindings(params: {
         continue;
       }
       const installPath = record.installPath ?? path.join(params.stateDir, "hooks", hookId);
+      // eslint-disable-next-line no-await-in-loop
       const installedVersion = await readInstalledPackageVersion(installPath);
       if (!installedVersion || installedVersion === recordedVersion) {
         continue;
@@ -899,6 +922,7 @@ export async function collectIncludeFilePermFindings(params: {
   }
 
   for (const p of includePaths) {
+    // eslint-disable-next-line no-await-in-loop
     const perms = await inspectPathPermissions(p, {
       env: params.env,
       platform: params.platform,
@@ -1013,6 +1037,7 @@ export async function collectStateDeepFilesystemFindings(params: {
   for (const agentId of ids) {
     const agentDir = path.join(params.stateDir, "agents", agentId, "agent");
     const authPath = path.join(agentDir, "auth-profiles.json");
+    // eslint-disable-next-line no-await-in-loop
     const authPerms = await inspectPathPermissions(authPath, {
       env: params.env,
       platform: params.platform,
@@ -1051,6 +1076,7 @@ export async function collectStateDeepFilesystemFindings(params: {
     }
 
     const storePath = path.join(params.stateDir, "agents", agentId, "sessions", "sessions.json");
+    // eslint-disable-next-line no-await-in-loop
     const storePerms = await inspectPathPermissions(storePath, {
       env: params.env,
       platform: params.platform,
@@ -1289,6 +1315,7 @@ export async function collectInstalledSkillsCodeSafetyFindings(params: {
           severity: "warn",
           title: `Skill "${skillName}" contains suspicious code patterns`,
           detail: `Found ${summary.warn} warning(s) in ${summary.scannedFiles} scanned file(s) under ${skillDir}:\n${details}`,
+          remediation: "Review flagged lines to ensure the behavior is intentional and safe.",
         });
       }
     }

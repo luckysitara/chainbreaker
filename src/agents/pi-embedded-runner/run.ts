@@ -359,6 +359,7 @@ export async function runEmbeddedPiAgent(
       const resolveAuthProfileFailureReason = (
         failoverReason: FailoverReason | null,
       ): AuthProfileFailureReason | null => {
+        // Timeouts are transport/model-path failures, not auth health signals,
         // so they should not persist auth-profile failure state.
         if (!failoverReason || failoverReason === "timeout") {
           return null;
@@ -1308,6 +1309,7 @@ export async function runEmbeddedPiAgent(
             reasoningLevel: params.reasoningLevel,
             toolResultFormat: resolvedToolResultFormat,
             suppressToolErrorWarnings: params.suppressToolErrorWarnings,
+            inlineToolResultsAllowed: false,
             didSendViaMessagingTool: attempt.didSendViaMessagingTool,
             didSendDeterministicApprovalPrompt: attempt.didSendDeterministicApprovalPrompt,
           });
@@ -1367,6 +1369,7 @@ export async function runEmbeddedPiAgent(
             // Only trigger for non-terminal stop reasons (toolUse, etc.) to
             // avoid false positives when the model legitimately produces no text.
             // StopReason union: "aborted" | "error" | "length" | "toolUse"
+            // "toolUse" is the key signal that prompt() resolved mid-turn.
             if (incompleteStopReason === "toolUse" || incompleteStopReason === "error") {
               log.warn(
                 `incomplete turn detected: runId=${params.runId} sessionId=${params.sessionId} ` +

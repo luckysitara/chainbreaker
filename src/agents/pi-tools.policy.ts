@@ -73,10 +73,7 @@ function resolveSubagentDenyListForRole(role: SubagentSessionRole): string[] {
   return [...SUBAGENT_TOOL_DENY_ALWAYS];
 }
 
-export function resolveSubagentToolPolicy(
-  cfg?: ChainbreakerConfig,
-  depth?: number,
-): SandboxToolPolicy {
+export function resolveSubagentToolPolicy(cfg?: ChainbreakerConfig, depth?: number): SandboxToolPolicy {
   const configured = cfg?.tools?.subagents?.tools;
   const maxSpawnDepth =
     cfg?.agents?.defaults?.subagents?.maxSpawnDepth ?? DEFAULT_SUBAGENT_MAX_SPAWN_DEPTH;
@@ -213,9 +210,7 @@ function resolveProviderToolPolicy(params: {
   return undefined;
 }
 
-function resolveExplicitProfileAlsoAllow(
-  tools?: ChainbreakerConfig["tools"],
-): string[] | undefined {
+function resolveExplicitProfileAlsoAllow(tools?: ChainbreakerConfig["tools"]): string[] | undefined {
   return Array.isArray(tools?.alsoAllow) ? tools.alsoAllow : undefined;
 }
 

@@ -20,6 +20,7 @@ function createWrappedTelegramClientFetch(proxyFetch: typeof fetch) {
   botCtorSpy.mockClear();
   createTelegramBot({
     token: "tok",
+    fetchAbortSignal: shutdown.signal,
     proxyFetch,
   });
   const clientFetch = (botCtorSpy.mock.calls.at(-1)?.[1] as { client?: { fetch?: unknown } })
@@ -33,6 +34,8 @@ describe("createTelegramBot fetch abort", () => {
     const fetchSpy = vi.fn(
       (_input: RequestInfo | URL, init?: RequestInit) =>
         new Promise<AbortSignal>((resolve) => {
+          const signal = init?.signal as AbortSignal;
+          signal.addEventListener("abort", () => resolve(signal), { once: true });
         }),
     );
     const { clientFetch, shutdown } = createWrappedTelegramClientFetch(
@@ -72,6 +75,8 @@ describe("createTelegramBot fetch abort", () => {
     const fetchSpy = vi.fn(
       (_input: RequestInfo | URL, init?: RequestInit) =>
         new Promise<AbortSignal>((resolve) => {
+          const signal = init?.signal as AbortSignal;
+          signal.addEventListener("abort", () => resolve(signal), { once: true });
         }),
     );
     const { clientFetch } = createWrappedTelegramClientFetch(fetchSpy as unknown as typeof fetch);

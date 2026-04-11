@@ -9,10 +9,7 @@ import {
 import { resolveDefaultModelForAgent } from "chainbreaker/plugin-sdk/agent-runtime";
 import type { ChainbreakerConfig } from "chainbreaker/plugin-sdk/config-runtime";
 import { loadJsonFile, saveJsonFile } from "chainbreaker/plugin-sdk/json-store";
-import {
-  AUTO_IMAGE_KEY_PROVIDERS,
-  DEFAULT_IMAGE_MODELS,
-} from "chainbreaker/plugin-sdk/media-runtime";
+import { AUTO_IMAGE_KEY_PROVIDERS, DEFAULT_IMAGE_MODELS } from "chainbreaker/plugin-sdk/media-runtime";
 import { resolveAutoImageModel } from "chainbreaker/plugin-sdk/media-runtime";
 import { describeImageFileWithModel } from "chainbreaker/plugin-sdk/media-understanding-runtime";
 import { logVerbose } from "chainbreaker/plugin-sdk/runtime-env";

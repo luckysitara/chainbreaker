@@ -23,6 +23,7 @@ export function createSuccessfulSpawnResult(stdout = ""): SpawnResult {
     code: 0,
     stdout,
     stderr: "",
+    signal: null,
     killed: false,
     termination: "exit",
   };

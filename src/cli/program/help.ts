@@ -31,14 +31,8 @@ const EXAMPLES = [
     "Send via your web session and print JSON result.",
   ],
   ["chainbreaker gateway --port 18789", "Run the WebSocket Gateway locally."],
-  [
-    "chainbreaker --dev gateway",
-    "Run a dev Gateway (isolated state/config) on ws://127.0.0.1:19001.",
-  ],
-  [
-    "chainbreaker gateway --force",
-    "Kill anything bound to the default gateway port, then start it.",
-  ],
+  ["chainbreaker --dev gateway", "Run a dev Gateway (isolated state/config) on ws://127.0.0.1:19001."],
+  ["chainbreaker gateway --force", "Kill anything bound to the default gateway port, then start it."],
   ["chainbreaker gateway ...", "Gateway control via WebSocket."],
   [
     'chainbreaker agent --to +15555550123 --message "Run summary" --deliver',
@@ -122,9 +116,7 @@ export function configureProgramHelp(program: Command, ctx: ProgramContext) {
   ) {
     const commit = resolveCommitHash({ moduleUrl: import.meta.url });
     console.log(
-      commit
-        ? `Chainbreaker ${ctx.programVersion} (${commit})`
-        : `Chainbreaker ${ctx.programVersion}`,
+      commit ? `Chainbreaker ${ctx.programVersion} (${commit})` : `Chainbreaker ${ctx.programVersion}`,
     );
     process.exit(0);
   }
@@ -134,6 +126,8 @@ export function configureProgramHelp(program: Command, ctx: ProgramContext) {
       return "";
     }
     const rich = isRich();
+    const line = formatCliBannerLine(ctx.programVersion, { richTty: rich });
+    return `\n${line}\n`;
   });
 
   const fmtExamples = EXAMPLES.map(

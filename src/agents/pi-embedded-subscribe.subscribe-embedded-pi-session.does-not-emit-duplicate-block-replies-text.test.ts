@@ -47,6 +47,7 @@ describe("subscribeEmbeddedPiSession", () => {
       runId: "run",
     });
 
+    const assistantMessageWithNewline = {
       role: "assistant",
       content: [{ type: "text", text: "Hello world\n" }],
     } as AssistantMessage;
@@ -56,6 +57,7 @@ describe("subscribeEmbeddedPiSession", () => {
       content: [{ type: "text", text: "Hello world" }],
     } as AssistantMessage;
 
+    emit({ type: "message_end", message: assistantMessageWithNewline });
     emit({ type: "message_end", message: assistantMessageTrimmed });
 
     expect(subscription.assistantTexts).toEqual(["Hello world"]);
@@ -83,6 +85,7 @@ describe("subscribeEmbeddedPiSession", () => {
     expect(subscription.assistantTexts).toEqual(["Hello world"]);
   });
   it("populates assistantTexts for non-streaming models with chunking enabled", () => {
+    // Non-streaming models (e.g. zai/glm-4.7): no text_delta events; message_end
     // must still populate assistantTexts so providers can deliver a final reply.
     const { session, emit } = createStubSessionHarness();
 

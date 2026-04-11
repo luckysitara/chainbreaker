@@ -48,7 +48,9 @@ function createRemoteStageParams(home: string): {
 
 function createRemoteContexts(remotePath: string) {
   const { ctx, sessionCtx } = createSandboxMediaContexts(remotePath);
+  ctx.Provider = "imessage";
   ctx.MediaRemoteHost = "user@gateway-host";
+  sessionCtx.Provider = "imessage";
   sessionCtx.MediaRemoteHost = "user@gateway-host";
   return { ctx, sessionCtx };
 }

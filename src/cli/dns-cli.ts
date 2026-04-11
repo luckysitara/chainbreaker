@@ -105,8 +105,7 @@ export function registerDnsCli(program: Command) {
     .description("DNS helpers for wide-area discovery (Tailscale + CoreDNS)")
     .addHelpText(
       "after",
-      () =>
-        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/dns", "docs.chainbreaker.ai/cli/dns")}\n`,
+      () => `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/dns", "docs.chainbreaker.ai/cli/dns")}\n`,
     );
 
   dns
@@ -238,6 +237,7 @@ export function registerDnsCli(program: Command) {
           tailnetIPv4 ? `ns1 IN A ${tailnetIPv4}` : null,
           tailnetIPv6 ? `ns1 IN AAAA ${tailnetIPv6}` : null,
           ``,
+        ].filter((line): line is string => Boolean(line));
 
         fs.writeFileSync(zonePath, zoneLines.join("\n"), "utf-8");
       }

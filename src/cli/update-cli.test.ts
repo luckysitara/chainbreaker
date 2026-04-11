@@ -82,6 +82,7 @@ vi.mock("node:child_process", async () => {
       stdout: "",
       stderr: "",
       status: 0,
+      signal: null,
     })),
   };
 });
@@ -360,6 +361,7 @@ describe("update-cli", () => {
       stdout: "",
       stderr: "",
       code: 0,
+      signal: null,
       killed: false,
       termination: "exit",
     });
@@ -686,6 +688,7 @@ describe("update-cli", () => {
           stdout: nodeModules,
           stderr: "",
           code: 0,
+          signal: null,
           killed: false,
           termination: "exit",
         };
@@ -694,6 +697,7 @@ describe("update-cli", () => {
         stdout: "",
         stderr: "",
         code: 0,
+        signal: null,
         killed: false,
         termination: "exit",
       };
@@ -834,6 +838,7 @@ describe("update-cli", () => {
           stdout: "",
           stderr: "install failed",
           code: 1,
+          signal: null,
           killed: false,
           termination: "exit",
         };
@@ -842,6 +847,7 @@ describe("update-cli", () => {
         stdout: "",
         stderr: "",
         code: 0,
+        signal: null,
         killed: false,
         termination: "exit",
       };
@@ -956,6 +962,7 @@ describe("update-cli", () => {
       },
       assert: () => {
         const logLines = vi.mocked(defaultRuntime.log).mock.calls.map((call) => String(call[0]));
+        expect(logLines.some((line) => line.includes("Daemon restarted successfully."))).toBe(
           false,
         );
       },
@@ -1082,6 +1089,8 @@ describe("update-cli", () => {
 
         const logLines = vi.mocked(defaultRuntime.log).mock.calls.map((call) => String(call[0]));
         expect(
+          logLines.some((line) =>
+            line.includes("Leveled up! New skills unlocked. You're welcome."),
           ),
         ).toBe(true);
       });

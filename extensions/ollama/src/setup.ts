@@ -15,6 +15,7 @@ import {
 } from "./provider-models.js";
 
 const OLLAMA_SUGGESTED_MODELS_LOCAL = [OLLAMA_DEFAULT_MODEL];
+const OLLAMA_SUGGESTED_MODELS_CLOUD = ["kimi-k2.5:cloud", "minimax-m2.5:cloud", "glm-5:cloud"];
 const OLLAMA_CONTEXT_ENRICH_LIMIT = 200;
 
 type OllamaMode = "remote" | "local";
@@ -69,6 +70,7 @@ async function checkOllamaCloudAuth(baseUrl: string): Promise<OllamaCloudAuthRes
       url: `${apiBase}/api/me`,
       init: {
         method: "POST",
+        signal: AbortSignal.timeout(5000),
       },
       policy: buildOllamaBaseUrlSsrFPolicy(apiBase),
       auditContext: "ollama-setup.me",
@@ -130,6 +132,8 @@ async function pullOllamaModelCore(params: {
       let buffer = "";
       const layers = new Map<string, { total: number; completed: number }>();
 
+      const parseLine = (line: string): OllamaPullResult => {
+        const trimmed = line.trim();
         if (!trimmed) {
           return { ok: true };
         }
@@ -157,6 +161,7 @@ async function pullOllamaModelCore(params: {
             params.onStatus?.(chunk.status, null);
           }
         } catch {
+          // Ignore malformed streaming lines from Ollama.
         }
         return { ok: true };
       };
@@ -167,6 +172,10 @@ async function pullOllamaModelCore(params: {
           break;
         }
         buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          const parsed = parseLine(line);
           if (!parsed.ok) {
             return parsed;
           }

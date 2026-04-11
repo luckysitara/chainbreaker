@@ -28,9 +28,11 @@ export function decorateCitations(
 }
 
 function formatCitation(entry: MemorySearchResult): string {
+  const lineRange =
     entry.startLine === entry.endLine
       ? `#L${entry.startLine}`
       : `#L${entry.startLine}-L${entry.endLine}`;
+  return `${entry.path}${lineRange}`;
 }
 
 export function clampResultsByInjectedChars(

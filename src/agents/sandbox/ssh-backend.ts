@@ -270,6 +270,7 @@ class SshSandboxBackendImpl {
         ]),
         stdin: params.stdin,
         allowFailure: params.allowFailure,
+        signal: params.signal,
       });
     } finally {
       await disposeSshSandboxSession(session);

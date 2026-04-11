@@ -157,9 +157,11 @@ export async function startSshPortForward(opts: {
   });
   child.stderr?.setEncoding("utf8");
   child.stderr?.on("data", (chunk) => {
+    const lines = String(chunk)
       .split("\n")
       .map((l) => l.trim())
       .filter(Boolean);
+    stderr.push(...lines);
   });
 
   const stop = async () => {
@@ -186,6 +188,8 @@ export async function startSshPortForward(opts: {
     await Promise.race([
       waitForLocalListener(localPort, Math.max(250, opts.timeoutMs)),
       new Promise<void>((_, reject) => {
+        child.once("exit", (code, signal) => {
+          reject(new Error(`ssh exited (${code ?? "null"}${signal ? `/${signal}` : ""})`));
         });
       }),
     ]);

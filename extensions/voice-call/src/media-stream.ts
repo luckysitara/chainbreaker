@@ -54,6 +54,7 @@ interface StreamSession {
 }
 
 type TtsQueueEntry = {
+  playFn: (signal: AbortSignal) => Promise<void>;
   controller: AbortController;
   resolve: () => void;
   reject: (error: unknown) => void;
@@ -487,6 +488,7 @@ export class MediaStreamHandler {
    * Queue a TTS operation for sequential playback.
    * Only one TTS operation plays at a time per stream to prevent overlap.
    */
+  async queueTts(streamSid: string, playFn: (signal: AbortSignal) => Promise<void>): Promise<void> {
     const queue = this.getTtsQueue(streamSid);
     let resolveEntry: () => void;
     let rejectEntry: (error: unknown) => void;
@@ -567,8 +569,10 @@ export class MediaStreamHandler {
       this.ttsActiveControllers.set(streamSid, entry.controller);
 
       try {
+        await entry.playFn(entry.controller.signal);
         entry.resolve();
       } catch (error) {
+        if (entry.controller.signal.aborted) {
           entry.resolve();
         } else {
           console.error("[MediaStream] TTS playback error:", error);

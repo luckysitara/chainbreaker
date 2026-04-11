@@ -10,6 +10,7 @@ export function buildPayloads(overrides: Partial<BuildPayloadParams> = {}) {
     toolMetas: [],
     lastAssistant: undefined,
     sessionKey: "session:telegram",
+    inlineToolResultsAllowed: false,
     verboseLevel: "off",
     reasoningLevel: "off",
     toolResultFormat: "plain",

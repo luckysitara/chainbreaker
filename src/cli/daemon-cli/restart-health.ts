@@ -260,17 +260,23 @@ export async function waitForGatewayHealthyListener(params: {
 }
 
 function renderPortUsageDiagnostics(snapshot: GatewayPortHealthSnapshot): string[] {
+  const lines: string[] = [];
 
   if (snapshot.portUsage.status === "busy") {
+    lines.push(...formatPortDiagnostics(snapshot.portUsage));
   } else {
+    lines.push(`Gateway port ${snapshot.portUsage.port} status: ${snapshot.portUsage.status}.`);
   }
 
   if (snapshot.portUsage.errors?.length) {
+    lines.push(`Port diagnostics errors: ${snapshot.portUsage.errors.join("; ")}`);
   }
 
+  return lines;
 }
 
 export function renderRestartDiagnostics(snapshot: GatewayRestartSnapshot): string[] {
+  const lines: string[] = [];
   const runtimeSummary = [
     snapshot.runtime.status ? `status=${snapshot.runtime.status}` : null,
     snapshot.runtime.state ? `state=${snapshot.runtime.state}` : null,
@@ -281,9 +287,12 @@ export function renderRestartDiagnostics(snapshot: GatewayRestartSnapshot): stri
     .join(", ");
 
   if (runtimeSummary) {
+    lines.push(`Service runtime: ${runtimeSummary}`);
   }
 
+  lines.push(...renderPortUsageDiagnostics(snapshot));
 
+  return lines;
 }
 
 export function renderGatewayPortHealthDiagnostics(snapshot: GatewayPortHealthSnapshot): string[] {

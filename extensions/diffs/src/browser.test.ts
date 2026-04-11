@@ -35,9 +35,7 @@ describe("PlaywrightDiffScreenshotter", () => {
 
   beforeEach(async () => {
     vi.useFakeTimers();
-    ({ rootDir, cleanup: cleanupRootDir } = await createTempDiffRoot(
-      "chainbreaker-diffs-browser-",
-    ));
+    ({ rootDir, cleanup: cleanupRootDir } = await createTempDiffRoot("chainbreaker-diffs-browser-"));
     outputPath = path.join(rootDir, "preview.png");
     launchMock.mockReset();
     await resetSharedBrowserStateForTests();
@@ -202,9 +200,7 @@ describe("diffs plugin registration", () => {
     type RegisteredHttpRouteParams = Parameters<ChainbreakerPluginApi["registerHttpRoute"]>[0];
 
     let registeredToolFactory:
-      | ((
-          ctx: ChainbreakerPluginToolContext,
-        ) => RegisteredTool | RegisteredTool[] | null | undefined)
+      | ((ctx: ChainbreakerPluginToolContext) => RegisteredTool | RegisteredTool[] | null | undefined)
       | undefined;
     let registeredHttpRouteHandler: RegisteredHttpRouteParams["handler"] | undefined;
     const on = vi.fn();
@@ -228,6 +224,7 @@ describe("diffs plugin registration", () => {
           layout: "split",
           showLineNumbers: false,
           diffIndicators: "classic",
+          lineSpacing: 2,
         },
         security: {
           allowRemoteViewer: true,
@@ -257,6 +254,7 @@ describe("diffs plugin registration", () => {
     const registeredTool = registeredToolFactory?.({
       agentId: "main",
       sessionId: "session-123",
+      messageChannel: "discord",
       agentAccountId: "default",
     }) as RegisteredTool | undefined;
     const result = await registeredTool?.execute?.("tool-1", {
@@ -282,10 +280,12 @@ describe("diffs plugin registration", () => {
     expect(String(res.body)).toContain('"diffStyle":"split"');
     expect(String(res.body)).toContain('"disableLineNumbers":true');
     expect(String(res.body)).toContain('"diffIndicators":"classic"');
+    expect(String(res.body)).toContain("--diffs-line-height: 30px;");
     expect((result as { details?: Record<string, unknown> } | undefined)?.details?.context).toEqual(
       {
         agentId: "main",
         sessionId: "session-123",
+        messageChannel: "discord",
         agentAccountId: "default",
       },
     );

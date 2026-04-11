@@ -11,9 +11,7 @@ const enabledConfig = {
 } as ChainbreakerConfig;
 
 describe("handleWhatsAppAction", () => {
-  function reactionConfig(
-    reactionLevel: "minimal" | "extensive" | "off" | "ack",
-  ): ChainbreakerConfig {
+  function reactionConfig(reactionLevel: "minimal" | "extensive" | "off" | "ack"): ChainbreakerConfig {
     return {
       channels: { whatsapp: { actions: { reactions: true }, reactionLevel } },
     } as ChainbreakerConfig;

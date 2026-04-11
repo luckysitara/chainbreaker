@@ -12,6 +12,8 @@ function truncateSummary(value: string, maxLen = 120): string {
   return `${trimmed}...`;
 }
 
+export function isToolDocBlockStart(line: string): boolean {
+  const normalized = line.trim().toUpperCase();
   if (!normalized) {
     return false;
   }
@@ -54,10 +56,14 @@ export function summarizeToolDescriptionText(params: {
     .map((part) => part.trim())
     .filter(Boolean);
   for (const paragraph of paragraphs) {
+    const lines = paragraph
       .split("\n")
+      .map((line) => line.trim())
       .filter(Boolean);
+    if (lines.length === 0) {
       continue;
     }
+    const first = lines[0] ?? "";
     if (!first || isToolDocBlockStart(first)) {
       continue;
     }
@@ -69,7 +75,14 @@ export function summarizeToolDescriptionText(params: {
 
   const firstLine = raw
     .split("\n")
+    .map((line) => line.trim())
     .find(
+      (line) =>
+        line.length > 0 &&
+        !isToolDocBlockStart(line) &&
+        !line.startsWith("{") &&
+        !line.startsWith("[") &&
+        !line.startsWith("- "),
     );
   return firstLine ? truncateSummary(normalizeSummaryWhitespace(firstLine), params.maxLen) : "Tool";
 }
@@ -84,7 +97,10 @@ export function describeToolForVerbose(params: {
     return params.fallback;
   }
 
+  const lines = raw.split("\n").map((line) => line.trimEnd());
   const kept: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
     if (!trimmed) {
       if (kept.length > 0 && kept.at(-1) !== "") {
         kept.push("");

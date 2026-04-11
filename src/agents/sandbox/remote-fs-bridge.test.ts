@@ -25,21 +25,18 @@ function createLocalRemoteRuntime(params: {
             encoding: "buffer",
             stdio: ["pipe", "pipe", "pipe"],
           })
-        : spawnSync(
-            "sh",
-            ["-c", command.script, "chainbreaker-sandbox-fs", ...(command.args ?? [])],
-            {
-              input: command.stdin,
-              encoding: "buffer",
-              stdio: ["pipe", "pipe", "pipe"],
-            },
-          );
+        : spawnSync("sh", ["-c", command.script, "chainbreaker-sandbox-fs", ...(command.args ?? [])], {
+            input: command.stdin,
+            encoding: "buffer",
+            stdio: ["pipe", "pipe", "pipe"],
+          });
       const stdout = Buffer.isBuffer(result.stdout)
         ? result.stdout
         : Buffer.from(result.stdout ?? []);
       const stderr = Buffer.isBuffer(result.stderr)
         ? result.stderr
         : Buffer.from(result.stderr ?? []);
+      const code = result.status ?? (result.signal ? 128 : 1);
       if (result.error) {
         throw result.error;
       }

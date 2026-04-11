@@ -37,6 +37,9 @@ function isIdentityPlaceholder(value: string): boolean {
 
 export function parseIdentityMarkdown(content: string): AgentIdentityFile {
   const identity: AgentIdentityFile = {};
+  const lines = content.split(/\r?\n/);
+  for (const line of lines) {
+    const cleaned = line.trim().replace(/^\s*-\s*/, "");
     const colonIndex = cleaned.indexOf(":");
     if (colonIndex === -1) {
       continue;

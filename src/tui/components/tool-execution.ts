@@ -38,14 +38,18 @@ function extractText(result?: ToolResult): string {
   if (!result?.content) {
     return "";
   }
+  const lines: string[] = [];
   for (const entry of result.content) {
     if (entry.type === "text" && entry.text) {
+      lines.push(sanitizeRenderableText(entry.text));
     } else if (entry.type === "image") {
       const mime = entry.mimeType ?? "image";
       const size = entry.bytes ? ` ${Math.round(entry.bytes / 1024)}kb` : "";
       const omitted = entry.omitted ? " (omitted)" : "";
+      lines.push(`[${mime}${size}${omitted}]`);
     }
   }
+  return lines.join("\n").trim();
 }
 
 export class ToolExecutionComponent extends Container {
@@ -64,9 +68,11 @@ export class ToolExecutionComponent extends Container {
     super();
     this.toolName = toolName;
     this.args = args;
+    this.box = new Box(1, 1, (line) => theme.toolPendingBg(line));
     this.header = new Text("", 0, 0);
     this.argsLine = new Text("", 0, 0);
     this.output = new Markdown("", 0, 0, markdownTheme, {
+      color: (line) => theme.toolOutput(line),
     });
     this.addChild(new Spacer(1));
     this.addChild(this.box);
@@ -105,6 +111,7 @@ export class ToolExecutionComponent extends Container {
       : this.isError
         ? theme.toolErrorBg
         : theme.toolSuccessBg;
+    this.box.setBgFn((line) => bg(line));
 
     const display = resolveToolDisplay({
       name: this.toolName,
@@ -119,7 +126,9 @@ export class ToolExecutionComponent extends Container {
     const raw = extractText(this.result);
     const text = raw || (this.isPartial ? "…" : "");
     if (!this.expanded && text) {
+      const lines = text.split("\n");
       const preview =
+        lines.length > PREVIEW_LINES ? `${lines.slice(0, PREVIEW_LINES).join("\n")}\n…` : text;
       this.output.setText(preview);
     } else {
       this.output.setText(text);

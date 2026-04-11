@@ -3,6 +3,7 @@ import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
+import chokidar, { FSWatcher } from "chokidar";
 import {
   buildCaseInsensitiveExtensionGlob,
   classifyMemoryMultimodalPath,
@@ -38,7 +39,6 @@ import {
   type MemorySource,
   type MemorySyncProgressUpdate,
 } from "chainbreaker/plugin-sdk/memory-core-host-engine-storage";
-import chokidar, { FSWatcher } from "chokidar";
 import {
   createEmbeddingProvider,
   type EmbeddingProvider,
@@ -537,6 +537,7 @@ export abstract class MemoryManagerSyncOps {
         thresholds.deltaMessages > 0 &&
         (thresholds.deltaBytes <= 0 || state.pendingBytes < thresholds.deltaBytes);
       if (shouldCountMessages) {
+        state.pendingMessages += await this.countNewlines(sessionFile, 0, size);
       }
     } else {
       state.pendingBytes += deltaBytes;
@@ -544,6 +545,7 @@ export abstract class MemoryManagerSyncOps {
         thresholds.deltaMessages > 0 &&
         (thresholds.deltaBytes <= 0 || state.pendingBytes < thresholds.deltaBytes);
       if (shouldCountMessages) {
+        state.pendingMessages += await this.countNewlines(sessionFile, state.lastSize, size);
       }
       state.lastSize = size;
     }
@@ -556,6 +558,7 @@ export abstract class MemoryManagerSyncOps {
     };
   }
 
+  private async countNewlines(absPath: string, start: number, end: number): Promise<number> {
     if (end <= start) {
       return 0;
     }

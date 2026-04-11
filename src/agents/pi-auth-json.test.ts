@@ -167,6 +167,7 @@ describe("ensurePiAuthJsonFromAuthProfiles", () => {
       "z.ai:default": {
         type: "api_key",
         provider: "z.ai",
+        key: "sk-zai",
       },
     });
 
@@ -174,6 +175,7 @@ describe("ensurePiAuthJsonFromAuthProfiles", () => {
     expect(result.wrote).toBe(true);
 
     const auth = await readAuthJson(agentDir);
+    expect(auth["zai"]).toMatchObject({ type: "api_key", key: "sk-zai" });
     expect(auth["z.ai"]).toBeUndefined();
   });
 

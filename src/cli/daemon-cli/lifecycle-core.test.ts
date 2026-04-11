@@ -31,6 +31,7 @@ let runServiceStart: typeof import("./lifecycle-core.js").runServiceStart;
 let runServiceStop: typeof import("./lifecycle-core.js").runServiceStop;
 
 function readJsonLog<T extends object>() {
+  const jsonLine = runtimeLogs.find((line) => line.trim().startsWith("{"));
   return JSON.parse(jsonLine ?? "{}") as T;
 }
 
@@ -207,6 +208,7 @@ describe("runServiceRestart token drift", () => {
       opts: { json: true },
       onNotLoaded: async () => ({
         result: "stopped",
+        message: "Gateway stop signal sent to unmanaged process on port 18789: 4200.",
       }),
     });
 
@@ -216,6 +218,7 @@ describe("runServiceRestart token drift", () => {
     expect(service.stop).not.toHaveBeenCalled();
   });
 
+  it("runs restart health checks after an unmanaged restart signal", async () => {
     const postRestartCheck = vi.fn(async () => {});
     service.isLoaded.mockResolvedValue(false);
 
@@ -226,6 +229,7 @@ describe("runServiceRestart token drift", () => {
       opts: { json: true },
       onNotLoaded: async () => ({
         result: "restarted",
+        message: "Gateway restart signal sent to unmanaged process on port 18789: 4200.",
       }),
       postRestartCheck,
     });

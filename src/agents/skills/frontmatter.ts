@@ -109,13 +109,7 @@ function normalizeSafeDownloadUrl(raw: unknown): string | undefined {
 }
 
 function parseInstallSpec(input: unknown): SkillInstallSpec | undefined {
-  const parsed = parseChainbreakerManifestInstallBase(input, [
-    "brew",
-    "node",
-    "go",
-    "uv",
-    "download",
-  ]);
+  const parsed = parseChainbreakerManifestInstallBase(input, ["brew", "node", "go", "uv", "download"]);
   if (!parsed) {
     return undefined;
   }

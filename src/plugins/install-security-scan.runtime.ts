@@ -11,6 +11,7 @@ type InstallScanFinding = {
   ruleId: string;
   severity: "info" | "warn" | "critical";
   file: string;
+  line: number;
   message: string;
 };
 
@@ -39,13 +40,16 @@ export type InstallSecurityScanResult = {
 };
 
 function buildCriticalDetails(params: {
+  findings: Array<{ file: string; line: number; message: string; severity: string }>;
 }) {
   return params.findings
     .filter((finding) => finding.severity === "critical")
+    .map((finding) => `${finding.message} (${finding.file}:${finding.line})`)
     .join("; ");
 }
 
 function buildCriticalBlockReason(params: {
+  findings: Array<{ file: string; line: number; message: string; severity: string }>;
   targetLabel: string;
 }) {
   return `${params.targetLabel} blocked: dangerous code patterns detected: ${buildCriticalDetails({ findings: params.findings })}`;
@@ -148,6 +152,7 @@ function buildBlockedScanResult(params: {
 }
 
 function logDangerousForceUnsafeInstall(params: {
+  findings: Array<{ file: string; line: number; message: string; severity: string }>;
   logger: InstallScanLogger;
   targetLabel: string;
 }) {

@@ -151,7 +151,6 @@ export function resolveCompatibilityHostVersion(
 // - Dev/npm builds: package.json.
 export const VERSION = resolveBinaryVersion({
   moduleUrl: import.meta.url,
-  injectedVersion:
-    typeof __CHAINBREAKER_VERSION__ === "string" ? __CHAINBREAKER_VERSION__ : undefined,
+  injectedVersion: typeof __CHAINBREAKER_VERSION__ === "string" ? __CHAINBREAKER_VERSION__ : undefined,
   bundledVersion: process.env.CHAINBREAKER_BUNDLED_VERSION,
 });

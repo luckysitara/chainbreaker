@@ -233,11 +233,7 @@ function parseExternalCatalogChannelEntries(raw: unknown): ExternalCatalogChanne
 
   const channels: ExternalCatalogChannelEntry[] = [];
   for (const entry of list) {
-    if (
-      !isRecord(entry) ||
-      !isRecord(entry.chainbreaker) ||
-      !isRecord(entry.chainbreaker.channel)
-    ) {
+    if (!isRecord(entry) || !isRecord(entry.chainbreaker) || !isRecord(entry.chainbreaker.channel)) {
       continue;
     }
     const channel = entry.chainbreaker.channel;

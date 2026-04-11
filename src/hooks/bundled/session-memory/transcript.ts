@@ -8,9 +8,12 @@ export async function getRecentSessionContent(
 ): Promise<string | null> {
   try {
     const content = await fs.readFile(sessionFilePath, "utf-8");
+    const lines = content.trim().split("\n");
 
     const allMessages: string[] = [];
+    for (const line of lines) {
       try {
+        const entry = JSON.parse(line);
         if (entry.type === "message" && entry.message) {
           const msg = entry.message;
           const role = msg.role;
@@ -19,6 +22,7 @@ export async function getRecentSessionContent(
               continue;
             }
             const text = Array.isArray(msg.content)
+              ? // oxlint-disable-next-line typescript/no-explicit-any
                 msg.content.find((c: any) => c.type === "text")?.text
               : msg.content;
             if (text && !text.startsWith("/")) {
@@ -27,6 +31,7 @@ export async function getRecentSessionContent(
           }
         }
       } catch {
+        // Skip invalid JSON lines.
       }
     }
 

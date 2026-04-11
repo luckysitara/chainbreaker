@@ -84,10 +84,12 @@ describe("resolveResponsePrefix with per-channel override", () => {
         channels: {
           whatsapp: { responsePrefix: "[WA Bot] " },
           telegram: { responsePrefix: "" },
+          discord: { responsePrefix: "🤖 " },
         },
       } satisfies ChainbreakerConfig);
       expect(resolveResponsePrefix(cfg, "main", { channel: "whatsapp" })).toBe("[WA Bot] ");
       expect(resolveResponsePrefix(cfg, "main", { channel: "telegram" })).toBe("");
+      expect(resolveResponsePrefix(cfg, "main", { channel: "discord" })).toBe("🤖 ");
     });
 
     it("returns undefined when channel not in config", () => {

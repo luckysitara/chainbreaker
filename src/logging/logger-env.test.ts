@@ -74,6 +74,7 @@ describe("CHAINBREAKER_LOG_LEVEL", () => {
 
     const warnings = stderrSpy.mock.calls
       .map(([firstArg]) => String(firstArg))
+      .filter((line) => line.includes("CHAINBREAKER_LOG_LEVEL"));
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain('Ignoring invalid CHAINBREAKER_LOG_LEVEL="nope"');
   });

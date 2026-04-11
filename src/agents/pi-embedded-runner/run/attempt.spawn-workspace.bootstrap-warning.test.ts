@@ -28,6 +28,7 @@ describe("runEmbeddedAttempt bootstrap warning prompt assembly", () => {
       analysis,
       mode: "once",
     });
+    const promptWithWarning = prependBootstrapPromptWarning("hello", warning.lines);
     const systemPrompt = composeSystemPromptWithHookContext({
       baseSystemPrompt: promptWithWarning,
       prependSystemContext: "hook context",

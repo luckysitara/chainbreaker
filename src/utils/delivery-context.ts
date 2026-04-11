@@ -72,6 +72,7 @@ export function formatConversationTarget(params: {
   if (!channel || !conversationId) {
     return undefined;
   }
+  if (channel === "matrix") {
     const parentConversationId =
       typeof params.parentConversationId === "number" &&
       Number.isFinite(params.parentConversationId)
@@ -111,6 +112,7 @@ export function resolveConversationDeliveryTarget(params: {
         ? params.parentConversationId.trim()
         : undefined;
   if (
+    channel === "matrix" &&
     to &&
     conversationId &&
     parentConversationId &&

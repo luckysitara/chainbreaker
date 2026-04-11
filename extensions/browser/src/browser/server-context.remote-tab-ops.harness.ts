@@ -9,6 +9,7 @@ export function makeState(
   profile: "remote" | "chainbreaker",
 ): BrowserServerState & { profiles: Map<string, { lastTargetId?: string | null }> } {
   return {
+    // oxlint-disable-next-line typescript/no-explicit-any
     server: null as any,
     port: 0,
     resolved: {

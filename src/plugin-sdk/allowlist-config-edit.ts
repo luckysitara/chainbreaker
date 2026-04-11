@@ -143,10 +143,7 @@ export function createNestedAllowlistOverrideResolver<ResolvedAccount, Outer, In
 
 /** Build the common account-scoped token-gated allowlist name resolver. */
 export function createAccountScopedAllowlistNameResolver<ResolvedAccount>(params: {
-  resolveAccount: (params: {
-    cfg: ChainbreakerConfig;
-    accountId?: string | null;
-  }) => ResolvedAccount;
+  resolveAccount: (params: { cfg: ChainbreakerConfig; accountId?: string | null }) => ResolvedAccount;
   resolveToken: (account: ResolvedAccount) => string | null | undefined;
   resolveNames: (params: { token: string; entries: string[] }) => Promise<AllowlistNameResolution>;
 }): NonNullable<ChannelAllowlistAdapter["resolveNames"]> {

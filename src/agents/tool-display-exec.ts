@@ -130,16 +130,24 @@ function summarizeKnownExec(words: string[]): string {
   }
 
   if (bin === "head" || bin === "tail") {
+    const lines =
+      optionValue(words, ["-n", "--lines"]) ??
       words
         .slice(1)
         .find((token) => /^-\d+$/.test(token))
         ?.slice(1);
+    const positional = positionalArgs(words, 1, ["-n", "--lines"]);
     let target = positional.at(-1);
     if (target && /^\d+$/.test(target) && positional.length === 1) {
       target = undefined;
     }
     const side = bin === "head" ? "first" : "last";
+    const unit = lines === "1" ? "line" : "lines";
+    if (lines && target) {
+      return `show ${side} ${lines} ${unit} of ${target}`;
     }
+    if (lines) {
+      return `show ${side} ${lines} ${unit}`;
     }
     if (target) {
       return `show ${target}`;
@@ -163,9 +171,12 @@ function summarizeKnownExec(words: string[]): string {
       const range = compact.match(/^([0-9]+),([0-9]+)p$/);
       if (range) {
         return target
+          ? `print lines ${range[1]}-${range[2]} from ${target}`
+          : `print lines ${range[1]}-${range[2]}`;
       }
       const single = compact.match(/^([0-9]+)p$/);
       if (single) {
+        return target ? `print line ${single[1]} from ${target}` : `print line ${single[1]}`;
       }
     }
 
@@ -227,13 +238,17 @@ function summarizeKnownExec(words: string[]): string {
   if (bin === "node" || bin === "python" || bin === "python3" || bin === "ruby" || bin === "php") {
     const heredoc = words.slice(1).find((token) => token.startsWith("<<"));
     if (heredoc) {
+      return `run ${bin} inline script (heredoc)`;
     }
 
+    const inline =
       bin === "node"
         ? optionValue(words, ["-e", "--eval"])
         : bin === "python" || bin === "python3"
           ? optionValue(words, ["-c"])
           : undefined;
+    if (inline !== undefined) {
+      return `run ${bin} inline script`;
     }
 
     const nodeOptsWithValue = ["-e", "--eval", "-m"];
@@ -270,6 +285,12 @@ function summarizeKnownExec(words: string[]): string {
   return /^[A-Za-z0-9._/-]+$/.test(arg) ? `run ${bin} ${arg}` : `run ${bin}`;
 }
 
+function summarizePipeline(stage: string): string {
+  const pipeline = splitTopLevelPipes(stage);
+  if (pipeline.length > 1) {
+    const first = summarizeKnownExec(trimLeadingEnv(splitShellWords(pipeline[0])));
+    const last = summarizeKnownExec(trimLeadingEnv(splitShellWords(pipeline[pipeline.length - 1])));
+    const extra = pipeline.length > 2 ? ` (+${pipeline.length - 2} steps)` : "";
     return `${first} -> ${last}${extra}`;
   }
   return summarizeKnownExec(trimLeadingEnv(splitShellWords(stage)));
@@ -292,6 +313,7 @@ function summarizeExecCommand(command: string): ExecSummary | undefined {
     return undefined;
   }
 
+  const summaries = stages.map((stage) => summarizePipeline(stage));
   const text = summaries.length === 1 ? summaries[0] : summaries.join(" → ");
   const allGeneric = summaries.every((summary) => isGenericSummary(summary));
 
@@ -319,6 +341,7 @@ const KNOWN_SUMMARY_PREFIXES = [
   "list files",
   "show first",
   "show last",
+  "print line",
   "print text",
   "copy ",
   "move ",

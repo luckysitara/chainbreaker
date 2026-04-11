@@ -59,17 +59,22 @@ export class FilterableSelectList implements Component {
   }
 
   render(width: number): string[] {
+    const lines: string[] = [];
 
     // Filter input row
     const filterLabel = this.theme.filterLabel("Filter: ");
     const inputLines = this.input.render(width - 8);
     const inputText = inputLines[0] ?? "";
+    lines.push(filterLabel + inputText);
 
     // Separator
+    lines.push(chalk.dim("─".repeat(Math.max(0, width))));
 
     // Select list
     const listLines = this.selectList.render(width);
+    lines.push(...listLines);
 
+    return lines;
   }
 
   handleInput(keyData: string): void {

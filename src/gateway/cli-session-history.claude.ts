@@ -316,9 +316,12 @@ export function readClaudeCliSessionMessages(params: {
 
   const messages: TranscriptLikeMessage[] = [];
   const toolNameRegistry: ToolNameRegistry = new Map();
+  for (const line of content.split(/\r?\n/)) {
+    if (!line.trim()) {
       continue;
     }
     try {
+      const parsed = JSON.parse(line) as ClaudeCliProjectEntry;
       const message = parseClaudeCliHistoryEntry(parsed, params.cliSessionId, toolNameRegistry);
       if (message) {
         messages.push(message);

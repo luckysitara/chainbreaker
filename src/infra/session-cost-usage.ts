@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import readline from "node:readline";
 import type { NormalizedUsage, UsageLike } from "../agents/usage.js";
 import { normalizeUsage } from "../agents/usage.js";
 import { stripInboundMetadata } from "../auto-reply/reply/strip-inbound-meta.js";
@@ -222,7 +223,10 @@ const applyCostTotal = (totals: CostUsageTotals, costTotal: number | undefined) 
 
 async function* readJsonlRecords(filePath: string): AsyncGenerator<Record<string, unknown>> {
   const fileStream = fs.createReadStream(filePath, { encoding: "utf-8" });
+  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
   try {
+    for await (const line of rl) {
+      const trimmed = line.trim();
       if (!trimmed) {
         continue;
       }
@@ -233,6 +237,7 @@ async function* readJsonlRecords(filePath: string): AsyncGenerator<Record<string
         }
         yield parsed as Record<string, unknown>;
       } catch {
+        // Ignore malformed lines
       }
     }
   } finally {
@@ -508,6 +513,7 @@ export async function discoverAllSessions(params?: {
             break; // Found first user message
           }
         } catch {
+          // Skip malformed lines
         }
       }
     } catch {
@@ -1066,6 +1072,7 @@ export async function loadSessionLogs(params: {
         cost,
       });
     } catch {
+      // Ignore malformed lines
     }
   }
 

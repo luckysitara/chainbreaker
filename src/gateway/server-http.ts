@@ -896,6 +896,8 @@ export function createGatewayHttpServer(opts: {
               rateLimiter,
             }),
         },
+        {
+        },
       ];
       if (openResponsesEnabled) {
         requestStages.push({

@@ -375,6 +375,10 @@ function buildFileArtifactMessage(params: {
   filePath: string;
   viewerUrl?: string;
 }): string {
+  const lines = params.viewerUrl ? [`Diff viewer: ${params.viewerUrl}`] : [];
+  lines.push(`Diff ${params.format.toUpperCase()} generated at: ${params.filePath}`);
+  lines.push("Use the `message` tool with `path` or `filePath` to send this file.");
+  return lines.join("\n");
 }
 
 async function renderDiffArtifactFile(params: {

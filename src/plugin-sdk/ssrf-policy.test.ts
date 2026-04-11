@@ -43,6 +43,7 @@ describe("assertHttpUrlTargetsPrivateNetwork", () => {
   it.each([
     {
       name: "allows https targets without private-network checks",
+      url: "https://matrix.example.org",
       policy: {
         allowPrivateNetwork: false,
       },
@@ -50,6 +51,7 @@ describe("assertHttpUrlTargetsPrivateNetwork", () => {
     },
     {
       name: "allows internal DNS names only when they resolve exclusively to private IPs",
+      url: "http://matrix-synapse:8008",
       policy: {
         allowPrivateNetwork: true,
         lookupFn: createLookupFn([{ address: "10.0.0.5", family: 4 }]),
@@ -58,6 +60,7 @@ describe("assertHttpUrlTargetsPrivateNetwork", () => {
     },
     {
       name: "rejects cleartext public hosts even when private-network access is enabled",
+      url: "http://matrix.example.org:8008",
       policy: {
         allowPrivateNetwork: true,
         lookupFn: createLookupFn([{ address: "93.184.216.34", family: 4 }]),

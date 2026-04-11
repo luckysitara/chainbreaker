@@ -16,8 +16,10 @@ function setMinimalCurrentConversationRegistry(): void {
   setActivePluginRegistry(
     createTestRegistry([
       {
+        pluginId: "slack",
         source: "test",
         plugin: {
+          id: "slack",
           meta: { aliases: [] },
           conversationBindings: {
             supportsCurrentConversationBinding: true,
@@ -57,6 +59,7 @@ describe("generic current-conversation bindings", () => {
   it("advertises support only for channels that opt into current-conversation binds", () => {
     expect(
       getGenericCurrentConversationBindingCapabilities({
+        channel: "slack",
         accountId: "default",
       }),
     ).toEqual({
@@ -78,6 +81,7 @@ describe("generic current-conversation bindings", () => {
 
     expect(
       getGenericCurrentConversationBindingCapabilities({
+        channel: "slack",
         accountId: "default",
       }),
     ).toEqual({
@@ -90,27 +94,36 @@ describe("generic current-conversation bindings", () => {
 
   it("reloads persisted bindings after the in-memory cache is cleared", async () => {
     const bound = await bindGenericCurrentConversation({
+      targetSessionKey: "agent:codex:acp:slack-dm",
       targetKind: "session",
       conversation: {
+        channel: "slack",
         accountId: "default",
         conversationId: "user:U123",
       },
       metadata: {
+        label: "slack-dm",
       },
     });
 
     expect(bound).toMatchObject({
+      bindingId: "generic:slack\u241fdefault\u241f\u241fuser:U123",
+      targetSessionKey: "agent:codex:acp:slack-dm",
     });
 
     __testing.resetCurrentConversationBindingsForTests();
 
     expect(
       resolveGenericCurrentConversationBinding({
+        channel: "slack",
         accountId: "default",
         conversationId: "user:U123",
       }),
     ).toMatchObject({
+      bindingId: "generic:slack\u241fdefault\u241f\u241fuser:U123",
+      targetSessionKey: "agent:codex:acp:slack-dm",
       metadata: expect.objectContaining({
+        label: "slack-dm",
       }),
     });
   });

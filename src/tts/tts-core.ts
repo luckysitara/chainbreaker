@@ -162,6 +162,7 @@ export async function summarizeText(
           apiKey,
           maxTokens: Math.ceil(targetLength / 2),
           temperature: 0.3,
+          signal: controller.signal,
         },
       );
       const summary = res.content

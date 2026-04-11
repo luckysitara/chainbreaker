@@ -42,22 +42,34 @@ function formatSummary(summary: AgentSummary) {
         ? "config"
         : null;
 
+  const lines = [`- ${header}`];
   if (identityLine) {
+    lines.push(`  Identity: ${identityLine}${identitySource ? ` (${identitySource})` : ""}`);
   }
+  lines.push(`  Workspace: ${shortenHomePath(summary.workspace)}`);
+  lines.push(`  Agent dir: ${shortenHomePath(summary.agentDir)}`);
   if (summary.model) {
+    lines.push(`  Model: ${summary.model}`);
   }
+  lines.push(`  Routing rules: ${summary.bindings}`);
 
   if (summary.routes?.length) {
+    lines.push(`  Routing: ${summary.routes.join(", ")}`);
   }
   if (summary.providers?.length) {
+    lines.push("  Providers:");
     for (const provider of summary.providers) {
+      lines.push(`    - ${provider}`);
     }
   }
 
   if (summary.bindingDetails?.length) {
+    lines.push("  Routing rules:");
     for (const binding of summary.bindingDetails) {
+      lines.push(`    - ${binding}`);
     }
   }
+  return lines.join("\n");
 }
 
 export async function agentsListCommand(
@@ -114,6 +126,10 @@ export async function agentsListCommand(
     return;
   }
 
+  const lines = ["Agents:", ...summaries.map(formatSummary)];
+  lines.push("Routing rules map channel/account/peer to an agent. Use --bindings for full rules.");
+  lines.push(
     `Channel status reflects local config/creds. For live health: ${formatCliCommand("chainbreaker channels status --probe")}.`,
   );
+  runtime.log(lines.join("\n"));
 }

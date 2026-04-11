@@ -256,6 +256,10 @@ describe("sessionsCleanupCommand", () => {
       runtime,
     );
 
+    expect(logs.some((line) => line.includes("Planned session actions:"))).toBe(true);
+    expect(logs.some((line) => line.includes("Action") && line.includes("Key"))).toBe(true);
+    expect(logs.some((line) => line.includes("fresh") && line.includes("keep"))).toBe(true);
+    expect(logs.some((line) => line.includes("stale") && line.includes("prune-stale"))).toBe(true);
   });
 
   it("returns grouped JSON for --all-agents dry-runs", async () => {

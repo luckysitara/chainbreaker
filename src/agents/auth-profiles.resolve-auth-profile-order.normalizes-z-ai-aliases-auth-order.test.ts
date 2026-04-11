@@ -33,11 +33,17 @@ describe("resolveAuthProfileOrder", () => {
     const order = resolveAuthProfileOrder({
       cfg: {
         auth: {
+          order: { "z.ai": ["zai:work", "zai:default"] },
           profiles: makeApiKeyProfilesByProviderProvider({
+            "zai:default": "zai",
+            "zai:work": "zai",
           }),
         },
       },
+      store: makeApiKeyStore("zai", ["zai:default", "zai:work"]),
+      provider: "zai",
     });
+    expect(order).toEqual(["zai:work", "zai:default"]);
   });
   it("normalizes provider casing in auth.order keys", () => {
     const order = resolveAuthProfileOrder({
@@ -60,10 +66,15 @@ describe("resolveAuthProfileOrder", () => {
       cfg: {
         auth: {
           profiles: makeApiKeyProfilesByProviderProvider({
+            "zai:default": "z.ai",
+            "zai:work": "Z.AI",
           }),
         },
       },
+      store: makeApiKeyStore("zai", ["zai:default", "zai:work"]),
+      provider: "zai",
     });
+    expect(order).toEqual(["zai:default", "zai:work"]);
   });
   it("prioritizes oauth profiles when order missing", () => {
     const mixedStore: AuthProfileStore = {

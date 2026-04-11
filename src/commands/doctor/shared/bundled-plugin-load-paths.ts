@@ -107,9 +107,12 @@ export function collectBundledPluginLoadPathWarnings(params: {
   if (params.hits.length === 0) {
     return [];
   }
+  const lines = params.hits.map(
     (hit) =>
       `- ${hit.pathLabel}: legacy bundled plugin path "${hit.fromPath}" still points at ${hit.pluginId}; current packaged path is "${hit.toPath}".`,
   );
+  lines.push(`- Run "${params.doctorFixCommand}" to rewrite these bundled plugin paths.`);
+  return lines.map((line) => sanitizeForLog(line));
 }
 
 export function maybeRepairBundledPluginLoadPaths(

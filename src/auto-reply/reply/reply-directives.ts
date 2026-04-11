@@ -1,4 +1,5 @@
 import { splitMediaFromOutput } from "../../media/parse.js";
+import { parseInlineDirectives } from "../../utils/directive-tags.js";
 import { isSilentReplyPayloadText, SILENT_REPLY_TOKEN } from "../tokens.js";
 
 export type ReplyDirectiveParseResult = {
@@ -19,6 +20,7 @@ export function parseReplyDirectives(
   const split = splitMediaFromOutput(raw);
   let text = split.text ?? "";
 
+  const replyParsed = parseInlineDirectives(text, {
     currentMessageId: options.currentMessageId,
     stripAudioTag: false,
     stripReplyTags: true,

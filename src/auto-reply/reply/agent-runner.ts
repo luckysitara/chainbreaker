@@ -35,6 +35,7 @@ import {
   createShouldEmitToolResult,
   finalizeWithFollowup,
   isAudioPayload,
+  signalTypingIfNeeded,
 } from "./agent-runner-helpers.js";
 import { runMemoryFlushIfNeeded, runPreflightCompactionIfNeeded } from "./agent-runner-memory.js";
 import { buildReplyPayloads } from "./agent-runner-payloads.js";
@@ -43,6 +44,8 @@ import {
   hasSessionRelatedCronJobs,
   hasUnbackedReminderCommitment,
 } from "./agent-runner-reminder-guard.js";
+import { appendUsageLine, formatResponseUsageLine } from "./agent-runner-usage-line.js";
+import { createAudioAsVoiceBuffer, createBlockReplyPipeline } from "./block-reply-pipeline.js";
 import { resolveEffectiveBlockStreamingConfig } from "./block-streaming.js";
 import { createFollowupRunner } from "./followup-runner.js";
 import { resolveOriginMessageProvider, resolveOriginMessageTo } from "./origin-routing.js";
@@ -86,6 +89,7 @@ export async function runReplyAgent(params: {
   blockReplyChunking?: {
     minChars: number;
     maxChars: number;
+    breakPreference: "paragraph" | "newline" | "sentence";
     flushOnParagraph?: boolean;
   };
   resolvedBlockStreamingBreak: "text_end" | "message_end";
@@ -172,7 +176,9 @@ export async function runReplyAgent(params: {
           chunking: blockReplyChunking,
         }).coalescing
       : undefined;
+  const blockReplyPipeline =
     blockStreamingEnabled && opts?.onBlockReply
+      ? createBlockReplyPipeline({
           onBlockReply: opts.onBlockReply,
           timeoutMs: blockReplyTimeoutMs,
           coalescing: blockReplyCoalescing,
@@ -247,6 +253,7 @@ export async function runReplyAgent(params: {
     return undefined;
   }
 
+  await typingSignals.signalRunStart();
 
   activeSessionEntry = await runPreflightCompactionIfNeeded({
     cfg,
@@ -400,6 +407,7 @@ export async function runReplyAgent(params: {
       sessionCtx,
       opts,
       typingSignals,
+      blockReplyPipeline,
       blockStreamingEnabled,
       blockReplyChunking,
       resolvedBlockStreamingBreak,
@@ -456,6 +464,9 @@ export async function runReplyAgent(params: {
 
     const payloadArray = runResult.payloads ?? [];
 
+    if (blockReplyPipeline) {
+      await blockReplyPipeline.flush({ force: true });
+      blockReplyPipeline.stop();
     }
     if (pendingToolTasks.size > 0) {
       await Promise.allSettled(pendingToolTasks);
@@ -543,6 +554,7 @@ export async function runReplyAgent(params: {
       didLogHeartbeatStrip,
       silentExpected: followupRun.run.silentExpected,
       blockStreamingEnabled,
+      blockReplyPipeline,
       directlySentBlockKeys,
       replyToMode,
       replyToChannel,
@@ -587,6 +599,7 @@ export async function runReplyAgent(params: {
         ? appendUnscheduledReminderNote(replyPayloads)
         : replyPayloads;
 
+    await signalTypingIfNeeded(guardedReplyPayloads, typingSignals);
 
     if (isDiagnosticsEnabled(cfg) && hasNonzeroUsage(usage)) {
       const input = usage.input ?? 0;
@@ -776,10 +789,12 @@ export async function runReplyAgent(params: {
     finalizeWithFollowup(undefined, queueKey, runFollowupTurn);
     throw error;
   } finally {
+    blockReplyPipeline?.stop();
     typing.markRunComplete();
     // Safety net: the dispatcher's onIdle callback normally fires
     // markDispatchIdle(), but if the dispatcher exits early, errors,
     // or the reply path doesn't go through it cleanly, the second
+    // signal never fires and the typing keepalive loop runs forever.
     // Calling this twice is harmless — cleanup() is guarded by the
     // `active` flag.  Same pattern as the followup runner fix (#26881).
     typing.markDispatchIdle();

@@ -16,6 +16,7 @@ import {
 import {
   buildXaiXSearchPayload,
   requestXaiXSearch,
+  resolveXaiXSearchInlineCitations,
   resolveXaiXSearchMaxTurns,
   resolveXaiXSearchModel,
   type XaiXSearchOptions,
@@ -159,6 +160,7 @@ function normalizeOptionalIsoDate(value: string | undefined, label: string): str
 function buildXSearchCacheKey(params: {
   query: string;
   model: string;
+  inlineCitations: boolean;
   maxTurns?: number;
   options: Omit<XaiXSearchOptions, "query">;
 }) {
@@ -166,6 +168,7 @@ function buildXSearchCacheKey(params: {
     "x_search",
     params.model,
     params.query,
+    params.inlineCitations,
     params.maxTurns ?? null,
     params.options.allowedXHandles ?? null,
     params.options.excludedXHandles ?? null,
@@ -256,10 +259,12 @@ export function createXSearchTool(options?: {
       };
       const xSearchConfigRecord = xSearchConfig as Record<string, unknown> | undefined;
       const model = resolveXaiXSearchModel(xSearchConfigRecord);
+      const inlineCitations = resolveXaiXSearchInlineCitations(xSearchConfigRecord);
       const maxTurns = resolveXaiXSearchMaxTurns(xSearchConfigRecord);
       const cacheKey = buildXSearchCacheKey({
         query,
         model,
+        inlineCitations,
         maxTurns,
         options: {
           allowedXHandles,
@@ -280,6 +285,7 @@ export function createXSearchTool(options?: {
         apiKey,
         model,
         timeoutSeconds: resolveTimeoutSeconds(xSearchConfig?.timeoutSeconds, 30),
+        inlineCitations,
         maxTurns,
         options: xSearchOptions,
       });
@@ -289,6 +295,7 @@ export function createXSearchTool(options?: {
         tookMs: Date.now() - startedAt,
         content: result.content,
         citations: result.citations,
+        inlineCitations: result.inlineCitations,
         options: xSearchOptions,
       });
       writeCache(

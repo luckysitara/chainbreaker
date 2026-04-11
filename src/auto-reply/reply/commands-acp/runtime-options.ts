@@ -131,6 +131,7 @@ export async function handleAcpStatusAction(
         backend: status.backend,
         identity: status.identity,
       });
+      const lines = [
         "ACP status:",
         "-----",
         `session: ${status.sessionKey}`,
@@ -163,6 +164,7 @@ export async function handleAcpStatusAction(
           ? [`runtimeDetails: ${JSON.stringify(status.runtimeStatus.details)}`]
           : []),
       ];
+      return stopWithText(lines.join("\n"));
     },
   });
 }

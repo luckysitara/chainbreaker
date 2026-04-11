@@ -1,7 +1,10 @@
 // Keep built-in channel IDs in a leaf module so shared config/sandbox code can
 // reference them without importing channel registry helpers that may pull in
 // plugin runtime state.
-export const CHAT_CHANNEL_ORDER = ["telegram", "whatsapp"] as const;
+export const CHAT_CHANNEL_ORDER = [
+  "telegram",
+  "whatsapp",
+] as const;
 
 export type ChatChannelId = (typeof CHAT_CHANNEL_ORDER)[number];
 

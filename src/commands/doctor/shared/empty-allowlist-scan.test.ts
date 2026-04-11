@@ -6,6 +6,7 @@ describe("doctor empty allowlist policy scan", () => {
     const warnings = scanEmptyAllowlistPolicyWarnings(
       {
         channels: {
+          signal: {
             dmPolicy: "allowlist",
             accounts: {
               work: { dmPolicy: "allowlist" },
@@ -17,7 +18,9 @@ describe("doctor empty allowlist policy scan", () => {
     );
 
     expect(warnings).toEqual([
+      expect.stringContaining('channels.signal.dmPolicy is "allowlist" but allowFrom is empty'),
       expect.stringContaining(
+        'channels.signal.accounts.work.dmPolicy is "allowlist" but allowFrom is empty',
       ),
     ]);
   });

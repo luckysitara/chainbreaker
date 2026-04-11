@@ -106,10 +106,7 @@ function toConcretePathSegments(pathPattern: string): string[] {
   return out;
 }
 
-function buildConfigForChainbreakerTarget(
-  entry: SecretRegistryEntry,
-  envId: string,
-): ChainbreakerConfig {
+function buildConfigForChainbreakerTarget(entry: SecretRegistryEntry, envId: string): ChainbreakerConfig {
   const config = {} as ChainbreakerConfig;
   const refTargetPath =
     entry.secretShape === "sibling_ref" && entry.refPathPattern // pragma: allowlist secret
@@ -137,7 +134,11 @@ function buildConfigForChainbreakerTarget(
       "https://example.com/hook",
     );
   }
+  if (entry.id === "channels.slack.signingSecret") {
+    setPathCreateStrict(config, ["channels", "slack", "mode"], "http");
   }
+  if (entry.id === "channels.slack.accounts.*.signingSecret") {
+    setPathCreateStrict(config, ["channels", "slack", "accounts", "sample", "mode"], "http");
   }
   if (entry.id === "channels.zalo.webhookSecret") {
     setPathCreateStrict(config, ["channels", "zalo", "webhookUrl"], "https://example.com/hook");

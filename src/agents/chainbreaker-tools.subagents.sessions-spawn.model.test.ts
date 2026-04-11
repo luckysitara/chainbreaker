@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "./defaults.js";
+import "./test-helpers/fast-core-tools.js";
 import {
   getCallGatewayMock,
   getSessionsSpawnTool,
   resetSessionsSpawnConfigOverride,
   setSessionsSpawnConfigOverride,
 } from "./chainbreaker-tools.subagents.sessions-spawn.test-harness.js";
-import "./test-helpers/fast-core-tools.js";
-import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "./defaults.js";
 import { resetSubagentRegistryForTests } from "./subagent-registry.js";
 import { SUBAGENT_SPAWN_ACCEPTED_NOTE } from "./subagent-spawn.js";
 
@@ -77,6 +77,7 @@ async function expectSpawnUsesConfiguredModel(params: {
 
   const tool = await getSessionsSpawnTool({
     agentSessionKey: "agent:research:main",
+    agentChannel: "discord",
   });
 
   const result = await tool.execute(params.callId, {
@@ -107,6 +108,8 @@ describe("chainbreaker-tools: subagents (sessions_spawn model + thinking)", () =
     mockLongRunningSpawnFlow({ calls, acceptedAtBase: 3000 });
 
     const tool = await getSessionsSpawnTool({
+      agentSessionKey: "discord:group:req",
+      agentChannel: "discord",
     });
 
     const result = await tool.execute("call3", {
@@ -147,6 +150,8 @@ describe("chainbreaker-tools: subagents (sessions_spawn model + thinking)", () =
     });
 
     const tool = await getSessionsSpawnTool({
+      agentSessionKey: "discord:group:req",
+      agentChannel: "discord",
     });
 
     const result = await tool.execute("call-thinking", {
@@ -173,6 +178,8 @@ describe("chainbreaker-tools: subagents (sessions_spawn model + thinking)", () =
     });
 
     const tool = await getSessionsSpawnTool({
+      agentSessionKey: "discord:group:req",
+      agentChannel: "discord",
     });
 
     const result = await tool.execute("call-thinking-invalid", {
@@ -191,9 +198,11 @@ describe("chainbreaker-tools: subagents (sessions_spawn model + thinking)", () =
     await expectSpawnUsesConfiguredModel({
       config: {
         session: { mainKey: "main", scope: "per-sender" },
+        agents: { defaults: { subagents: { model: "minimax/MiniMax-M2.7" } } },
       },
       runId: "run-default-model",
       callId: "call-default-model",
+      expectedModel: "minimax/MiniMax-M2.7",
     });
   });
 
@@ -210,6 +219,7 @@ describe("chainbreaker-tools: subagents (sessions_spawn model + thinking)", () =
       config: {
         session: { mainKey: "main", scope: "per-sender" },
         agents: {
+          defaults: { subagents: { model: "minimax/MiniMax-M2.7" } },
           list: [{ id: "research", subagents: { model: "opencode/claude" } }],
         },
       },
@@ -224,6 +234,7 @@ describe("chainbreaker-tools: subagents (sessions_spawn model + thinking)", () =
       config: {
         session: { mainKey: "main", scope: "per-sender" },
         agents: {
+          defaults: { model: { primary: "minimax/MiniMax-M2.7" } },
           list: [{ id: "research", model: { primary: "opencode/claude" } }],
         },
       },

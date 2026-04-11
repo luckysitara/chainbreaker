@@ -204,6 +204,7 @@ export async function fetchCdpChecked(
   try {
     const headers = getHeadersWithAuth(url, (init?.headers as Record<string, string>) || {});
     const res = await withNoProxyForCdpUrl(url, () =>
+      fetch(url, { ...init, headers, signal: ctrl.signal }),
     );
     if (!res.ok) {
       if (res.status === 429) {

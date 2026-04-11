@@ -5,6 +5,7 @@ export type TerminationReason =
   | "overall-timeout"
   | "no-output-timeout"
   | "spawn-error"
+  | "signal"
   | "exit";
 
 export type RunRecord = {
@@ -58,6 +59,8 @@ export type SpawnProcessAdapter<WaitSignal = NodeJS.Signals | number | null> = {
   stdin?: ManagedRunStdin;
   onStdout: (listener: (chunk: string) => void) => void;
   onStderr: (listener: (chunk: string) => void) => void;
+  wait: () => Promise<{ code: number | null; signal: WaitSignal }>;
+  kill: (signal?: NodeJS.Signals) => void;
   dispose: () => void;
 };
 

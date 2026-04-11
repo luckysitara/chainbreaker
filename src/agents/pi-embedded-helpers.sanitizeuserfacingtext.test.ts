@@ -153,6 +153,8 @@ describe("sanitizeUserFacingText", () => {
       expected: "Hello there!",
     },
     {
+      input: "Hello there!\n\nDifferent line.",
+      expected: "Hello there!\n\nDifferent line.",
     },
   ])("normalizes paragraph blocks", ({ input, expected }) => {
     expect(sanitizeUserFacingText(input)).toBe(expected);
@@ -161,11 +163,14 @@ describe("sanitizeUserFacingText", () => {
   it.each([
     { input: "\n\nHello there!", expected: "Hello there!" },
     { input: "\nHello there!", expected: "Hello there!" },
+    { input: "\n\n\nMultiple newlines", expected: "Multiple newlines" },
     { input: "\n \nHello", expected: "Hello" },
     { input: "  \n\nHello", expected: "Hello" },
+  ])("strips leading empty lines: %j", ({ input, expected }) => {
     expect(sanitizeUserFacingText(input)).toBe(expected);
   });
 
+  it("preserves trailing whitespace and internal newlines", () => {
     expect(sanitizeUserFacingText("Hello\n\nWorld\n")).toBe("Hello\n\nWorld\n");
     expect(sanitizeUserFacingText("Line 1\nLine 2")).toBe("Line 1\nLine 2");
   });
@@ -305,6 +310,7 @@ describe("downgradeOpenAIReasoningBlocks", () => {
       },
     ];
 
+    // oxlint-disable-next-line typescript/no-explicit-any
     expect(downgradeOpenAIReasoningBlocks(input as any)).toEqual(input);
   });
 
@@ -322,6 +328,7 @@ describe("downgradeOpenAIReasoningBlocks", () => {
       { role: "user", content: "next" },
     ];
 
+    // oxlint-disable-next-line typescript/no-explicit-any
     expect(downgradeOpenAIReasoningBlocks(input as any)).toEqual([
       { role: "user", content: "next" },
     ]);
@@ -340,6 +347,7 @@ describe("downgradeOpenAIReasoningBlocks", () => {
       },
     ];
 
+    // oxlint-disable-next-line typescript/no-explicit-any
     expect(downgradeOpenAIReasoningBlocks(input as any)).toEqual([]);
   });
 
@@ -357,6 +365,7 @@ describe("downgradeOpenAIReasoningBlocks", () => {
       },
     ];
 
+    // oxlint-disable-next-line typescript/no-explicit-any
     expect(downgradeOpenAIReasoningBlocks(input as any)).toEqual(input);
   });
 
@@ -374,7 +383,9 @@ describe("downgradeOpenAIReasoningBlocks", () => {
       { role: "user", content: "next" },
     ];
 
+    // oxlint-disable-next-line typescript/no-explicit-any
     const once = downgradeOpenAIReasoningBlocks(input as any);
+    // oxlint-disable-next-line typescript/no-explicit-any
     const twice = downgradeOpenAIReasoningBlocks(once as any);
     expect(twice).toEqual(once);
   });
@@ -419,6 +430,7 @@ describe("downgradeOpenAIFunctionCallReasoningPairs", () => {
       makeToolResult(callIdWithReasoning, "ok"),
     ];
 
+    // oxlint-disable-next-line typescript/no-explicit-any
     expect(downgradeOpenAIFunctionCallReasoningPairs(input as any)).toEqual([
       makePlainAssistantTurn(callIdWithoutReasoning),
       makeToolResult(callIdWithoutReasoning, "ok"),
@@ -431,6 +443,7 @@ describe("downgradeOpenAIFunctionCallReasoningPairs", () => {
       makeToolResult(callIdWithReasoning, "ok"),
     ];
 
+    // oxlint-disable-next-line typescript/no-explicit-any
     expect(downgradeOpenAIFunctionCallReasoningPairs(input as any)).toEqual(input);
   });
 
@@ -442,6 +455,7 @@ describe("downgradeOpenAIFunctionCallReasoningPairs", () => {
       makeToolResult(callIdWithReasoning, "turn2"),
     ];
 
+    // oxlint-disable-next-line typescript/no-explicit-any
     expect(downgradeOpenAIFunctionCallReasoningPairs(input as any)).toEqual([
       makePlainAssistantTurn(callIdWithoutReasoning),
       makeToolResult(callIdWithoutReasoning, "turn1"),

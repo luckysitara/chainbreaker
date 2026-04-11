@@ -5,7 +5,9 @@ import { CallRecordSchema, TerminalStates, type CallId, type CallRecord } from "
 
 export function persistCallRecord(storePath: string, call: CallRecord): void {
   const logPath = path.join(storePath, "calls.jsonl");
+  const line = `${JSON.stringify(call)}\n`;
   // Fire-and-forget async write to avoid blocking event loop.
+  fsp.appendFile(logPath, line).catch((err) => {
     console.error("[voice-call] Failed to persist call record:", err);
   });
 }
@@ -27,13 +29,18 @@ export function loadActiveCallsFromStore(storePath: string): {
   }
 
   const content = fs.readFileSync(logPath, "utf-8");
+  const lines = content.split("\n");
 
   const callMap = new Map<CallId, CallRecord>();
+  for (const line of lines) {
+    if (!line.trim()) {
       continue;
     }
     try {
+      const call = CallRecordSchema.parse(JSON.parse(line));
       callMap.set(call.callId, call);
     } catch {
+      // Skip invalid lines.
     }
   }
 
@@ -71,11 +78,15 @@ export async function getCallHistoryFromStore(
   }
 
   const content = await fsp.readFile(logPath, "utf-8");
+  const lines = content.trim().split("\n").filter(Boolean);
   const calls: CallRecord[] = [];
 
+  for (const line of lines.slice(-limit)) {
     try {
+      const parsed = CallRecordSchema.parse(JSON.parse(line));
       calls.push(parsed);
     } catch {
+      // Skip invalid lines.
     }
   }
 

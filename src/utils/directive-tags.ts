@@ -1,3 +1,4 @@
+export type InlineDirectiveParseResult = {
   text: string;
   audioAsVoice: boolean;
   replyToId?: string;
@@ -7,6 +8,7 @@
   hasReplyTag: boolean;
 };
 
+type InlineDirectiveParseOptions = {
   currentMessageId?: string;
   stripAudioTag?: boolean;
   stripReplyTags?: boolean;
@@ -34,6 +36,7 @@ function normalizeDirectiveWhitespace(text: string): string {
     .trimEnd();
 }
 
+type StripInlineDirectiveTagsResult = {
   text: string;
   changed: boolean;
 };
@@ -49,6 +52,7 @@ export type DisplayMessageWithContent = {
   content?: unknown;
 } & Record<string, unknown>;
 
+export function stripInlineDirectiveTagsForDisplay(text: string): StripInlineDirectiveTagsResult {
   if (!text) {
     return { text, changed: false };
   }
@@ -60,6 +64,7 @@ export type DisplayMessageWithContent = {
   };
 }
 
+export function stripInlineDirectiveTagsForDelivery(text: string): StripInlineDirectiveTagsResult {
   if (!text) {
     return { text, changed: false };
   }
@@ -76,8 +81,10 @@ function isMessageTextPart(part: MessagePart): part is MessageTextPart {
 }
 
 /**
+ * Strips inline directive tags from message text blocks while preserving message shape.
  * Empty post-strip text stays empty-string to preserve caller semantics.
  */
+export function stripInlineDirectiveTagsFromMessageForDisplay(
   message: DisplayMessageWithContent | undefined,
 ): DisplayMessageWithContent | undefined {
   if (!message) {
@@ -94,11 +101,15 @@ function isMessageTextPart(part: MessagePart): part is MessageTextPart {
     if (!isMessageTextPart(record)) {
       return part;
     }
+    return { ...record, text: stripInlineDirectiveTagsForDisplay(record.text).text };
   });
   return { ...message, content: cleaned };
 }
 
+export function parseInlineDirectives(
   text?: string,
+  options: InlineDirectiveParseOptions = {},
+): InlineDirectiveParseResult {
   const { currentMessageId, stripAudioTag = true, stripReplyTags = true } = options;
   if (!text) {
     return {

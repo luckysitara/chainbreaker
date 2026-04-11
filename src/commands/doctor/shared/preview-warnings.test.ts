@@ -30,6 +30,7 @@ function channelManifest(id: string, channelId: string): PluginManifestRecord {
 describe("doctor preview warnings", () => {
   beforeEach(() => {
     vi.spyOn(manifestRegistry, "loadPluginManifestRegistry").mockReturnValue({
+      plugins: [manifest("discord")],
       diagnostics: [],
     });
   });
@@ -45,6 +46,7 @@ describe("doctor preview warnings", () => {
           telegram: {
             allowFrom: ["@alice"],
           },
+          signal: {
             dmPolicy: "open",
           },
         },
@@ -54,6 +56,7 @@ describe("doctor preview warnings", () => {
 
     expect(warnings).toEqual([
       expect.stringContaining("Telegram allowFrom contains 1 non-numeric entries"),
+      expect.stringContaining('channels.signal.allowFrom: set to ["*"]'),
     ]);
   });
 
@@ -61,6 +64,7 @@ describe("doctor preview warnings", () => {
     const warnings = collectDoctorPreviewWarnings({
       cfg: {
         channels: {
+          signal: {
             accounts: {
               "ops\u001B[31m-team\u001B[0m\r\nnext": {
                 dmPolicy: "allowlist",
@@ -73,6 +77,7 @@ describe("doctor preview warnings", () => {
     });
 
     expect(warnings).toEqual([
+      expect.stringContaining("channels.signal.accounts.ops-teamnext.dmPolicy"),
     ]);
     expect(warnings[0]).not.toContain("\u001B");
     expect(warnings[0]).not.toContain("\r");

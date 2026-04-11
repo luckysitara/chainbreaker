@@ -76,8 +76,11 @@ function parseFuserPidList(output: string): number[] {
   }
   const values = new Set<number>();
   for (const rawLine of output.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) {
       continue;
     }
+    const pidRegion = line.includes(":") ? line.slice(line.indexOf(":") + 1) : line;
     const pidMatches = pidRegion.match(/\d+/g) ?? [];
     for (const match of pidMatches) {
       const pid = Number.parseInt(match, 10);
@@ -89,6 +92,8 @@ function parseFuserPidList(output: string): number[] {
   return [...values];
 }
 
+function killPortWithFuser(port: number, signal: "SIGTERM" | "SIGKILL"): PortProcess[] {
+  const args = ["-k", `-${FUSER_SIGNALS[signal]}`, `${port}/tcp`];
   try {
     const stdout = execFileSync("fuser", args, {
       encoding: "utf-8",
@@ -103,6 +108,7 @@ function parseFuserPidList(output: string): number[] {
     const stderr = readExecOutput(execErr.stderr);
     const parsed = parseFuserPidList([stdout, stderr].filter(Boolean).join("\n"));
     if (status === 1) {
+      // fuser exits 1 if nothing matched; keep any parsed PIDs in case signal succeeded.
       return parsed.map((pid) => ({ pid }));
     }
     if (code === "ENOENT") {
@@ -133,11 +139,17 @@ async function isPortBusy(port: number): Promise<boolean> {
 }
 
 export function parseLsofOutput(output: string): PortProcess[] {
+  const lines = output.split(/\r?\n/).filter(Boolean);
   const results: PortProcess[] = [];
   let current: Partial<PortProcess> = {};
+  for (const line of lines) {
+    if (line.startsWith("p")) {
       if (current.pid) {
         results.push(current as PortProcess);
       }
+      current = { pid: Number.parseInt(line.slice(1), 10) };
+    } else if (line.startsWith("c")) {
+      current.command = line.slice(1);
     }
   }
   if (current.pid) {
@@ -150,7 +162,10 @@ export function listPortListeners(port: number): PortProcess[] {
   if (process.platform === "win32") {
     try {
       const out = execFileSync("netstat", ["-ano", "-p", "TCP"], { encoding: "utf-8" });
+      const lines = out.split(/\r?\n/).filter(Boolean);
       const results: PortProcess[] = [];
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
         if (parts.length >= 5 && parts[3] === "LISTENING") {
           const localAddress = parts[1];
           const addressPort = localAddress.split(":").pop();
@@ -219,8 +234,10 @@ export function forceFreePort(port: number): PortProcess[] {
   return listeners;
 }
 
+function killPids(listeners: PortProcess[], signal: NodeJS.Signals) {
   for (const proc of listeners) {
     try {
+      process.kill(proc.pid, signal);
     } catch (err) {
       throw new Error(
         `failed to kill pid ${proc.pid}${proc.command ? ` (${proc.command})` : ""}: ${String(err)}`,
@@ -233,6 +250,7 @@ export function forceFreePort(port: number): PortProcess[] {
 export async function forceFreePortAndWait(
   port: number,
   opts: {
+    /** Total wait budget across signals. */
     timeoutMs?: number;
     /** Poll interval for checking whether lsof reports listeners. */
     intervalMs?: number;

@@ -91,18 +91,24 @@ export function formatUsageReportLines(summary: UsageSummary, opts?: { now?: num
     return ["Usage: no provider usage available."];
   }
 
+  const lines: string[] = ["Usage:"];
   for (const entry of summary.providers) {
     const planSuffix = entry.plan ? ` (${entry.plan})` : "";
     if (entry.error) {
+      lines.push(`  ${entry.displayName}${planSuffix}: ${entry.error}`);
       continue;
     }
     if (entry.windows.length === 0) {
+      lines.push(`  ${entry.displayName}${planSuffix}: no data`);
       continue;
     }
+    lines.push(`  ${entry.displayName}${planSuffix}`);
     for (const window of entry.windows) {
       const remaining = clampPercent(100 - window.usedPercent);
       const reset = formatResetRemaining(window.resetAt, opts?.now);
       const resetSuffix = reset ? ` · resets ${reset}` : "";
+      lines.push(`    ${window.label}: ${remaining.toFixed(0)}% left${resetSuffix}`);
     }
   }
+  return lines;
 }

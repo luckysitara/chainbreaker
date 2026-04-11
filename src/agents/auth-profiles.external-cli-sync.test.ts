@@ -47,6 +47,7 @@ function getProviderCases() {
     {
       label: "MiniMax",
       profileId: MINIMAX_CLI_PROFILE_ID,
+      provider: "minimax-portal" as const,
       readMock: mocks.readMiniMaxCliCredentialsCached,
     },
   ];

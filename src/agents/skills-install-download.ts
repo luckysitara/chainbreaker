@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { isWindowsDrivePath } from "../infra/archive-path.js";
 import { writeFileFromPathWithinRoot } from "../infra/fs-safe.js";
@@ -86,6 +87,7 @@ async function downloadFile(params: {
     const readable = isNodeReadableStream(body)
       ? body
       : Readable.fromWeb(body as NodeReadableStream);
+    await pipeline(readable, file);
     await writeFileFromPathWithinRoot({
       rootDir: params.rootDir,
       relativePath: params.relativePath,

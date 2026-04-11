@@ -24,6 +24,7 @@ export function renderFileContextBlock(params: {
   fallbackName?: string;
   mimeType?: string | null;
   content: string;
+  surroundContentWithNewlines?: boolean;
 }): string {
   const fallbackName =
     typeof params.fallbackName === "string" && params.fallbackName.trim().length > 0
@@ -40,6 +41,7 @@ export function renderFileContextBlock(params: {
     .filter(Boolean)
     .join(" ");
 
+  if (params.surroundContentWithNewlines === false) {
     return `<file ${attrs}>${safeContent}</file>`;
   }
   return `<file ${attrs}>\n${safeContent}\n</file>`;

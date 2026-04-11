@@ -31,12 +31,10 @@ describe("startGatewayMemoryBackend", () => {
   beforeEach(() => {
     getMemorySearchManagerMock.mockClear();
     resolveActiveMemoryBackendConfigMock.mockReset();
-    resolveActiveMemoryBackendConfigMock.mockImplementation(
-      ({ cfg }: { cfg: ChainbreakerConfig }) => ({
-        backend: cfg.memory?.backend === "qmd" ? "qmd" : "builtin",
-        qmd: cfg.memory?.backend === "qmd" ? {} : undefined,
-      }),
-    );
+    resolveActiveMemoryBackendConfigMock.mockImplementation(({ cfg }: { cfg: ChainbreakerConfig }) => ({
+      backend: cfg.memory?.backend === "qmd" ? "qmd" : "builtin",
+      qmd: cfg.memory?.backend === "qmd" ? {} : undefined,
+    }));
   });
 
   it("skips initialization when memory backend is not qmd", async () => {

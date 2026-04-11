@@ -93,6 +93,7 @@ describe("config schema regressions", () => {
   it("accepts safe iMessage remoteHost", () => {
     const res = validateConfigObject({
       channels: {
+        imessage: {
           remoteHost: "bot@gateway-host",
         },
       },
@@ -116,6 +117,7 @@ describe("config schema regressions", () => {
   it("rejects unsafe iMessage remoteHost", () => {
     const res = validateConfigObject({
       channels: {
+        imessage: {
           remoteHost: "bot@gateway-host -oProxyCommand=whoami",
         },
       },
@@ -123,12 +125,14 @@ describe("config schema regressions", () => {
 
     expect(res.ok).toBe(false);
     if (!res.ok) {
+      expect(res.issues[0]?.path).toBe("channels.imessage.remoteHost");
     }
   });
 
   it("accepts iMessage attachment root patterns", () => {
     const res = validateConfigObject({
       channels: {
+        imessage: {
           attachmentRoots: ["/Users/*/Library/Messages/Attachments"],
           remoteAttachmentRoots: ["/Volumes/relay/attachments"],
         },
@@ -188,6 +192,7 @@ describe("config schema regressions", () => {
   it("rejects relative iMessage attachment roots", () => {
     const res = validateConfigObject({
       channels: {
+        imessage: {
           attachmentRoots: ["./attachments"],
         },
       },
@@ -195,6 +200,7 @@ describe("config schema regressions", () => {
 
     expect(res.ok).toBe(false);
     if (!res.ok) {
+      expect(res.issues[0]?.path).toBe("channels.imessage.attachmentRoots.0");
     }
   });
 
@@ -218,8 +224,10 @@ describe("config schema regressions", () => {
     expect(res.ok).toBe(false);
   });
 
+  it("accepts signal accountUuid for loop protection", () => {
     const res = validateConfigObject({
       channels: {
+        signal: {
           accountUuid: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         },
       },

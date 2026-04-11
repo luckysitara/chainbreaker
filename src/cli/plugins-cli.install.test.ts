@@ -192,6 +192,8 @@ describe("plugins cli install", () => {
 
     expect(clearPluginManifestRegistryCache).toHaveBeenCalledTimes(1);
     expect(writeConfigFile).toHaveBeenCalledWith(installedCfg);
+    expect(runtimeLogs.some((line) => line.includes("slot adjusted"))).toBe(true);
+    expect(runtimeLogs.some((line) => line.includes("Installed plugin: alpha"))).toBe(true);
   });
 
   it("installs ClawHub plugins and persists source metadata", async () => {
@@ -249,6 +251,7 @@ describe("plugins cli install", () => {
       }),
     );
     expect(writeConfigFile).toHaveBeenCalledWith(installedCfg);
+    expect(runtimeLogs.some((line) => line.includes("Installed plugin: demo"))).toBe(true);
     expect(installPluginFromNpmSpec).not.toHaveBeenCalled();
   });
 
@@ -480,5 +483,6 @@ describe("plugins cli install", () => {
       }),
     );
     expect(writeConfigFile).toHaveBeenCalledWith(installedCfg);
+    expect(runtimeLogs.some((line) => line.includes("Installed hook pack: demo-hooks"))).toBe(true);
   });
 });

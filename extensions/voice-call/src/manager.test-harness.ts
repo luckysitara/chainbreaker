@@ -103,6 +103,8 @@ export function markCallAnswered(manager: CallManager, callId: string, eventId: 
 export function writeCallsToStore(storePath: string, calls: Record<string, unknown>[]): void {
   fs.mkdirSync(storePath, { recursive: true });
   const logPath = path.join(storePath, "calls.jsonl");
+  const lines = calls.map((c) => JSON.stringify(c)).join("\n") + "\n";
+  fs.writeFileSync(logPath, lines);
 }
 
 export function makePersistedCall(

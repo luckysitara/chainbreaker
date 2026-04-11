@@ -240,8 +240,10 @@ export async function waitForWebLogin(
     };
   }
   const timeoutMs = Math.max(opts.timeoutMs ?? 120_000, 1000);
+  const deadline = Date.now() + timeoutMs;
 
   while (true) {
+    const remaining = deadline - Date.now();
     if (remaining <= 0) {
       return {
         connected: false,

@@ -12,6 +12,7 @@ export type TelegramProbe = BaseProbeResult & {
     username?: string | null;
     canJoinGroups?: boolean | null;
     canReadAllGroupMessages?: boolean | null;
+    supportsInlineQueries?: boolean | null;
   };
   webhook?: { url?: string | null; hasCustomCert?: boolean | null };
 };
@@ -98,11 +99,13 @@ export async function probeTelegram(
 ): Promise<TelegramProbe> {
   const started = Date.now();
   const timeoutBudgetMs = Math.max(1, Math.floor(timeoutMs));
+  const deadlineMs = started + timeoutBudgetMs;
   const options = resolveProbeOptions(proxyOrOptions);
   const fetcher = resolveProbeFetcher(token, options);
   const apiBase = resolveTelegramApiBase(options?.apiRoot);
   const base = `${apiBase}/bot${token}`;
   const retryDelayMs = Math.max(50, Math.min(1000, Math.floor(timeoutBudgetMs / 5)));
+  const resolveRemainingBudgetMs = () => Math.max(0, deadlineMs - Date.now());
 
   const result: TelegramProbe = {
     ok: false,
@@ -156,6 +159,7 @@ export async function probeTelegram(
         username?: string;
         can_join_groups?: boolean;
         can_read_all_group_messages?: boolean;
+        supports_inline_queries?: boolean;
       };
     };
     if (!meRes.ok || !meJson?.ok) {
@@ -173,6 +177,9 @@ export async function probeTelegram(
         typeof meJson.result?.can_read_all_group_messages === "boolean"
           ? meJson.result?.can_read_all_group_messages
           : null,
+      supportsInlineQueries:
+        typeof meJson.result?.supports_inline_queries === "boolean"
+          ? meJson.result?.supports_inline_queries
           : null,
     };
 

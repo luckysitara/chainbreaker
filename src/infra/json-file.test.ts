@@ -37,6 +37,7 @@ describe("json-file helpers", () => {
     });
   });
 
+  it("creates parent dirs, writes a trailing newline, and loads the saved object", async () => {
     await withTempDir({ prefix: "chainbreaker-json-file-" }, async (root) => {
       const pathname = path.join(root, "nested", "config.json");
       saveJsonFile(pathname, { enabled: true, count: 2 });

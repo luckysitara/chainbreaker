@@ -145,6 +145,7 @@ describe("resolveAgentRoute", () => {
         mainSessionKey: "agent:main:main",
         lastRoutePolicy: "main" as const,
       },
+      sessionKey: "agent:main:discord:direct:user-1",
       expected: "agent:main:main",
     },
     {
@@ -186,7 +187,9 @@ describe("resolveAgentRoute", () => {
     },
     {
       dmScope: "per-channel-peer" as const,
+      channel: "discord" as const,
       peerId: "222222222222222222",
+      expected: "agent:main:discord:direct:alice",
     },
   ])(
     "identityLinks applies to direct-message scopes: $channel $dmScope",
@@ -195,6 +198,7 @@ describe("resolveAgentRoute", () => {
         session: {
           dmScope,
           identityLinks: {
+            alice: ["telegram:111111111", "discord:222222222222222222"],
           },
         },
       };
@@ -238,12 +242,14 @@ describe("resolveAgentRoute", () => {
       },
     },
     {
+      name: "discord channel peer binding wins over guild binding",
       routeParams: {
         cfg: {
           bindings: [
             {
               agentId: "chan",
               match: {
+                channel: "discord",
                 accountId: "default",
                 peer: { kind: "channel", id: "c1" },
               },
@@ -251,18 +257,21 @@ describe("resolveAgentRoute", () => {
             {
               agentId: "guild",
               match: {
+                channel: "discord",
                 accountId: "default",
                 guildId: "g1",
               },
             },
           ],
         } satisfies ChainbreakerConfig,
+        channel: "discord" as const,
         accountId: "default",
         guildId: "g1",
         peer: { kind: "channel" as const, id: "c1" },
       },
       expected: {
         agentId: "chan",
+        sessionKey: "agent:chan:discord:channel:c1",
         matchedBy: "binding.peer",
       },
     },
@@ -274,15 +283,18 @@ describe("resolveAgentRoute", () => {
             {
               agentId: "guild",
               match: {
+                channel: "discord",
                 accountId: "default",
                 guildId: "g1",
               },
             },
             {
               agentId: "acct",
+              match: { channel: "discord", accountId: "default" },
             },
           ],
         } satisfies ChainbreakerConfig,
+        channel: "discord" as const,
         accountId: "default",
         guildId: "g1",
         peer: { kind: "channel" as const, id: "c1" },
@@ -300,9 +312,11 @@ describe("resolveAgentRoute", () => {
     const cfg: ChainbreakerConfig = {};
     const route = resolveAgentRoute({
       cfg,
+      channel: "discord",
       accountId: "default",
       peer: { kind: "channel", id: 1468834856187203680n as unknown as string },
     });
+    expect(route.sessionKey).toBe("agent:main:discord:channel:1468834856187203680");
   });
 
   test.each([
@@ -314,6 +328,7 @@ describe("resolveAgentRoute", () => {
             {
               agentId: "olga",
               match: {
+                channel: "discord",
                 peer: { kind: "channel", id: "CHANNEL_A" },
                 guildId: "GUILD_1",
               },
@@ -321,11 +336,13 @@ describe("resolveAgentRoute", () => {
             {
               agentId: "main",
               match: {
+                channel: "discord",
                 guildId: "GUILD_1",
               },
             },
           ],
         } satisfies ChainbreakerConfig,
+        channel: "discord" as const,
         guildId: "GUILD_1",
         peer: { kind: "channel" as const, id: "CHANNEL_B" },
       },
@@ -342,6 +359,7 @@ describe("resolveAgentRoute", () => {
             {
               agentId: "wrongguild",
               match: {
+                channel: "discord",
                 peer: { kind: "channel", id: "c1" },
                 guildId: "g1",
               },
@@ -349,11 +367,13 @@ describe("resolveAgentRoute", () => {
             {
               agentId: "rightguild",
               match: {
+                channel: "discord",
                 guildId: "g2",
               },
             },
           ],
         } satisfies ChainbreakerConfig,
+        channel: "discord" as const,
         guildId: "g2",
         peer: { kind: "channel" as const, id: "c1" },
       },
@@ -370,6 +390,7 @@ describe("resolveAgentRoute", () => {
             {
               agentId: "roomonly",
               match: {
+                channel: "slack",
                 peer: { kind: "channel", id: "C_A" },
                 teamId: "T1",
               },
@@ -377,11 +398,13 @@ describe("resolveAgentRoute", () => {
             {
               agentId: "teamwide",
               match: {
+                channel: "slack",
                 teamId: "T1",
               },
             },
           ],
         } satisfies ChainbreakerConfig,
+        channel: "slack" as const,
         teamId: "T1",
         peer: { kind: "channel" as const, id: "C_B" },
       },
@@ -398,6 +421,7 @@ describe("resolveAgentRoute", () => {
             {
               agentId: "wrongteam",
               match: {
+                channel: "slack",
                 peer: { kind: "channel", id: "C1" },
                 teamId: "T1",
               },
@@ -405,11 +429,13 @@ describe("resolveAgentRoute", () => {
             {
               agentId: "rightteam",
               match: {
+                channel: "slack",
                 teamId: "T2",
               },
             },
           ],
         } satisfies ChainbreakerConfig,
+        channel: "slack" as const,
         teamId: "T2",
         peer: { kind: "channel" as const, id: "C1" },
       },
@@ -476,7 +502,9 @@ describe("resolveAgentRoute", () => {
     {
       name: "binding accountId matching is canonicalized",
       cfg: {
+        bindings: [{ agentId: "biz", match: { channel: "discord", accountId: "BIZ" } }],
       } satisfies ChainbreakerConfig,
+      channel: "discord" as const,
       accountId: " biz ",
       peer: { kind: "direct" as const, id: "u-1" },
       expected: {
@@ -545,6 +573,7 @@ describe("parentPeer binding inheritance (thread support)", () => {
     return {
       agentId,
       match: {
+        channel: "discord" as const,
         peer: { kind: "channel" as const, id: peerId },
       },
     };
@@ -554,6 +583,7 @@ describe("parentPeer binding inheritance (thread support)", () => {
     return {
       agentId,
       match: {
+        channel: "discord" as const,
         guildId,
       },
     };
@@ -567,6 +597,7 @@ describe("parentPeer binding inheritance (thread support)", () => {
     const parentPeer = "parentPeer" in params ? params.parentPeer : defaultParentPeer;
     return resolveAgentRoute({
       cfg: params.cfg,
+      channel: "discord",
       peer: threadPeer,
       parentPeer,
       guildId: params.guildId,
@@ -700,14 +731,18 @@ describe("backward compatibility: peer.kind group ↔ channel", () => {
   test.each([
     {
       name: "config group binding matches runtime channel scope",
+      agentId: "slack-group-agent",
       bindingPeerKind: "group" as const satisfies CompatRoutePeerKind,
       runtimePeerKind: "channel" as const satisfies CompatRoutePeerKind,
+      expectedAgentId: "slack-group-agent",
       expectedMatchedBy: "binding.peer",
     },
     {
       name: "config channel binding matches runtime group scope",
+      agentId: "slack-channel-agent",
       bindingPeerKind: "channel" as const satisfies CompatRoutePeerKind,
       runtimePeerKind: "group" as const satisfies CompatRoutePeerKind,
+      expectedAgentId: "slack-channel-agent",
       expectedMatchedBy: "binding.peer",
     },
     {
@@ -727,11 +762,13 @@ describe("backward compatibility: peer.kind group ↔ channel", () => {
             {
               agentId,
               match: {
+                channel: "slack",
                 peer: createCompatPeer(bindingPeerKind, "C123456"),
               },
             },
           ],
         },
+        channel: "slack",
         accountId: null,
         peer: createCompatPeer(runtimePeerKind, "C123456"),
       });
@@ -757,6 +794,7 @@ describe("role-based agent routing", () => {
     return {
       agentId,
       match: {
+        channel: "discord",
         ...(params.includeGuildId === false ? {} : { guildId: "g1" }),
         ...(params.roles !== undefined ? { roles: [...params.roles] } : {}),
         ...(params.peerId ? { peer: { kind: "channel", id: params.peerId } } : {}),
@@ -774,6 +812,7 @@ describe("role-based agent routing", () => {
   }) {
     const route = resolveRoute({
       cfg: { bindings: [...params.bindings] },
+      channel: "discord",
       guildId: "g1",
       ...(params.memberRoleIds ? { memberRoleIds: [...params.memberRoleIds] } : {}),
       peer: { kind: "channel", id: params.peerId ?? "c1" },
@@ -1004,6 +1043,7 @@ describe("wildcard peer bindings (peer.id=*)", () => {
         {
           agentId: "grp",
           match: {
+            channel: "discord",
             accountId: "default",
             peer: { kind: "group", id: "*" },
           },
@@ -1012,6 +1052,7 @@ describe("wildcard peer bindings (peer.id=*)", () => {
     };
     const route = resolveAgentRoute({
       cfg,
+      channel: "discord",
       accountId: "default",
       peer: { kind: "group", id: "g-42" },
     });

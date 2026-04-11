@@ -79,10 +79,7 @@ function logChannelSelectionError(params: {
   );
 }
 
-async function isPluginConfigured(
-  plugin: ChannelPlugin,
-  cfg: ChainbreakerConfig,
-): Promise<boolean> {
+async function isPluginConfigured(plugin: ChannelPlugin, cfg: ChainbreakerConfig): Promise<boolean> {
   const accountIds = plugin.config.listAccountIds(cfg);
   if (accountIds.length === 0) {
     return false;

@@ -169,7 +169,9 @@ export function registerDefaultAuthTokenSuite(): void {
       }
     });
 
+    test("device-less auth matrix", async () => {
       const token = resolveGatewayTokenOrEnv();
+      const matrix: Array<{
         name: string;
         opts: Parameters<typeof connectReq>[1];
         expectConnectOk: boolean;
@@ -198,6 +200,7 @@ export function registerDefaultAuthTokenSuite(): void {
         },
       ];
 
+      for (const scenario of matrix) {
         const ws = await openWs(port);
         try {
           const res = await connectReq(ws, scenario.opts);

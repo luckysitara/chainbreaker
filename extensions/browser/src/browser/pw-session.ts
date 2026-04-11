@@ -32,6 +32,7 @@ export type BrowserConsoleMessage = {
   type: string;
   text: string;
   timestamp: string;
+  location?: { url?: string; lineNumber?: number; columnNumber?: number };
 };
 
 export type BrowserPageError = {

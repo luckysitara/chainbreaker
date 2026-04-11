@@ -20,8 +20,11 @@ describe("shared/text/code-regions", () => {
 
   it.each([
     {
+      name: "finds fenced and inline code regions without double-counting inline code inside fences",
+      text: ["before `inline` after", "```ts", "const a = `inside fence`;", "```", "tail"].join(
         "\n",
       ),
+      expectedSlices: ["`inline`", "```ts\nconst a = `inside fence`;\n```"],
     },
     {
       name: "accepts alternate fence markers and unterminated trailing fences",
@@ -29,6 +32,9 @@ describe("shared/text/code-regions", () => {
       expectedSlices: ["~~~js\nconsole.log(1)\n~~~", "```\nunterminated"],
     },
     {
+      name: "keeps adjacent inline code outside fenced regions",
+      text: ["```ts", "const a = 1;", "```", "after `inline` tail"].join("\n"),
+      expectedSlices: ["```ts\nconst a = 1;\n```", "`inline`"],
     },
   ] as const)("$name", ({ text, expectedSlices }) => {
     expectCodeRegionSlices(text, expectedSlices);

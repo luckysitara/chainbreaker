@@ -2,12 +2,8 @@ import type { ChainbreakerConfig, ProviderAuthResult } from "chainbreaker/plugin
 import { readClaudeCliCredentialsCached } from "chainbreaker/plugin-sdk/provider-auth";
 
 const DEFAULT_CLAUDE_CLI_MODEL = "claude-cli/claude-sonnet-4-6";
-type AgentDefaultsModel = NonNullable<
-  NonNullable<ChainbreakerConfig["agents"]>["defaults"]
->["model"];
-type AgentDefaultsModels = NonNullable<
-  NonNullable<ChainbreakerConfig["agents"]>["defaults"]
->["models"];
+type AgentDefaultsModel = NonNullable<NonNullable<ChainbreakerConfig["agents"]>["defaults"]>["model"];
+type AgentDefaultsModels = NonNullable<NonNullable<ChainbreakerConfig["agents"]>["defaults"]>["models"];
 
 function toClaudeCliModelRef(raw: string): string | null {
   const trimmed = raw.trim();

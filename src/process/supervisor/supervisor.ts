@@ -193,6 +193,7 @@ export function createProcessSupervisor(): ProcessSupervisor {
           return {
             reason: forcedReason ?? "exit",
             exitCode: result.code,
+            exitSignal: result.signal,
             durationMs: Date.now() - startedAtMs,
             stdout,
             stderr,
@@ -206,9 +207,11 @@ export function createProcessSupervisor(): ProcessSupervisor {
         active.delete(runId);
 
         const reason: TerminationReason =
+          forcedReason ?? (result.signal != null ? ("signal" as const) : ("exit" as const));
         const exit: RunExit = {
           reason,
           exitCode: result.code,
+          exitSignal: result.signal,
           durationMs: Date.now() - startedAtMs,
           stdout,
           stderr,

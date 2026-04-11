@@ -90,6 +90,7 @@ export function pcmToMulaw(pcm: Buffer): Buffer {
 
   for (let i = 0; i < samples; i++) {
     const sample = pcm.readInt16LE(i * 2);
+    mulaw[i] = linearToMulaw(sample);
   }
 
   return mulaw;
@@ -111,6 +112,7 @@ export function chunkAudio(audio: Buffer, chunkSize = 160): Generator<Buffer, vo
   })();
 }
 
+function linearToMulaw(sample: number): number {
   const BIAS = 132;
   const CLIP = 32635;
 

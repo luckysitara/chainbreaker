@@ -463,10 +463,7 @@ export function registerBrowserManageCommands(
     .option("--color <hex>", "Profile color (hex format, e.g. #0066CC)")
     .option("--cdp-url <url>", "CDP URL for remote Chrome (http/https)")
     .option("--user-data-dir <path>", "User data dir for existing-session Chromium attach")
-    .option(
-      "--driver <driver>",
-      "Profile driver (chainbreaker|existing-session). Default: chainbreaker",
-    )
+    .option("--driver <driver>", "Profile driver (chainbreaker|existing-session). Default: chainbreaker")
     .action(
       async (
         opts: {

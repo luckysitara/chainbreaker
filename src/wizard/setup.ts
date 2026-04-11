@@ -93,6 +93,7 @@ async function requireRiskAcknowledgement(params: {
       "If you’re not comfortable with security hardening and access control, don’t run Chainbreaker.",
       "Ask someone experienced to help before enabling tools or exposing it to the internet.",
       "",
+      "Recommended baseline:",
       "- Pairing/allowlists + mention gating.",
       "- Multi-user/shared inbox: split trust boundaries (separate gateway/credentials, ideally separate OS users/hosts).",
       "- Sandbox + least-privilege tools.",

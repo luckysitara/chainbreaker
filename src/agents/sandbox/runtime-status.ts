@@ -163,14 +163,24 @@ export function formatSandboxToolPolicyBlockedMessage(params: {
     );
   }
 
+  const lines: string[] = [];
+  lines.push(`Tool "${tool}" blocked by sandbox tool policy (mode=${runtime.mode}).`);
+  lines.push(`Session: ${redactSessionKey(runtime.sessionKey)}`);
+  lines.push(`Reason: ${reasons.join(" + ")}`);
+  lines.push("Fix:");
+  lines.push(`- agents.defaults.sandbox.mode=off (disable sandbox)`);
   for (const fix of fixes) {
+    lines.push(`- ${fix}`);
   }
   if (runtime.mode === "non-main") {
+    lines.push("- Use the agent main session instead of a non-main session.");
   }
   const explainCommand = runtime.sessionKey
     ? hasUnsafeControlChars(runtime.sessionKey)
       ? `chainbreaker sandbox explain --agent ${runtime.agentId}`
       : `chainbreaker sandbox explain --session ${shellEscapeSingleArg(runtime.sessionKey)}`
     : "chainbreaker sandbox explain";
+  lines.push(`- See: ${formatCliCommand(explainCommand)}`);
 
+  return lines.join("\n");
 }

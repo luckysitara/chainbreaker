@@ -13,6 +13,7 @@ import { enqueueSystemEvent } from "../../infra/system-events.js";
 import { applyVerboseOverride } from "../../sessions/level-overrides.js";
 import { applyModelOverrideToSessionEntry } from "../../sessions/model-overrides.js";
 import { resolveModelSelectionFromDirective } from "./directive-handling.model-selection.js";
+import type { InlineDirectives } from "./directive-handling.parse.js";
 import {
   canPersistInternalExecDirective,
   canPersistInternalVerboseDirective,
@@ -20,6 +21,8 @@ import {
 } from "./directive-handling.shared.js";
 import type { ElevatedLevel, ReasoningLevel } from "./directives.js";
 
+export async function persistInlineDirectives(params: {
+  directives: InlineDirectives;
   effectiveModelDirective?: string;
   cfg: ChainbreakerConfig;
   agentDir?: string;
@@ -121,6 +124,7 @@ import type { ElevatedLevel, ReasoningLevel } from "./directives.js";
       elevatedEnabled &&
       elevatedAllowed
     ) {
+      // Persist "off" explicitly so inline `/elevated off` overrides defaults.
       sessionEntry.elevatedLevel = directives.elevatedLevel;
       elevatedChanged =
         elevatedChanged ||

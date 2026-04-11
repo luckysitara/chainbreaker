@@ -1,3 +1,4 @@
+import { type Bot, GrammyError, InputFile } from "grammy";
 import type { ReplyToMode } from "chainbreaker/plugin-sdk/config-runtime";
 import type { MarkdownTableMode } from "chainbreaker/plugin-sdk/config-runtime";
 import { fireAndForgetHook } from "chainbreaker/plugin-sdk/hook-runtime";
@@ -17,7 +18,7 @@ import type { RuntimeEnv } from "chainbreaker/plugin-sdk/runtime-env";
 import { danger, logVerbose } from "chainbreaker/plugin-sdk/runtime-env";
 import { formatErrorMessage } from "chainbreaker/plugin-sdk/ssrf-runtime";
 import { loadWebMedia } from "chainbreaker/plugin-sdk/web-media";
-import { type Bot, GrammyError, InputFile } from "grammy";
+import type { TelegramInlineButtons } from "../button-types.js";
 import { splitTelegramCaption } from "../caption.js";
 import {
   markdownToTelegramChunks,
@@ -25,6 +26,7 @@ import {
   renderTelegramHtmlText,
   wrapFileReferencesInHtml,
 } from "../format.js";
+import { buildInlineKeyboard } from "../send.js";
 import { resolveTelegramVoiceSend } from "../voice.js";
 import {
   buildTelegramSendParams,
@@ -49,6 +51,7 @@ type DeliveryProgress = ReplyThreadDeliveryProgress & {
 };
 
 type TelegramReplyChannelData = {
+  buttons?: TelegramInlineButtons;
   pin?: boolean;
 };
 
@@ -61,6 +64,7 @@ function buildChunkTextResolver(params: {
 }): ChunkTextFn {
   return (markdown: string) => {
     const markdownChunks =
+      params.chunkMode === "newline"
         ? chunkMarkdownTextWithMode(markdown, params.textLimit, params.chunkMode)
         : [markdown];
     const chunks: ReturnType<typeof markdownToTelegramChunks> = [];
@@ -101,6 +105,7 @@ async function deliverTextReply(params: {
   thread?: TelegramThreadSpec | null;
   chunkText: ChunkTextFn;
   replyText: string;
+  replyMarkup?: ReturnType<typeof buildInlineKeyboard>;
   replyQuoteText?: string;
   linkPreview?: boolean;
   silent?: boolean;
@@ -150,6 +155,7 @@ async function sendPendingFollowUpText(params: {
   thread?: TelegramThreadSpec | null;
   chunkText: ChunkTextFn;
   text: string;
+  replyMarkup?: ReturnType<typeof buildInlineKeyboard>;
   linkPreview?: boolean;
   silent?: boolean;
   replyToId?: number;
@@ -202,6 +208,7 @@ async function sendTelegramVoiceFallbackText(opts: {
   thread?: TelegramThreadSpec | null;
   linkPreview?: boolean;
   silent?: boolean;
+  replyMarkup?: ReturnType<typeof buildInlineKeyboard>;
   replyQuoteText?: string;
 }): Promise<number | undefined> {
   let firstDeliveredMessageId: number | undefined;
@@ -246,6 +253,7 @@ async function deliverMediaReply(params: {
   linkPreview?: boolean;
   silent?: boolean;
   replyQuoteText?: string;
+  replyMarkup?: ReturnType<typeof buildInlineKeyboard>;
   replyToId?: number;
   replyToMode: ReplyToMode;
   progress: DeliveryProgress;
@@ -654,6 +662,7 @@ export async function deliverReplies(params: {
         params.replyToMode === "off" ? undefined : resolveTelegramReplyId(reply.replyToId);
       const telegramData = reply.channelData?.telegram as TelegramReplyChannelData | undefined;
       const shouldPinFirstMessage = telegramData?.pin === true;
+      const replyMarkup = buildInlineKeyboard(telegramData?.buttons);
       let firstDeliveredMessageId: number | undefined;
       if (mediaList.length === 0) {
         firstDeliveredMessageId = await deliverTextReply({

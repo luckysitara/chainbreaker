@@ -154,6 +154,7 @@ describe("subagent registry steer restarts", () => {
       task,
       expectsCompletionMessage: true,
       requesterOrigin: {
+        channel: "discord",
         to: "channel:123",
         accountId: "work",
       },

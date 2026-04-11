@@ -9,6 +9,7 @@ describe("buildBareSessionResetPrompt", () => {
     expect(prompt).toContain("read the required files before responding to the user");
   });
 
+  it("appends current time line so agents know the date", () => {
     const cfg = {
       agents: { defaults: { userTimezone: "America/New_York", timeFormat: "12" } },
     } as ChainbreakerConfig;
@@ -20,6 +21,7 @@ describe("buildBareSessionResetPrompt", () => {
     );
   });
 
+  it("does not append a duplicate current time line", () => {
     const nowMs = Date.UTC(2026, 2, 3, 14, 0, 0);
     const prompt = buildBareSessionResetPrompt(undefined, nowMs);
     expect((prompt.match(/Current time:/g) ?? []).length).toBe(1);

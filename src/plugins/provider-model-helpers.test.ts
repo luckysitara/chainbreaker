@@ -96,14 +96,17 @@ describe("matchesExactOrPrefix", () => {
   it.each([
     {
       id: "MiniMax-M2.7",
+      candidates: ["minimax-m2.7"],
       expected: true,
     },
     {
+      id: "minimax-m2.7-highspeed",
       candidates: ["MiniMax-M2.7"],
       expected: true,
     },
     {
       id: "glm-5",
+      candidates: ["minimax-m2.7"],
       expected: false,
     },
   ] as const)("matches $id against prefixes", expectPrefixMatchCase);

@@ -59,6 +59,7 @@ type ReadTruncationDetails = {
 };
 
 const READ_CONTINUATION_NOTICE_RE =
+  /\n\n\[(?:Showing lines [^\]]*?Use offset=\d+ to continue\.|\d+ more lines in file\. Use offset=\d+ to continue\.)\]\s*$/;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -208,12 +209,14 @@ async function executeReadWithAdaptivePaging(params: {
   base: AnyAgentTool;
   toolCallId: string;
   args: Record<string, unknown>;
+  signal?: AbortSignal;
   maxBytes: number;
 }): Promise<AgentToolResult<unknown>> {
   const userLimit = params.args.limit;
   const hasExplicitLimit =
     typeof userLimit === "number" && Number.isFinite(userLimit) && userLimit > 0;
   if (hasExplicitLimit) {
+    return await params.base.execute(params.toolCallId, params.args, params.signal);
   }
 
   const offsetRaw = params.args.offset;
@@ -229,6 +232,7 @@ async function executeReadWithAdaptivePaging(params: {
 
   for (let page = 0; page < MAX_ADAPTIVE_READ_PAGES; page += 1) {
     const pageArgs = { ...params.args, offset: nextOffset };
+    const pageResult = await params.base.execute(params.toolCallId, pageArgs, params.signal);
     firstResult ??= pageResult;
 
     const rawText = getToolResultText(pageResult);
@@ -269,6 +273,7 @@ async function executeReadWithAdaptivePaging(params: {
   }
 
   if (!firstResult) {
+    return await params.base.execute(params.toolCallId, params.args, params.signal);
   }
 
   let finalText = aggregatedText;
@@ -417,12 +422,14 @@ async function readOptionalUtf8File(params: {
   absolutePath: string;
   relativePath: string;
   sandbox?: MemoryFlushAppendOnlyWriteOptions["sandbox"];
+  signal?: AbortSignal;
 }): Promise<string> {
   try {
     if (params.sandbox) {
       const stat = await params.sandbox.bridge.stat({
         filePath: params.relativePath,
         cwd: params.sandbox.root,
+        signal: params.signal,
       });
       if (!stat) {
         return "";
@@ -430,6 +437,7 @@ async function readOptionalUtf8File(params: {
       const buffer = await params.sandbox.bridge.readFile({
         filePath: params.relativePath,
         cwd: params.sandbox.root,
+        signal: params.signal,
       });
       return buffer.toString("utf-8");
     }
@@ -448,6 +456,7 @@ async function appendMemoryFlushContent(params: {
   relativePath: string;
   content: string;
   sandbox?: MemoryFlushAppendOnlyWriteOptions["sandbox"];
+  signal?: AbortSignal;
 }) {
   if (!params.sandbox) {
     await appendFileWithinRoot({
@@ -455,6 +464,7 @@ async function appendMemoryFlushContent(params: {
       relativePath: params.relativePath,
       data: params.content,
       mkdir: true,
+      prependNewlineIfNeeded: true,
     });
     return;
   }
@@ -463,6 +473,7 @@ async function appendMemoryFlushContent(params: {
     absolutePath: params.absolutePath,
     relativePath: params.relativePath,
     sandbox: params.sandbox,
+    signal: params.signal,
   });
   const separator =
     existing.length > 0 && !existing.endsWith("\n") && !params.content.startsWith("\n") ? "\n" : "";
@@ -473,6 +484,7 @@ async function appendMemoryFlushContent(params: {
       await params.sandbox.bridge.mkdirp({
         filePath: parent,
         cwd: params.sandbox.root,
+        signal: params.signal,
       });
     }
     await params.sandbox.bridge.writeFile({
@@ -480,6 +492,7 @@ async function appendMemoryFlushContent(params: {
       cwd: params.sandbox.root,
       data: next,
       mkdir: true,
+      signal: params.signal,
     });
     return;
   }
@@ -495,6 +508,7 @@ export function wrapToolMemoryFlushAppendOnlyWrite(
   return {
     ...tool,
     description: `${tool.description} During memory flush, this tool may only append to ${options.relativePath}.`,
+    execute: async (toolCallId, args, signal, onUpdate) => {
       const normalized = normalizeToolParams(args);
       const record =
         normalized ??
@@ -504,6 +518,7 @@ export function wrapToolMemoryFlushAppendOnlyWrite(
         typeof record?.path === "string" && record.path.trim() ? record.path : undefined;
       const content = typeof record?.content === "string" ? record.content : undefined;
       if (!filePath || content === undefined) {
+        return tool.execute(toolCallId, normalized ?? args, signal, onUpdate);
       }
 
       const resolvedPath = resolveToolPathAgainstWorkspaceRoot({
@@ -523,6 +538,7 @@ export function wrapToolMemoryFlushAppendOnlyWrite(
         relativePath: options.relativePath,
         content,
         sandbox: options.sandbox,
+        signal,
       });
       return {
         content: [{ type: "text", text: `Appended content to ${options.relativePath}.` }],
@@ -544,6 +560,7 @@ export function wrapToolWorkspaceRootGuardWithOptions(
 ): AnyAgentTool {
   return {
     ...tool,
+    execute: async (toolCallId, args, signal, onUpdate) => {
       const normalized = normalizeToolParams(args);
       const record =
         normalized ??
@@ -557,6 +574,7 @@ export function wrapToolWorkspaceRootGuardWithOptions(
         });
         await assertSandboxPath({ filePath: sandboxPath, cwd: root, root });
       }
+      return tool.execute(toolCallId, normalized ?? args, signal, onUpdate);
     },
   };
 }
@@ -622,6 +640,7 @@ export function createChainbreakerReadTool(
   const patched = patchToolSchemaForClaudeCompatibility(base);
   return {
     ...patched,
+    execute: async (toolCallId, params, signal) => {
       const normalized = normalizeToolParams(params);
       const record =
         normalized ??
@@ -631,6 +650,7 @@ export function createChainbreakerReadTool(
         base,
         toolCallId,
         args: (normalized ?? params ?? {}) as Record<string, unknown>,
+        signal,
         maxBytes: resolveAdaptiveReadMaxBytes(options),
       });
       const filePath = typeof record?.path === "string" ? String(record.path) : "<unknown>";

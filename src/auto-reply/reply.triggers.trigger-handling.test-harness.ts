@@ -10,7 +10,9 @@ import { resetProviderRuntimeHookCacheForTest } from "../plugins/provider-runtim
 import { resolveRelativeBundledPluginPublicModuleId } from "../test-utils/bundled-plugin-public-surface.js";
 
 // Avoid exporting vitest mock types (TS2742 under pnpm + d.ts emit).
+// oxlint-disable-next-line typescript/no-explicit-any
 type AnyMock = any;
+// oxlint-disable-next-line typescript/no-explicit-any
 type AnyMocks = Record<string, any>;
 
 function getSharedMocks<T>(key: string, create: () => T): T {
@@ -78,29 +80,27 @@ export function getProviderUsageMocks(): AnyMocks {
 
 vi.mock("../infra/provider-usage.js", () => providerUsageMocks);
 
-const modelCatalogMocks = getSharedMocks(
-  "chainbreaker.trigger-handling.model-catalog-mocks",
-  () => ({
-    loadModelCatalog: vi.fn().mockResolvedValue([
-      {
-        provider: "anthropic",
-        id: "claude-opus-4-5",
-        name: "Claude Opus 4.5",
-        contextWindow: 200000,
-      },
-      {
-        provider: "openrouter",
-        id: "anthropic/claude-opus-4-5",
-        name: "Claude Opus 4.5 (OpenRouter)",
-        contextWindow: 200000,
-      },
-      { provider: "openai", id: "gpt-4.1-mini", name: "GPT-4.1 mini" },
-      { provider: "openai", id: "gpt-5.2", name: "GPT-5.2" },
-      { provider: "openai-codex", id: "gpt-5.2", name: "GPT-5.2 (Codex)" },
-    ]),
-    resetModelCatalogCacheForTest: vi.fn(),
-  }),
-);
+const modelCatalogMocks = getSharedMocks("chainbreaker.trigger-handling.model-catalog-mocks", () => ({
+  loadModelCatalog: vi.fn().mockResolvedValue([
+    {
+      provider: "anthropic",
+      id: "claude-opus-4-5",
+      name: "Claude Opus 4.5",
+      contextWindow: 200000,
+    },
+    {
+      provider: "openrouter",
+      id: "anthropic/claude-opus-4-5",
+      name: "Claude Opus 4.5 (OpenRouter)",
+      contextWindow: 200000,
+    },
+    { provider: "openai", id: "gpt-4.1-mini", name: "GPT-4.1 mini" },
+    { provider: "openai", id: "gpt-5.2", name: "GPT-5.2" },
+    { provider: "openai-codex", id: "gpt-5.2", name: "GPT-5.2 (Codex)" },
+    { provider: "minimax", id: "MiniMax-M2.7", name: "MiniMax M2.7" },
+  ]),
+  resetModelCatalogCacheForTest: vi.fn(),
+}));
 
 export function getModelCatalogMocks(): AnyMocks {
   return modelCatalogMocks;
@@ -125,23 +125,20 @@ vi.doMock("../plugins/provider-runtime.runtime.js", () => ({
   refreshProviderOAuthCredentialWithPlugin: async () => undefined,
 }));
 
-const modelFallbackMocks = getSharedMocks(
-  "chainbreaker.trigger-handling.model-fallback-mocks",
-  () => ({
-    runWithModelFallback: vi.fn(
-      async (params: {
-        provider: string;
-        model: string;
-        run: (provider: string, model: string, runOptions?: unknown) => Promise<unknown>;
-      }) => ({
-        result: await params.run(params.provider, params.model),
-        provider: params.provider,
-        model: params.model,
-        attempts: [],
-      }),
-    ),
-  }),
-);
+const modelFallbackMocks = getSharedMocks("chainbreaker.trigger-handling.model-fallback-mocks", () => ({
+  runWithModelFallback: vi.fn(
+    async (params: {
+      provider: string;
+      model: string;
+      run: (provider: string, model: string, runOptions?: unknown) => Promise<unknown>;
+    }) => ({
+      result: await params.run(params.provider, params.model),
+      provider: params.provider,
+      model: params.model,
+      attempts: [],
+    }),
+  ),
+}));
 
 export function getModelFallbackMocks(): AnyMocks {
   return modelFallbackMocks;
@@ -382,6 +379,7 @@ export async function runDirectElevatedToggleAndLoadStore(params: {
   return { text, store };
 }
 
+export async function expectInlineCommandHandledAndStripped(params: {
   home: string;
   getReplyFromConfig: typeof import("./reply.js").getReplyFromConfig;
   body: string;

@@ -89,6 +89,7 @@ describe("describeGeminiVideo", () => {
     expect(result.text).toBe("first\nsecond");
     expect(seenUrl).toBe("https://example.com/v1beta/models/gemini-3-pro-preview:generateContent");
     expect(seenInit?.method).toBe("POST");
+    expect(seenInit?.signal).toBeInstanceOf(AbortSignal);
 
     const headers = new Headers(seenInit?.headers);
     expect(headers.get("x-goog-api-key")).toBe("test-key");
@@ -103,6 +104,8 @@ describe("describeGeminiVideo", () => {
           : "";
     const body = JSON.parse(bodyText);
     expect(body.contents?.[0]?.parts?.[0]?.text).toBe("Describe the video.");
+    expect(body.contents?.[0]?.parts?.[1]?.inline_data?.mime_type).toBe("video/mp4");
+    expect(body.contents?.[0]?.parts?.[1]?.inline_data?.data).toBe(
       Buffer.from("video-bytes").toString("base64"),
     );
   });

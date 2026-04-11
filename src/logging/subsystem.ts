@@ -2,6 +2,7 @@ import { Chalk } from "chalk";
 import type { Logger as TsLogger } from "tslog";
 import { isVerbose } from "../global-state.js";
 import { defaultRuntime, type OutputRuntimeEnv, type RuntimeEnv } from "../runtime.js";
+import { clearActiveProgressLine } from "../terminal/progress-line.js";
 import {
   formatConsoleTimestamp,
   getConsoleSettings,
@@ -100,8 +101,12 @@ const SUBSYSTEM_MAX_SEGMENTS = 2;
 const CHANNEL_SUBSYSTEM_PREFIXES = new Set<string>([
   "telegram",
   "whatsapp",
+  "discord",
   "irc",
   "googlechat",
+  "slack",
+  "signal",
+  "imessage",
 ]);
 
 function pickSubsystemColor(color: ChalkInstance, subsystem: string): ChalkInstance {
@@ -147,6 +152,7 @@ export function stripRedundantSubsystemPrefixForConsole(
     return message;
   }
 
+  // Common duplication: "[discord] discord: ..." (when a message manually includes the subsystem tag).
   if (message.startsWith("[")) {
     const closeIdx = message.indexOf("]");
     if (closeIdx > 1) {
@@ -228,9 +234,12 @@ function formatConsoleLine(opts: {
   return `${head} ${levelColor(displayMessage)}`;
 }
 
+function writeConsoleLine(level: LogLevel, line: string) {
   clearActiveProgressLine();
   const sanitized =
     process.platform === "win32" && process.env.GITHUB_ACTIONS === "true"
+      ? line.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, "?").replace(/[\uD800-\uDFFF]/g, "?")
+      : line;
   const sink = loggingState.rawConsole ?? console;
   if (loggingState.forceConsoleToStderr || level === "error" || level === "fatal") {
     (sink.error ?? console.error)(sanitized);

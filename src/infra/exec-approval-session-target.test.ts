@@ -99,6 +99,7 @@ describe("exec approval session target", () => {
       "agent:main:main": {
         sessionId: "main",
         updatedAt: 1,
+        lastChannel: "slack",
       },
     });
 
@@ -120,6 +121,7 @@ describe("exec approval session target", () => {
       "agent:main:main": {
         sessionId: "main",
         updatedAt: 1,
+        lastChannel: "slack",
         lastTo: "U1",
       },
     });
@@ -149,6 +151,7 @@ describe("exec approval session target", () => {
         "agent:helper:main": {
           sessionId: "main",
           updatedAt: 1,
+          lastChannel: "discord",
           lastTo: "channel:123",
           lastAccountId: " Work ",
           lastThreadId: "55",
@@ -156,6 +159,7 @@ describe("exec approval session target", () => {
       } as Record<string, Partial<SessionEntry>>,
       request: buildRequest({ sessionKey: "agent:helper:main" }),
       expected: {
+        channel: "discord",
         to: "channel:123",
         accountId: "work",
         threadId: 55,
@@ -197,14 +201,17 @@ describe("exec approval session target", () => {
   it("prefers explicit turn-source account bindings when session store is missing", () => {
     const cfg = {} as ChainbreakerConfig;
     const request = buildRequest({
+      turnSourceChannel: "slack",
       turnSourceAccountId: "Work",
       sessionKey: "agent:main:missing",
     });
 
+    expect(resolveApprovalRequestAccountId({ cfg, request, channel: "slack" })).toBe("work");
     expect(
       doesApprovalRequestMatchChannelAccount({
         cfg,
         request,
+        channel: "slack",
         accountId: "work",
       }),
     ).toBe(true);
@@ -212,6 +219,7 @@ describe("exec approval session target", () => {
       doesApprovalRequestMatchChannelAccount({
         cfg,
         request,
+        channel: "slack",
         accountId: "other",
       }),
     ).toBe(false);
@@ -220,13 +228,16 @@ describe("exec approval session target", () => {
   it("rejects mismatched channel bindings before account checks", () => {
     const cfg = {} as ChainbreakerConfig;
     const request = buildRequest({
+      turnSourceChannel: "discord",
       turnSourceAccountId: "work",
     });
 
+    expect(resolveApprovalRequestAccountId({ cfg, request, channel: "slack" })).toBeNull();
     expect(
       doesApprovalRequestMatchChannelAccount({
         cfg,
         request,
+        channel: "slack",
         accountId: "work",
       }),
     ).toBe(false);
@@ -239,17 +250,20 @@ describe("exec approval session target", () => {
       "agent:main:main": {
         sessionId: "main",
         updatedAt: 1,
+        lastChannel: "slack",
         lastTo: "user:U1",
         lastAccountId: "ops",
       },
     });
 
+    expect(resolveApprovalRequestAccountId({ cfg, request: baseRequest, channel: "slack" })).toBe(
       "ops",
     );
     expect(
       doesApprovalRequestMatchChannelAccount({
         cfg,
         request: baseRequest,
+        channel: "slack",
         accountId: "ops",
       }),
     ).toBe(true);
@@ -262,18 +276,22 @@ describe("exec approval session target", () => {
       "agent:main:main": {
         sessionId: "main",
         updatedAt: 1,
+        lastChannel: "slack",
         lastTo: "user:U1",
         lastAccountId: "ops",
       },
     });
     const request = buildRequest({
+      turnSourceChannel: "slack",
       turnSourceAccountId: "work",
     });
 
+    expect(resolveApprovalRequestAccountId({ cfg, request, channel: "slack" })).toBe("work");
     expect(
       doesApprovalRequestMatchChannelAccount({
         cfg,
         request,
+        channel: "slack",
         accountId: "work",
       }),
     ).toBe(true);
@@ -286,6 +304,7 @@ describe("exec approval session target", () => {
       "agent:main:main": {
         sessionId: "main",
         updatedAt: 1,
+        lastChannel: "slack",
         lastTo: "channel:C123",
       },
     });
@@ -293,10 +312,13 @@ describe("exec approval session target", () => {
     const target = resolveApprovalRequestOriginTarget({
       cfg,
       request: buildPluginRequest({
+        turnSourceChannel: "slack",
         turnSourceTo: "channel:C123",
       }),
+      channel: "slack",
       accountId: "default",
       resolveTurnSourceTarget: (request) =>
+        request.request.turnSourceChannel === "slack" && request.request.turnSourceTo
           ? { to: request.request.turnSourceTo }
           : null,
       resolveSessionTarget: (sessionTarget) => ({ to: sessionTarget.to }),
@@ -313,6 +335,7 @@ describe("exec approval session target", () => {
       "agent:main:main": {
         sessionId: "main",
         updatedAt: 1,
+        lastChannel: "slack",
         lastTo: "channel:C123",
       },
     });
@@ -320,10 +343,13 @@ describe("exec approval session target", () => {
     const target = resolveApprovalRequestOriginTarget({
       cfg,
       request: buildPluginRequest({
+        turnSourceChannel: "slack",
         turnSourceTo: "channel:C999",
       }),
+      channel: "slack",
       accountId: "default",
       resolveTurnSourceTarget: (request) =>
+        request.request.turnSourceChannel === "slack" && request.request.turnSourceTo
           ? { to: request.request.turnSourceTo }
           : null,
       resolveSessionTarget: (sessionTarget) => ({ to: sessionTarget.to }),
@@ -337,6 +363,7 @@ describe("exec approval session target", () => {
     const target = resolveApprovalRequestOriginTarget({
       cfg: {} as ChainbreakerConfig,
       request: buildPluginRequest({ sessionKey: "agent:main:missing" }),
+      channel: "discord",
       accountId: "default",
       resolveTurnSourceTarget: () => null,
       resolveSessionTarget: () => ({ to: "unused" }),

@@ -148,8 +148,11 @@ export function formatSkillsList(report: SkillStatusReport, opts: SkillsListOpti
     columns.push({ key: "Missing", header: "Missing", minWidth: 18, flex: true });
   }
 
+  const lines: string[] = [];
+  lines.push(
     `${theme.heading("Skills")} ${theme.muted(`(${eligible.length}/${skills.length} ready)`)}`,
   );
+  lines.push(
     renderTable({
       width: tableWidth,
       columns,
@@ -157,6 +160,7 @@ export function formatSkillsList(report: SkillStatusReport, opts: SkillsListOpti
     }).trimEnd(),
   );
 
+  return appendClawHubHint(lines.join("\n"), opts.json);
 }
 
 export function formatSkillInfo(
@@ -180,6 +184,7 @@ export function formatSkillInfo(
     return JSON.stringify(sanitizeJsonValue(skill), null, 2);
   }
 
+  const lines: string[] = [];
   const emoji = normalizeSkillEmoji(skill.emoji);
   const status = skill.eligible
     ? theme.success("✓ Ready")
@@ -193,10 +198,19 @@ export function formatSkillInfo(
   const safeHomepage = skill.homepage ? sanitizeForLog(skill.homepage) : undefined;
   const safeSkillKey = sanitizeForLog(skill.skillKey);
 
+  lines.push(`${emoji} ${theme.heading(safeName)} ${status}`);
+  lines.push("");
+  lines.push(sanitizeForLog(skill.description));
+  lines.push("");
 
+  lines.push(theme.heading("Details:"));
+  lines.push(`${theme.muted("  Source:")} ${sanitizeForLog(skill.source)}`);
+  lines.push(`${theme.muted("  Path:")} ${shortenHomePath(skill.filePath)}`);
   if (safeHomepage) {
+    lines.push(`${theme.muted("  Homepage:")} ${safeHomepage}`);
   }
   if (skill.primaryEnv) {
+    lines.push(`${theme.muted("  Primary env:")} ${skill.primaryEnv}`);
   }
 
   const hasRequirements =
@@ -207,11 +221,14 @@ export function formatSkillInfo(
     skill.requirements.os.length > 0;
 
   if (hasRequirements) {
+    lines.push("");
+    lines.push(theme.heading("Requirements:"));
     if (skill.requirements.bins.length > 0) {
       const binsStatus = skill.requirements.bins.map((bin) => {
         const missing = skill.missing.bins.includes(bin);
         return missing ? theme.error(`✗ ${bin}`) : theme.success(`✓ ${bin}`);
       });
+      lines.push(`${theme.muted("  Binaries:")} ${binsStatus.join(", ")}`);
     }
     if (skill.requirements.anyBins.length > 0) {
       const anyBinsMissing = skill.missing.anyBins.length > 0;
@@ -219,43 +236,57 @@ export function formatSkillInfo(
         const missing = anyBinsMissing;
         return missing ? theme.error(`✗ ${bin}`) : theme.success(`✓ ${bin}`);
       });
+      lines.push(`${theme.muted("  Any binaries:")} ${anyBinsStatus.join(", ")}`);
     }
     if (skill.requirements.env.length > 0) {
       const envStatus = skill.requirements.env.map((env) => {
         const missing = skill.missing.env.includes(env);
         return missing ? theme.error(`✗ ${env}`) : theme.success(`✓ ${env}`);
       });
+      lines.push(`${theme.muted("  Environment:")} ${envStatus.join(", ")}`);
     }
     if (skill.requirements.config.length > 0) {
       const configStatus = skill.requirements.config.map((cfg) => {
         const missing = skill.missing.config.includes(cfg);
         return missing ? theme.error(`✗ ${cfg}`) : theme.success(`✓ ${cfg}`);
       });
+      lines.push(`${theme.muted("  Config:")} ${configStatus.join(", ")}`);
     }
     if (skill.requirements.os.length > 0) {
       const osStatus = skill.requirements.os.map((osName) => {
         const missing = skill.missing.os.includes(osName);
         return missing ? theme.error(`✗ ${osName}`) : theme.success(`✓ ${osName}`);
       });
+      lines.push(`${theme.muted("  OS:")} ${osStatus.join(", ")}`);
     }
   }
 
   if (skill.install.length > 0 && !skill.eligible) {
+    lines.push("");
+    lines.push(theme.heading("Install options:"));
     for (const inst of skill.install) {
+      lines.push(`  ${theme.warn("→")} ${inst.label}`);
     }
   }
 
   if (skill.primaryEnv && skill.missing.env.includes(skill.primaryEnv)) {
+    lines.push("");
+    lines.push(theme.heading("API key setup:"));
     if (safeHomepage) {
+      lines.push(`  Get your key: ${safeHomepage}`);
     }
+    lines.push(
       `  Save via UI: ${theme.muted("Control UI → Skills → ")}${safeName}${theme.muted(" → Save key")}`,
     );
+    lines.push(
       `  Save via CLI: ${formatCliCommand(`chainbreaker config set skills.entries.${safeSkillKey}.apiKey YOUR_KEY`)}`,
     );
+    lines.push(
       `  Stored in: ${theme.muted("$CHAINBREAKER_CONFIG_PATH")} ${theme.muted("(default: ~/.chainbreaker/chainbreaker.json)")}`,
     );
   }
 
+  return appendClawHubHint(lines.join("\n"), opts.json);
 }
 
 export function formatSkillsCheck(report: SkillStatusReport, opts: SkillsCheckOptions): string {
@@ -290,18 +321,33 @@ export function formatSkillsCheck(report: SkillStatusReport, opts: SkillsCheckOp
     );
   }
 
+  const lines: string[] = [];
+  lines.push(theme.heading("Skills Status Check"));
+  lines.push("");
+  lines.push(`${theme.muted("Total:")} ${report.skills.length}`);
+  lines.push(`${theme.success("✓")} ${theme.muted("Eligible:")} ${eligible.length}`);
+  lines.push(`${theme.warn("⏸")} ${theme.muted("Disabled:")} ${disabled.length}`);
+  lines.push(`${theme.warn("🚫")} ${theme.muted("Blocked by allowlist:")} ${blocked.length}`);
+  lines.push(`${theme.error("✗")} ${theme.muted("Missing requirements:")} ${missingReqs.length}`);
 
   if (eligible.length > 0) {
+    lines.push("");
+    lines.push(theme.heading("Ready to use:"));
     for (const skill of eligible) {
       const emoji = normalizeSkillEmoji(skill.emoji);
+      lines.push(`  ${emoji} ${sanitizeForLog(skill.name)}`);
     }
   }
 
   if (missingReqs.length > 0) {
+    lines.push("");
+    lines.push(theme.heading("Missing requirements:"));
     for (const skill of missingReqs) {
       const emoji = normalizeSkillEmoji(skill.emoji);
       const missing = formatSkillMissingSummary(skill);
+      lines.push(`  ${emoji} ${sanitizeForLog(skill.name)} ${theme.muted(`(${missing})`)}`);
     }
   }
 
+  return appendClawHubHint(lines.join("\n"), opts.json);
 }

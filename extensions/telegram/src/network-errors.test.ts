@@ -16,17 +16,25 @@ const errorWithTelegramCode = (message: string, error_code: number) =>
 
 describe("isRecoverableTelegramNetworkError", () => {
   it("tracks Telegram polling origin separately from generic network matching", () => {
+    const slackDnsError = Object.assign(
+      new Error("A request error occurred: getaddrinfo ENOTFOUND slack.com"),
       {
         code: "ENOTFOUND",
+        hostname: "slack.com",
       },
     );
+    expect(isRecoverableTelegramNetworkError(slackDnsError)).toBe(true);
+    expect(isTelegramPollingNetworkError(slackDnsError)).toBe(false);
 
+    tagTelegramNetworkError(slackDnsError, {
       method: "getUpdates",
       url: "https://api.telegram.org/bot123456:ABC/getUpdates",
     });
+    expect(getTelegramNetworkErrorOrigin(slackDnsError)).toEqual({
       method: "getupdates",
       url: "https://api.telegram.org/bot123456:ABC/getUpdates",
     });
+    expect(isTelegramPollingNetworkError(slackDnsError)).toBe(true);
   });
 
   it.each([

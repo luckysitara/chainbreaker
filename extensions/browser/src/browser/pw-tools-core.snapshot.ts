@@ -104,6 +104,7 @@ export async function snapshotRoleViaPlaywright(opts: {
 }): Promise<{
   snapshot: string;
   refs: Record<string, { role: string; name?: string; nth?: number }>;
+  stats: { lines: number; chars: number; refs: number; interactive: number };
 }> {
   const page = await getPageForTargetId({
     cdpUrl: opts.cdpUrl,

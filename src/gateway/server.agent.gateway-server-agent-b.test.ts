@@ -234,6 +234,7 @@ describe("gateway server agent", () => {
     setRegistry(registry);
     await writeMainSessionEntry({
       sessionId: "sess-alias",
+      lastChannel: "imessage",
       lastTo: "chat_id:123",
     });
     const resIMessage = await rpcReq(ws, "agent", {
@@ -245,6 +246,7 @@ describe("gateway server agent", () => {
     });
     expect(resIMessage.ok).toBe(true);
 
+    expectAgentRoutingCall({ channel: "imessage", deliver: true, fromEnd: 1 });
   });
 
   test("agent accepts plugin channel alias (teams)", async () => {
@@ -328,7 +330,9 @@ describe("gateway server agent", () => {
   test("agent downgrades to session-only when multiple channels are configured but no external target resolves", async () => {
     const registry = createRegistry([
       {
+        pluginId: "discord",
         source: "test",
+        plugin: createConfiguredChannelPlugin({ id: "discord", label: "Discord" }),
       },
       {
         pluginId: "telegram",

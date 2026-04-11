@@ -3,11 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { getModel } from "@mariozechner/pi-ai";
 import { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
+import OpenAI from "openai";
 import type { ChainbreakerConfig } from "chainbreaker/plugin-sdk/config-runtime";
 import { loadConfig } from "chainbreaker/plugin-sdk/config-runtime";
 import { encodePngRgba, fillPixel } from "chainbreaker/plugin-sdk/media-runtime";
 import type { ResolvedTtsConfig } from "chainbreaker/plugin-sdk/speech-runtime";
-import OpenAI from "openai";
 import { describe, expect, it } from "vitest";
 import {
   registerProviderPlugin,
@@ -18,8 +18,7 @@ import plugin from "./index.js";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
 const LIVE_MODEL_ID = process.env.CHAINBREAKER_LIVE_OPENAI_PLUGIN_MODEL?.trim() || "gpt-5.4-nano";
 const LIVE_IMAGE_MODEL = process.env.CHAINBREAKER_LIVE_OPENAI_IMAGE_MODEL?.trim() || "gpt-image-1";
-const LIVE_VISION_MODEL =
-  process.env.CHAINBREAKER_LIVE_OPENAI_VISION_MODEL?.trim() || "gpt-4.1-mini";
+const LIVE_VISION_MODEL = process.env.CHAINBREAKER_LIVE_OPENAI_VISION_MODEL?.trim() || "gpt-4.1-mini";
 const liveEnabled = OPENAI_API_KEY.trim().length > 0 && process.env.CHAINBREAKER_LIVE_TEST === "1";
 const describeLive = liveEnabled ? describe : describe.skip;
 const EMPTY_AUTH_STORE = { version: 1, profiles: {} } as const;

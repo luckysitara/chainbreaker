@@ -1,3 +1,4 @@
+// Barrel exports for the web channel pieces. Splitting the original 900+ line
 // module keeps responsibilities small and testable.
 import { resolveWaWebAuthDir } from "./plugins/runtime/runtime-whatsapp-boundary.js";
 

@@ -31,28 +31,44 @@ export async function handleAcpDoctorAction(
   const installHint = resolveAcpInstallCommandHint(params.cfg);
   const registeredBackend = getAcpRuntimeBackend(backendId);
   const managerSnapshot = getAcpSessionManager().getObservabilitySnapshot(params.cfg);
+  const lines = ["ACP doctor:", "-----", `configuredBackend: ${backendId}`];
+  lines.push(`activeRuntimeSessions: ${managerSnapshot.runtimeCache.activeSessions}`);
+  lines.push(`runtimeIdleTtlMs: ${managerSnapshot.runtimeCache.idleTtlMs}`);
+  lines.push(`evictedIdleRuntimes: ${managerSnapshot.runtimeCache.evictedTotal}`);
+  lines.push(`activeTurns: ${managerSnapshot.turns.active}`);
+  lines.push(`queueDepth: ${managerSnapshot.turns.queueDepth}`);
+  lines.push(
     `turnLatencyMs: avg=${managerSnapshot.turns.averageLatencyMs}, max=${managerSnapshot.turns.maxLatencyMs}`,
   );
+  lines.push(
     `turnCounts: completed=${managerSnapshot.turns.completed}, failed=${managerSnapshot.turns.failed}`,
   );
   const errorStatsText =
     Object.entries(managerSnapshot.errorsByCode)
       .map(([code, count]) => `${code}=${count}`)
       .join(", ") || "(none)";
+  lines.push(`errorCodes: ${errorStatsText}`);
   if (registeredBackend) {
+    lines.push(`registeredBackend: ${registeredBackend.id}`);
   } else {
+    lines.push("registeredBackend: (none)");
   }
 
   if (registeredBackend?.runtime.doctor) {
     try {
       const report = await registeredBackend.runtime.doctor();
+      lines.push(`runtimeDoctor: ${report.ok ? "ok" : "error"} (${report.message})`);
       if (report.code) {
+        lines.push(`runtimeDoctorCode: ${report.code}`);
       }
       if (report.installCommand) {
+        lines.push(`runtimeDoctorInstall: ${report.installCommand}`);
       }
       for (const detail of report.details ?? []) {
+        lines.push(`runtimeDoctorDetail: ${detail}`);
       }
     } catch (error) {
+      lines.push(
         `runtimeDoctor: error (${
           toAcpRuntimeError({
             error,
@@ -69,16 +85,26 @@ export async function handleAcpDoctorAction(
     const capabilities = backend.runtime.getCapabilities
       ? await backend.runtime.getCapabilities({})
       : { controls: [] as string[], configOptionKeys: [] as string[] };
+    lines.push("healthy: yes");
+    lines.push(`capabilities: ${formatAcpCapabilitiesText(capabilities.controls ?? [])}`);
     if ((capabilities.configOptionKeys?.length ?? 0) > 0) {
+      lines.push(`configKeys: ${capabilities.configOptionKeys?.join(", ")}`);
     }
+    return stopWithText(lines.join("\n"));
   } catch (error) {
     const acpError = toAcpRuntimeError({
       error,
       fallbackCode: "ACP_TURN_FAILED",
       fallbackMessage: "ACP backend doctor failed.",
     });
+    lines.push("healthy: no");
+    lines.push(formatAcpRuntimeErrorText(acpError));
+    lines.push(`next: ${installHint}`);
+    lines.push(`next: chainbreaker config set plugins.entries.${backendId}.enabled true`);
     if (backendId.toLowerCase() === "acpx") {
+      lines.push("next: verify acpx is installed (`acpx --help`).");
     }
+    return stopWithText(lines.join("\n"));
   }
 }
 
@@ -91,6 +117,7 @@ export function handleAcpInstallAction(
   }
   const backendId = resolveConfiguredAcpBackendId(params.cfg);
   const installHint = resolveAcpInstallCommandHint(params.cfg);
+  const lines = [
     "ACP install:",
     "-----",
     `configuredBackend: ${backendId}`,
@@ -98,6 +125,7 @@ export function handleAcpInstallAction(
     `then: chainbreaker config set plugins.entries.${backendId}.enabled true`,
     "then: /acp doctor",
   ];
+  return stopWithText(lines.join("\n"));
 }
 
 function formatAcpSessionLine(params: {

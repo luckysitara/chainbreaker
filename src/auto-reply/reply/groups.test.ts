@@ -50,6 +50,7 @@ describe("group runtime loading", () => {
       groups.resolveGroupRequireMention({
         cfg: {
           channels: {
+            slack: {
               channels: {
                 C123: { requireMention: false },
               },
@@ -57,9 +58,13 @@ describe("group runtime loading", () => {
           },
         },
         ctx: {
+          Provider: "slack",
+          From: "slack:channel:C123",
           GroupSubject: "#general",
         },
         groupResolution: {
+          key: "slack:group:C123",
+          channel: "slack",
           id: "C123",
           chatType: "group",
         },

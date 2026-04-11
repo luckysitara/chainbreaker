@@ -96,9 +96,11 @@ describe("wrapFetchWithAbortSignal", () => {
     expect(seenInit).toMatchObject({ duplex: "half" });
   });
 
+  it("converts foreign abort signals to native controllers", async () => {
     let seenSignal: AbortSignal | undefined;
     const fetchImpl = withFetchPreconnect(
       vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        seenSignal = init?.signal as AbortSignal | undefined;
         return {} as Response;
       }),
     );
@@ -107,6 +109,7 @@ describe("wrapFetchWithAbortSignal", () => {
 
     const { fakeSignal, triggerAbort } = createForeignSignalHarness();
 
+    const promise = wrapped("https://example.com", { signal: fakeSignal });
     expect(fetchImpl).toHaveBeenCalledOnce();
     expect(seenSignal).toBeInstanceOf(AbortSignal);
     expect(seenSignal).not.toBe(fakeSignal);
@@ -133,6 +136,7 @@ describe("wrapFetchWithAbortSignal", () => {
     const { fakeSignal, removeEventListener } = createForeignSignalHarness();
 
     try {
+      await expect(wrapped("https://example.com", { signal: fakeSignal })).rejects.toBe(fetchError);
       await Promise.resolve();
       await waitForMicrotaskTurn();
 
@@ -153,6 +157,7 @@ describe("wrapFetchWithAbortSignal", () => {
 
     const { fakeSignal, removeEventListener } = createThrowingCleanupSignalHarness(cleanupError);
 
+    await expect(wrapped("https://example.com", { signal: fakeSignal })).rejects.toBe(fetchError);
     expect(removeEventListener).toHaveBeenCalledOnce();
   });
 
@@ -176,9 +181,11 @@ describe("wrapFetchWithAbortSignal", () => {
 
     const { fakeSignal, removeEventListener } = makeSignalHarness();
 
+    expect(() => wrapped("https://example.com", { signal: fakeSignal })).toThrow(syncError);
     expect(removeEventListener).toHaveBeenCalledOnce();
   });
 
+  it("skips listener cleanup when foreign signal is already aborted", async () => {
     const addEventListener = vi.fn();
     const removeEventListener = vi.fn();
     const fetchImpl = withFetchPreconnect(vi.fn(async () => ({ ok: true }) as Response));
@@ -190,14 +197,17 @@ describe("wrapFetchWithAbortSignal", () => {
       removeEventListener,
     } as unknown as AbortSignal;
 
+    await wrapped("https://example.com", { signal: fakeSignal });
 
     expect(addEventListener).not.toHaveBeenCalled();
     expect(removeEventListener).not.toHaveBeenCalled();
   });
 
+  it("passes through foreign signal-like objects without addEventListener", async () => {
     let seenSignal: AbortSignal | undefined;
     const fetchImpl = withFetchPreconnect(
       vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        seenSignal = init?.signal as AbortSignal | undefined;
         return {} as Response;
       }),
     );
@@ -208,6 +218,7 @@ describe("wrapFetchWithAbortSignal", () => {
       removeEventListener: vi.fn(),
     } as unknown as AbortSignal;
 
+    await wrapped("https://example.com", { signal: fakeSignal });
 
     expect(seenSignal).toBe(fakeSignal);
   });
@@ -216,18 +227,23 @@ describe("wrapFetchWithAbortSignal", () => {
     let seenSignal: AbortSignal | undefined;
     const fetchImpl = withFetchPreconnect(
       vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        seenSignal = init?.signal as AbortSignal | undefined;
         return {} as Response;
       }),
     );
     const wrapped = wrapFetchWithAbortSignal(fetchImpl);
     const controller = new AbortController();
 
+    await wrapped("https://example.com", { signal: controller.signal });
 
+    expect(seenSignal).toBe(controller.signal);
   });
 
+  it("passes through foreign signals unchanged when AbortController is unavailable", async () => {
     let seenSignal: AbortSignal | undefined;
     const fetchImpl = withFetchPreconnect(
       vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        seenSignal = init?.signal as AbortSignal | undefined;
         return {} as Response;
       }),
     );
@@ -241,6 +257,7 @@ describe("wrapFetchWithAbortSignal", () => {
     vi.stubGlobal("AbortController", undefined);
 
     try {
+      await wrapped("https://example.com", { signal: fakeSignal });
     } finally {
       vi.stubGlobal("AbortController", previousAbortController);
     }

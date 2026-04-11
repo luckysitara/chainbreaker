@@ -22,8 +22,14 @@ describe('dmPolicy="allowlist" requires non-empty effective allowFrom', () => {
       issuePath: "channels.telegram.allowFrom",
     },
     {
+      name: "signal",
+      config: { signal: { dmPolicy: "allowlist" } },
+      issuePath: "channels.signal.allowFrom",
     },
     {
+      name: "discord",
+      config: { discord: { dmPolicy: "allowlist" } },
+      issuePath: ["channels.discord", "allowFrom"],
     },
     {
       name: "whatsapp",
@@ -54,15 +60,21 @@ describe('account dmPolicy="allowlist" uses inherited allowFrom', () => {
       },
     },
     {
+      name: "signal",
       config: {
+        signal: { allowFrom: ["+15550001111"], accounts: { work: { dmPolicy: "allowlist" } } },
       },
     },
     {
+      name: "discord",
       config: {
+        discord: { allowFrom: ["123456789"], accounts: { work: { dmPolicy: "allowlist" } } },
       },
     },
     {
+      name: "slack",
       config: {
+        slack: {
           allowFrom: ["U123"],
           botToken: "xoxb-top",
           appToken: "xapp-top",
@@ -79,7 +91,9 @@ describe('account dmPolicy="allowlist" uses inherited allowFrom', () => {
       },
     },
     {
+      name: "imessage",
       config: {
+        imessage: { allowFrom: ["alice"], accounts: { work: { dmPolicy: "allowlist" } } },
       },
     },
     {

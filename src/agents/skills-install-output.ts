@@ -9,12 +9,18 @@ function summarizeInstallOutput(text: string): string | undefined {
   if (!raw) {
     return undefined;
   }
+  const lines = raw
     .split("\n")
+    .map((line) => line.trim())
     .filter(Boolean);
+  if (lines.length === 0) {
     return undefined;
   }
 
   const preferred =
+    lines.find((line) => /^error\b/i.test(line)) ??
+    lines.find((line) => /\b(err!|error:|failed)\b/i.test(line)) ??
+    lines.at(-1);
 
   if (!preferred) {
     return undefined;

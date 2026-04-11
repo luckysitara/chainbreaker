@@ -96,6 +96,7 @@ export async function noteChromeMcpBrowserReadiness(
   const autoProfileLabel = autoConnectProfiles.map((profile) => profile.name).join(", ");
 
   if (!chrome) {
+    const lines = [
       `- Chrome MCP existing-session is configured for profile(s): ${profileLabel}.`,
       `- Google Chrome was not found on this host for auto-connect profile(s): ${autoProfileLabel}. Chainbreaker does not bundle Chrome.`,
       `- Install Google Chrome ${CHROME_MCP_MIN_MAJOR}+ on the same host as the Gateway or node, or set browser.profiles.<name>.userDataDir for a different Chromium-based browser.`,
@@ -104,36 +105,46 @@ export async function noteChromeMcpBrowserReadiness(
       "- Docker, headless, and sandbox browser flows stay on raw CDP; this check only applies to host-local Chrome MCP attach.",
     ];
     if (explicitProfiles.length > 0) {
+      lines.push(
         `- Profiles with explicit userDataDir skip Chrome auto-detection: ${explicitProfiles
           .map((profile) => profile.name)
           .join(", ")}.`,
       );
     }
+    noteFn(lines.join("\n"), "Browser");
     return;
   }
 
   const versionRaw = readVersion(chrome.path);
   const major = parseBrowserMajorVersion(versionRaw);
+  const lines = [
     `- Chrome MCP existing-session is configured for profile(s): ${profileLabel}.`,
     `- Chrome path: ${chrome.path}`,
   ];
 
   if (!versionRaw || major === null) {
+    lines.push(
       `- Could not determine the installed Chrome version. Chrome MCP requires Google Chrome ${CHROME_MCP_MIN_MAJOR}+ on this host.`,
     );
   } else if (major < CHROME_MCP_MIN_MAJOR) {
+    lines.push(
       `- Detected Chrome ${versionRaw}, which is too old for Chrome MCP existing-session attach. Upgrade to Chrome ${CHROME_MCP_MIN_MAJOR}+.`,
     );
   } else {
+    lines.push(`- Detected Chrome ${versionRaw}.`);
   }
 
+  lines.push(`- Enable remote debugging in the browser inspect page (${REMOTE_DEBUGGING_PAGES}).`);
+  lines.push(
     "- Keep the browser running and accept the attach consent prompt the first time Chainbreaker connects.",
   );
   if (explicitProfiles.length > 0) {
+    lines.push(
       `- Profiles with explicit userDataDir still need manual validation of the matching Chromium-based browser: ${explicitProfiles
         .map((profile) => profile.name)
         .join(", ")}.`,
     );
   }
 
+  noteFn(lines.join("\n"), "Browser");
 }

@@ -35,6 +35,7 @@ describe("gateway probe endpoints", () => {
   it("returns only readiness state for unauthenticated remote /ready requests", async () => {
     const getReadiness: ReadinessChecker = () => ({
       ready: false,
+      failing: ["discord", "telegram"],
       uptimeMs: 8_000,
     });
 
@@ -60,6 +61,7 @@ describe("gateway probe endpoints", () => {
   it("returns detailed readiness payload for authenticated remote /ready requests", async () => {
     const getReadiness: ReadinessChecker = () => ({
       ready: false,
+      failing: ["discord", "telegram"],
       uptimeMs: 8_000,
     });
 
@@ -80,6 +82,7 @@ describe("gateway probe endpoints", () => {
         expect(res.statusCode).toBe(503);
         expect(JSON.parse(getBody())).toEqual({
           ready: false,
+          failing: ["discord", "telegram"],
           uptimeMs: 8_000,
         });
       },
@@ -109,6 +112,7 @@ describe("gateway probe endpoints", () => {
   it("keeps /healthz shallow even when readiness checker reports failing channels", async () => {
     const getReadiness: ReadinessChecker = () => ({
       ready: false,
+      failing: ["discord"],
       uptimeMs: 999,
     });
 
@@ -130,6 +134,7 @@ describe("gateway probe endpoints", () => {
   it("reflects readiness status on HEAD /readyz without a response body", async () => {
     const getReadiness: ReadinessChecker = () => ({
       ready: false,
+      failing: ["discord"],
       uptimeMs: 5_000,
     });
 

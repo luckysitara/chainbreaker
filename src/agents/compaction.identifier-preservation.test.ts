@@ -43,6 +43,7 @@ describe("compaction identifier-preservation instructions", () => {
     reserveTokens: 4000,
     maxChunkTokens: 8000,
     contextWindow: 200_000,
+    signal: new AbortController().signal,
   };
 
   beforeEach(async () => {
@@ -58,6 +59,7 @@ describe("compaction identifier-preservation instructions", () => {
     await summarizeInStages({
       ...summarizeBase,
       ...overrides,
+      signal: new AbortController().signal,
       messages: Array.from({ length: messageCount }, (_unused, index) => makeMessage(index + 1)),
     });
   }

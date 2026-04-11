@@ -94,6 +94,7 @@ async function runGatewayHealthCheck(params: {
     url: wsUrl,
     token,
     password,
+    deadlineMs: 15_000,
   });
 
   try {
@@ -169,6 +170,7 @@ async function promptWebToolsConfig(
 
   note(
     [
+      "Web search lets your agent look things up online using the `web_search` tool.",
       "Choose a managed provider now, and Codex-capable models can also use native Codex web search.",
       "Docs: https://docs.chainbreaker.ai/tools/web",
     ].join("\n"),

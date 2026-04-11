@@ -402,15 +402,18 @@ export class AcpSessionManager {
   async getSessionStatus(params: {
     cfg: ChainbreakerConfig;
     sessionKey: string;
+    signal?: AbortSignal;
   }): Promise<AcpSessionStatus> {
     const sessionKey = canonicalizeAcpSessionKey(params);
     if (!sessionKey) {
       throw new AcpRuntimeError("ACP_SESSION_INIT_FAILED", "ACP session key is required.");
     }
+    this.throwIfAborted(params.signal);
     await this.evictIdleRuntimeHandles({ cfg: params.cfg });
     return await this.withSessionActor(
       sessionKey,
       async () => {
+        this.throwIfAborted(params.signal);
         const resolution = this.resolveSession({
           cfg: params.cfg,
           sessionKey,
@@ -432,9 +435,12 @@ export class AcpSessionManager {
         if (runtime.getStatus) {
           runtimeStatus = await withAcpRuntimeErrorBoundary({
             run: async () => {
+              this.throwIfAborted(params.signal);
               const status = await runtime.getStatus!({
                 handle,
+                ...(params.signal ? { signal: params.signal } : {}),
               });
+              this.throwIfAborted(params.signal);
               return status;
             },
             fallbackCode: "ACP_TURN_FAILED",
@@ -465,6 +471,7 @@ export class AcpSessionManager {
           lastError: meta.lastError,
         };
       },
+      params.signal,
     );
   }
 
@@ -736,7 +743,10 @@ export class AcpSessionManager {
             onCallerAbort = () => {
               internalAbortController?.abort();
             };
+            if (input.signal?.aborted) {
               internalAbortController.abort();
+            } else if (input.signal) {
+              input.signal.addEventListener("abort", onCallerAbort, { once: true });
             }
 
             activeTurn = {
@@ -749,6 +759,9 @@ export class AcpSessionManager {
 
             let streamError: AcpRuntimeError | null = null;
             const combinedSignal =
+              input.signal && typeof AbortSignal.any === "function"
+                ? AbortSignal.any([input.signal, internalAbortController.signal])
+                : internalAbortController.signal;
             const eventGate = { open: true };
             const turnPromise = (async () => {
               for await (const event of runtime.runTurn({
@@ -757,6 +770,7 @@ export class AcpSessionManager {
                 attachments: input.attachments,
                 mode: input.mode,
                 requestId: input.requestId,
+                signal: combinedSignal,
               })) {
                 if (!eventGate.open) {
                   continue;
@@ -879,6 +893,8 @@ export class AcpSessionManager {
             });
             throw acpError;
           } finally {
+            if (input.signal && onCallerAbort) {
+              input.signal.removeEventListener("abort", onCallerAbort);
             }
             if (activeTurn && this.activeTurnBySession.get(actorKey) === activeTurn) {
               this.activeTurnBySession.delete(actorKey);
@@ -927,6 +943,7 @@ export class AcpSessionManager {
           }
         }
       },
+      input.signal,
     );
   }
 
@@ -1523,10 +1540,7 @@ export class AcpSessionManager {
     cached.appliedControlSignature = undefined;
   }
 
-  private enforceConcurrentSessionLimit(params: {
-    cfg: ChainbreakerConfig;
-    sessionKey: string;
-  }): void {
+  private enforceConcurrentSessionLimit(params: { cfg: ChainbreakerConfig; sessionKey: string }): void {
     const configuredLimit = params.cfg.acp?.maxConcurrentSessions;
     if (typeof configuredLimit !== "number" || !Number.isFinite(configuredLimit)) {
       return;
@@ -1582,6 +1596,7 @@ export class AcpSessionManager {
   }
 
   private isRecoverableAcpxExitError(message: string): boolean {
+    return /^acpx exited with (code \d+|signal [a-z0-9]+)/i.test(message.trim());
   }
 
   private async evictIdleRuntimeHandles(params: { cfg: ChainbreakerConfig }): Promise<void> {
@@ -1741,20 +1756,25 @@ export class AcpSessionManager {
   private async withSessionActor<T>(
     sessionKey: string,
     op: () => Promise<T>,
+    signal?: AbortSignal,
   ): Promise<T> {
     const actorKey = normalizeActorKey(sessionKey);
+    this.throwIfAborted(signal);
 
     let actorStarted = false;
     const queued = this.actorQueue.run(actorKey, async () => {
       actorStarted = true;
+      this.throwIfAborted(signal);
       return await op();
     });
+    if (!signal) {
       return await queued;
     }
 
     return await new Promise<T>((resolve, reject) => {
       let settled = false;
       const cleanup = () => {
+        signal.removeEventListener("abort", onAbort);
       };
       const settleValue = (value: T) => {
         if (settled) {
@@ -1777,17 +1797,22 @@ export class AcpSessionManager {
           return;
         }
         try {
+          this.throwIfAborted(signal);
         } catch (error) {
           settleError(error);
         }
       };
 
+      signal.addEventListener("abort", onAbort, { once: true });
       queued.then(settleValue, settleError);
+      if (signal.aborted) {
         onAbort();
       }
     });
   }
 
+  private throwIfAborted(signal?: AbortSignal): void {
+    if (!signal?.aborted) {
       return;
     }
     throw new AcpRuntimeError("ACP_TURN_FAILED", "ACP operation aborted.");

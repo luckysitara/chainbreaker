@@ -85,8 +85,10 @@ describe("channel activity", () => {
   });
 
   it("reset clears previously recorded activity", () => {
+    recordChannelActivity({ channel: "line", direction: "outbound", at: 7 });
     resetChannelActivityForTest();
 
+    expect(getChannelActivity({ channel: "line" })).toEqual({
       inboundAt: null,
       outboundAt: null,
     });

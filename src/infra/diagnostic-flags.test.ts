@@ -60,5 +60,6 @@ describe("isDiagnosticFlagEnabled", () => {
 
     expect(isDiagnosticFlagEnabled("gateway.ws", cfg, env)).toBe(true);
     expect(isDiagnosticFlagEnabled("telegram.http", cfg, env)).toBe(true);
+    expect(isDiagnosticFlagEnabled("slack.http", cfg, env)).toBe(false);
   });
 });

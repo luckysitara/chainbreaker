@@ -272,6 +272,8 @@ export function enableConsoleCapture(): void {
       if (loggingState.forceConsoleToStderr) {
         // In --json mode, all console.* writes are diagnostics and should stay off stdout.
         try {
+          const line = timestamp ? `${timestamp} ${formatted}` : formatted;
+          process.stderr.write(`${line}\n`);
         } catch (err) {
           if (isEpipeError(err)) {
             return;

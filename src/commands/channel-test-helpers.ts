@@ -11,7 +11,10 @@ import type { ChannelChoice } from "./onboard-types.js";
 const { googlechatPlugin } = loadBundledPluginTestApiSync<{
   googlechatPlugin: ChannelPlugin;
 }>("googlechat");
+const { matrixPlugin, setMatrixRuntime } = loadBundledPluginTestApiSync<{
+  matrixPlugin: ChannelPlugin;
   setMatrixRuntime: (runtime: PluginRuntime) => void;
+}>("matrix");
 const { msteamsPlugin } = loadBundledPluginTestApiSync<{
   msteamsPlugin: ChannelPlugin;
 }>("msteams");
@@ -52,6 +55,7 @@ export function setDefaultChannelPluginRegistryForTests(): void {
   } as Parameters<typeof setMatrixRuntime>[0]);
   const channels = [
     ...listBundledChannelPlugins(),
+    matrixPlugin,
     msteamsPlugin,
     nostrPlugin,
     tlonPlugin,

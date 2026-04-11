@@ -1,5 +1,6 @@
 import { hasOutboundReplyContent } from "chainbreaker/plugin-sdk/reply-payload";
 import { splitMediaFromOutput } from "../../media/parse.js";
+import { parseInlineDirectives } from "../../utils/directive-tags.js";
 import { isSilentReplyPrefixText, isSilentReplyText, SILENT_REPLY_TOKEN } from "../tokens.js";
 import type { ReplyDirectiveParseResult } from "./reply-directives.js";
 
@@ -37,6 +38,7 @@ const parseChunk = (raw: string, options?: { silentToken?: string }): ParsedChun
   const split = splitMediaFromOutput(raw);
   let text = split.text ?? "";
 
+  const replyParsed = parseInlineDirectives(text, {
     stripAudioTag: false,
     stripReplyTags: true,
   });
@@ -117,6 +119,7 @@ export function createStreamingDirectiveAccumulator() {
       return null;
     }
 
+    // Keep reply context sticky for the full assistant message so split/newline chunks
     // stay on the same native reply target until reset() is called for the next message.
     activeReply = {
       explicitId,

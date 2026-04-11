@@ -31,6 +31,8 @@ function createCoordinator(onReplyStart?: (...args: unknown[]) => Promise<void>)
   return createAcpDispatchDeliveryCoordinator({
     cfg: createAcpTestConfig(),
     ctx: buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex-acp:session-1",
     }),
     dispatcher: createDispatcher(),
@@ -46,6 +48,8 @@ describe("createAcpDispatchDeliveryCoordinator", () => {
     const coordinator = createAcpDispatchDeliveryCoordinator({
       cfg: createAcpTestConfig(),
       ctx: buildTestCtx({
+        Provider: "discord",
+        Surface: "discord",
         SessionKey: "agent:codex-acp:session-1",
       }),
       dispatcher,

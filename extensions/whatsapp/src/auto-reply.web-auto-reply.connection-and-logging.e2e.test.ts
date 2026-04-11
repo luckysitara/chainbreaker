@@ -283,15 +283,11 @@ describe("web auto-reply connection", () => {
         const firstPattern = escapeRegExp(firstTimestamp);
         const secondPattern = escapeRegExp(secondTimestamp);
         expect(firstArgs.Body).toMatch(
-          new RegExp(
-            `\\[WhatsApp \\+1 (\\+\\d+[smhd] )?${firstPattern}\\] \\[chainbreaker\\] first`,
-          ),
+          new RegExp(`\\[WhatsApp \\+1 (\\+\\d+[smhd] )?${firstPattern}\\] \\[chainbreaker\\] first`),
         );
         expect(firstArgs.Body).not.toContain("second");
         expect(secondArgs.Body).toMatch(
-          new RegExp(
-            `\\[WhatsApp \\+1 (\\+\\d+[smhd] )?${secondPattern}\\] \\[chainbreaker\\] second`,
-          ),
+          new RegExp(`\\[WhatsApp \\+1 (\\+\\d+[smhd] )?${secondPattern}\\] \\[chainbreaker\\] second`),
         );
         expect(secondArgs.Body).not.toContain("first");
         expect(process.getMaxListeners?.()).toBeGreaterThanOrEqual(50);
@@ -328,6 +324,7 @@ describe("web auto-reply connection", () => {
       true,
       async () => ({ text: "ok" }),
       runtime as never,
+      controller.signal,
       {
         heartbeatSeconds: 1,
         reconnect: { initialMs: 5, maxMs: 5, maxAttempts: 1, factor: 1.1 },

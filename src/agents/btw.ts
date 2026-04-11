@@ -63,11 +63,13 @@ function buildBtwSystemPrompt(): string {
 }
 
 function buildBtwQuestionPrompt(question: string, inFlightPrompt?: string): string {
+  const lines = [
     "Answer this side question only.",
     "Ignore any unfinished task in the conversation while answering it.",
   ];
   const trimmedPrompt = inFlightPrompt?.trim();
   if (trimmedPrompt) {
+    lines.push(
       "",
       "Current in-flight main task request for background context only:",
       "<in_flight_main_task>",
@@ -76,6 +78,8 @@ function buildBtwQuestionPrompt(question: string, inFlightPrompt?: string): stri
       "Do not continue or complete that task while answering the side question.",
     );
   }
+  lines.push("", "<btw_side_question>", question.trim(), "</btw_side_question>");
+  return lines.join("\n");
 }
 
 function toSimpleContextMessages(messages: unknown[]): Message[] {
@@ -302,6 +306,7 @@ export async function runBtwSideQuestion(
       // BTW is intentionally a lightweight side question path. Keep provider
       // reasoning off so we reliably receive answer text instead of thinking-only output.
       reasoning: undefined,
+      signal: params.opts?.abortSignal,
     },
   );
 

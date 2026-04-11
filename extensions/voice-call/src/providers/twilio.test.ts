@@ -302,7 +302,9 @@ describe("TwilioProvider", () => {
       const mediaStreamHandler = {
         queueTts: async (
           _streamSid: string,
+          playFn: (signal: AbortSignal) => Promise<void>,
         ): Promise<void> => {
+          await playFn(new AbortController().signal);
         },
         sendAudio,
         sendMark,
@@ -338,7 +340,9 @@ describe("TwilioProvider", () => {
     const mediaStreamHandler = {
       queueTts: async (
         _streamSid: string,
+        playFn: (signal: AbortSignal) => Promise<void>,
       ): Promise<void> => {
+        await playFn(new AbortController().signal);
       },
       sendAudio,
       sendMark,

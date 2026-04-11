@@ -30,6 +30,7 @@ describe("logs cli", () => {
       file: "/tmp/chainbreaker.log",
       cursor: 1,
       size: 123,
+      lines: ["raw line"],
       truncated: true,
       reset: true,
     });
@@ -48,6 +49,7 @@ describe("logs cli", () => {
     await runLogsCli(["logs"]);
 
     expect(stdoutWrites.join("")).toContain("Log file:");
+    expect(stdoutWrites.join("")).toContain("raw line");
     expect(stderrWrites.join("")).toContain("Log tail truncated");
     expect(stderrWrites.join("")).toContain("Log cursor reset");
   });
@@ -55,9 +57,11 @@ describe("logs cli", () => {
   it("wires --local-time through CLI parsing and emits local timestamps", async () => {
     callGatewayFromCli.mockResolvedValueOnce({
       file: "/tmp/chainbreaker.log",
+      lines: [
         JSON.stringify({
           time: "2025-01-01T12:00:00.000Z",
           _meta: { logLevelName: "INFO", name: JSON.stringify({ subsystem: "gateway" }) },
+          0: "line one",
         }),
       ],
     });
@@ -71,6 +75,7 @@ describe("logs cli", () => {
     await runLogsCli(["logs", "--local-time", "--plain"]);
 
     const output = stdoutWrites.join("");
+    expect(output).toContain("line one");
     const timestamp = output.match(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z?/u)?.[0];
     expect(timestamp).toBeTruthy();
     expect(timestamp?.endsWith("Z")).toBe(false);
@@ -79,6 +84,7 @@ describe("logs cli", () => {
   it("warns when the output pipe closes", async () => {
     callGatewayFromCli.mockResolvedValueOnce({
       file: "/tmp/chainbreaker.log",
+      lines: ["line one"],
     });
 
     const stderrWrites: string[] = [];

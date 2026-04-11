@@ -50,6 +50,7 @@ function addMutableAllowlistHits(params: {
 export function scanMutableAllowlistEntries(cfg: ChainbreakerConfig): MutableAllowlistHit[] {
   const hits: MutableAllowlistHit[] = [];
 
+  for (const scope of collectProviderDangerousNameMatchingScopes(cfg, "discord")) {
     if (scope.dangerousNameMatchingEnabled) {
       continue;
     }
@@ -58,6 +59,7 @@ export function scanMutableAllowlistEntries(cfg: ChainbreakerConfig): MutableAll
       pathLabel: `${scope.prefix}.allowFrom`,
       list: scope.account.allowFrom,
       detector: isDiscordMutableAllowEntry,
+      channel: "discord",
       dangerousFlagPath: scope.dangerousFlagPath,
     });
     const dm = asObjectRecord(scope.account.dm);
@@ -67,6 +69,7 @@ export function scanMutableAllowlistEntries(cfg: ChainbreakerConfig): MutableAll
         pathLabel: `${scope.prefix}.dm.allowFrom`,
         list: dm.allowFrom,
         detector: isDiscordMutableAllowEntry,
+        channel: "discord",
         dangerousFlagPath: scope.dangerousFlagPath,
       });
     }
@@ -84,6 +87,7 @@ export function scanMutableAllowlistEntries(cfg: ChainbreakerConfig): MutableAll
         pathLabel: `${scope.prefix}.guilds.${guildId}.users`,
         list: guild.users,
         detector: isDiscordMutableAllowEntry,
+        channel: "discord",
         dangerousFlagPath: scope.dangerousFlagPath,
       });
       const channels = asObjectRecord(guild.channels);
@@ -100,12 +104,14 @@ export function scanMutableAllowlistEntries(cfg: ChainbreakerConfig): MutableAll
           pathLabel: `${scope.prefix}.guilds.${guildId}.channels.${channelId}.users`,
           list: channel.users,
           detector: isDiscordMutableAllowEntry,
+          channel: "discord",
           dangerousFlagPath: scope.dangerousFlagPath,
         });
       }
     }
   }
 
+  for (const scope of collectProviderDangerousNameMatchingScopes(cfg, "slack")) {
     if (scope.dangerousNameMatchingEnabled) {
       continue;
     }
@@ -114,6 +120,7 @@ export function scanMutableAllowlistEntries(cfg: ChainbreakerConfig): MutableAll
       pathLabel: `${scope.prefix}.allowFrom`,
       list: scope.account.allowFrom,
       detector: isSlackMutableAllowEntry,
+      channel: "slack",
       dangerousFlagPath: scope.dangerousFlagPath,
     });
     const dm = asObjectRecord(scope.account.dm);
@@ -123,6 +130,7 @@ export function scanMutableAllowlistEntries(cfg: ChainbreakerConfig): MutableAll
         pathLabel: `${scope.prefix}.dm.allowFrom`,
         list: dm.allowFrom,
         detector: isSlackMutableAllowEntry,
+        channel: "slack",
         dangerousFlagPath: scope.dangerousFlagPath,
       });
     }
@@ -140,6 +148,7 @@ export function scanMutableAllowlistEntries(cfg: ChainbreakerConfig): MutableAll
         pathLabel: `${scope.prefix}.channels.${channelKey}.users`,
         list: channel.users,
         detector: isSlackMutableAllowEntry,
+        channel: "slack",
         dangerousFlagPath: scope.dangerousFlagPath,
       });
     }

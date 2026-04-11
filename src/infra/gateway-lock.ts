@@ -7,6 +7,7 @@ import { z } from "zod";
 import { resolveConfigPath, resolveGatewayLockDir, resolveStateDir } from "../config/paths.js";
 import { isPidAlive } from "../shared/pid-alive.js";
 import { safeParseJsonWithSchema } from "../utils/zod-parse.js";
+import { isGatewayArgv, parseProcCmdline } from "./gateway-process-argv.js";
 
 const DEFAULT_TIMEOUT_MS = 5000;
 const DEFAULT_POLL_INTERVAL_MS = 100;
@@ -58,7 +59,10 @@ export class GatewayLockError extends Error {
 
 type LockOwnerStatus = "alive" | "dead" | "unknown";
 
+function readLinuxCmdline(pid: number): string[] | null {
   try {
+    const raw = fsSync.readFileSync(`/proc/${pid}/cmdline`, "utf8");
+    return parseProcCmdline(raw);
   } catch {
     return null;
   }
@@ -137,6 +141,7 @@ async function resolveGatewayOwnerStatus(
     return currentStartTime === payloadStartTime ? "alive" : "dead";
   }
 
+  const args = readLinuxCmdline(pid);
   if (!args) {
     return "unknown";
   }

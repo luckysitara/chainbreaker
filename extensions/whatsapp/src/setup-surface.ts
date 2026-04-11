@@ -50,10 +50,7 @@ function setWhatsAppAllowFrom(cfg: ChainbreakerConfig, allowFrom?: string[]): Ch
   return mergeWhatsAppConfig(cfg, { allowFrom }, { unsetOnUndefined: ["allowFrom"] });
 }
 
-function setWhatsAppSelfChatMode(
-  cfg: ChainbreakerConfig,
-  selfChatMode: boolean,
-): ChainbreakerConfig {
+function setWhatsAppSelfChatMode(cfg: ChainbreakerConfig, selfChatMode: boolean): ChainbreakerConfig {
   return mergeWhatsAppConfig(cfg, { selfChatMode });
 }
 

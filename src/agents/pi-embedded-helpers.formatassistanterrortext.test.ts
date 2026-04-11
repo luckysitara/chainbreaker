@@ -231,11 +231,13 @@ describe("formatRawAssistantErrorForUi", () => {
     expect(formatRawAssistantErrorForUi("")).toContain("unknown error");
   });
 
+  it("formats plain HTTP status lines", () => {
     expect(formatRawAssistantErrorForUi("500 Internal Server Error")).toBe(
       "HTTP 500: Internal Server Error",
     );
   });
 
+  it("formats colon-delimited HTTP status lines", () => {
     expect(formatRawAssistantErrorForUi("HTTP 410: No body")).toBe("HTTP 410: No body");
   });
 

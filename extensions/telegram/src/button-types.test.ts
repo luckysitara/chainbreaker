@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { buildTelegramInteractiveButtons, resolveTelegramInlineButtons } from "./button-types.js";
 
 describe("buildTelegramInteractiveButtons", () => {
+  it("maps shared buttons and selects into Telegram inline rows", () => {
     expect(
       buildTelegramInteractiveButtons({
         blocks: [
@@ -47,10 +49,12 @@ describe("buildTelegramInteractiveButtons", () => {
   });
 });
 
+describe("resolveTelegramInlineButtons", () => {
   it("prefers explicit buttons over shared interactive blocks", () => {
     const explicit = [[{ text: "Keep", callback_data: "keep" }]] as const;
 
     expect(
+      resolveTelegramInlineButtons({
         buttons: explicit,
         interactive: {
           blocks: [
@@ -66,6 +70,7 @@ describe("buildTelegramInteractiveButtons", () => {
 
   it("derives buttons from raw interactive payloads", () => {
     expect(
+      resolveTelegramInlineButtons({
         interactive: {
           blocks: [
             {

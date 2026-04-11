@@ -34,6 +34,7 @@ function loadDeliverRuntime() {
 export type RouteReplyParams = {
   /** The reply payload to send. */
   payload: ReplyPayload;
+  /** The originating channel type (telegram, slack, etc). */
   channel: OriginatingChannelType;
   /** The destination chat/channel/user ID. */
   to: string;
@@ -45,6 +46,7 @@ export type RouteReplyParams = {
   threadId?: string | number;
   /** Config for provider-specific settings. */
   cfg: ChainbreakerConfig;
+  /** Optional abort signal for cooperative cancellation. */
   abortSignal?: AbortSignal;
   /** Mirror reply into session transcript (default: true when sessionKey is set). */
   mirror?: boolean;
@@ -155,8 +157,14 @@ export async function routeReply(params: RouteReplyParams): Promise<RouteReplyRe
       threadId,
       replyToId,
     }) ?? null;
-  const resolvedReplyToId = replyTransport?.replyToId ?? replyToId ?? undefined;
-  const resolvedThreadId = replyTransport?.threadId ?? threadId ?? null;
+  const resolvedReplyToId =
+    replyTransport?.replyToId ??
+    replyToId ??
+    ((channelId === "slack" || channelId === "mattermost") && threadId != null && threadId !== ""
+      ? String(threadId)
+      : undefined);
+  const resolvedThreadId =
+    replyTransport?.threadId ?? (channelId === "slack" ? null : (threadId ?? null));
 
   try {
     // Provider docking: this is an execution boundary (we're about to send).

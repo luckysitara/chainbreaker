@@ -78,13 +78,16 @@ describe("healthCommand (coverage)", () => {
             webhook: { url: "https://example.com/h" },
           },
         },
+        discord: {
           accountId: "default",
           configured: false,
         },
       },
+      channelOrder: ["whatsapp", "telegram", "discord"],
       channelLabels: {
         whatsapp: "WhatsApp",
         telegram: "Telegram",
+        discord: "Discord",
       },
       heartbeatSeconds: 60,
       defaultAgentId: "main",

@@ -11,6 +11,7 @@ describe("directive-handling.model-picker", () => {
         { provider: "z.ai", id: "glm-5" },
         { provider: "z-ai", id: "glm-5" },
       ]),
+    ).toEqual([{ provider: "zai", model: "glm-5" }]);
   });
 
   it("matches provider endpoint labels across canonical aliases", () => {

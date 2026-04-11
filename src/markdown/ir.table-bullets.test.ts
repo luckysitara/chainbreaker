@@ -101,6 +101,7 @@ describe("markdownToIR tableMode bullets", () => {
     expect(ir.styles.some((style) => style.style === "code_block")).toBe(true);
   });
 
+  it("preserves inline styles and links in bullets mode", () => {
     const md = `
 | Name | Value |
 |------|-------|

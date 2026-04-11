@@ -49,6 +49,7 @@ describe("pw-role-snapshot", () => {
     const stats = getRoleSnapshotStats(res.snapshot, res.refs);
     expect(stats.refs).toBe(2);
     expect(stats.interactive).toBe(2);
+    expect(stats.lines).toBeGreaterThan(0);
     expect(stats.chars).toBeGreaterThan(0);
   });
 

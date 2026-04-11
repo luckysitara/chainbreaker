@@ -58,6 +58,7 @@ function hasImportantTail(text: string): boolean {
     /\b(error|exception|failed|fatal|traceback|panic|stack trace|errno|exit code)\b/.test(tail) ||
     // JSON closing — if the output is JSON, the tail has closing structure
     /\}\s*$/.test(tail.trim()) ||
+    // Summary/result lines often appear at the end
     /\b(total|summary|result|complete|finished|done)\b/.test(tail)
   );
 }
@@ -88,10 +89,17 @@ export function truncateToolResultText(
     const headBudget = budget - tailBudget - MIDDLE_OMISSION_MARKER.length;
 
     if (headBudget > minKeepChars) {
+      // Find clean cut points at newline boundaries
       let headCut = headBudget;
+      const headNewline = text.lastIndexOf("\n", headBudget);
+      if (headNewline > headBudget * 0.8) {
+        headCut = headNewline;
       }
 
       let tailStart = text.length - tailBudget;
+      const tailNewline = text.indexOf("\n", tailStart);
+      if (tailNewline !== -1 && tailNewline < tailStart + tailBudget * 0.2) {
+        tailStart = tailNewline + 1;
       }
 
       return text.slice(0, headCut) + MIDDLE_OMISSION_MARKER + text.slice(tailStart) + suffix;
@@ -100,6 +108,9 @@ export function truncateToolResultText(
 
   // Default: keep the beginning
   let cutPoint = budget;
+  const lastNewline = text.lastIndexOf("\n", budget);
+  if (lastNewline > budget * 0.8) {
+    cutPoint = lastNewline;
   }
   return text.slice(0, cutPoint) + suffix;
 }

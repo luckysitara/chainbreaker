@@ -32,6 +32,7 @@ describe("memory indexing with OpenAI batches", () => {
       uploadedRequests = text
         .split("\n")
         .filter(Boolean)
+        .map((line: string) => JSON.parse(line) as { custom_id?: string });
     }
     return uploadedRequests;
   }
@@ -72,6 +73,7 @@ describe("memory indexing with OpenAI batches", () => {
         );
       }
       if (url.endsWith("/files/file_out/content")) {
+        const lines = uploadedRequests.map((request, index) =>
           JSON.stringify({
             custom_id: request.custom_id,
             response: {
@@ -80,6 +82,7 @@ describe("memory indexing with OpenAI batches", () => {
             },
           }),
         );
+        return new Response(lines.join("\n"), {
           status: 200,
           headers: { "Content-Type": "application/jsonl" },
         });

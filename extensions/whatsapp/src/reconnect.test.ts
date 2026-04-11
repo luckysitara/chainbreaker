@@ -44,6 +44,7 @@ describe("web reconnect helpers", () => {
 
   it("sleepWithAbort rejects on abort", async () => {
     const controller = new AbortController();
+    const promise = sleepWithAbort(50, controller.signal);
     controller.abort();
     await expect(promise).rejects.toThrow("aborted");
   });

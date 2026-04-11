@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { resolveTelegramPreviewStreamMode } from "./streaming.js";
+import {
+  resolveTelegramPreviewStreamMode,
+} from "./streaming.js";
 import {
   normalizeTelegramCommandDescription,
   normalizeTelegramCommandName,
@@ -24,17 +26,21 @@ import {
   requireAllowlistAllowFrom,
   requireOpenAllowFrom,
 } from "./zod-schema.core.js";
-import { validateTelegramWebhookSecretRequirements } from "./zod-schema.secret-input-validation.js";
+import {
+  validateTelegramWebhookSecretRequirements,
+} from "./zod-schema.secret-input-validation.js";
 import { sensitive } from "./zod-schema.sensitive.js";
 
 const ToolPolicyBySenderSchema = z.record(z.string(), ToolPolicySchema).optional();
 
+const TelegramInlineButtonsScopeSchema = z.enum(["off", "dm", "group", "all", "allowlist"]);
 const TelegramIdListSchema = z.array(z.union([z.string(), z.number()]));
 
 const TelegramCapabilitiesSchema = z.union([
   z.array(z.string()),
   z
     .object({
+      inlineButtons: TelegramInlineButtonsScopeSchema.optional(),
     })
     .strict(),
 ]);
@@ -96,8 +102,8 @@ export const TelegramDirectSchema = z
 
 const TelegramCustomCommandSchema = z
   .object({
-    command: z.string().overwrite(normalizeTelegramCommandName),
-    description: z.string().overwrite(normalizeTelegramCommandDescription),
+    command: z.string().transform(normalizeTelegramCommandName),
+    description: z.string().transform(normalizeTelegramCommandDescription),
   })
   .strict();
 
@@ -160,6 +166,7 @@ export const TelegramAccountSchemaBase = z
     dms: z.record(z.string(), DmConfigSchema.optional()).optional(),
     direct: z.record(z.string(), TelegramDirectSchema.optional()).optional(),
     textChunkLimit: z.number().int().positive().optional(),
+    chunkMode: z.enum(["length", "newline"]).optional(),
     streaming: z.union([z.boolean(), z.enum(["off", "partial", "block", "progress"])]).optional(),
     blockStreaming: z.boolean().optional(),
     draftChunk: BlockStreamingChunkSchema.optional(),
@@ -252,10 +259,6 @@ export const TelegramAccountSchemaBase = z
 
 export const TelegramAccountSchema = TelegramAccountSchemaBase.superRefine((value, ctx) => {
   normalizeTelegramStreamingConfig(value);
-  // Account-level schemas skip allowFrom validation because accounts inherit
-  // allowFrom from the parent channel config at runtime (resolveTelegramAccount
-  // shallow-merges top-level and account values in src/telegram/accounts.ts).
-  // Validation is enforced at the top-level TelegramConfigSchema instead.
   validateTelegramCustomCommands(value, ctx);
 });
 

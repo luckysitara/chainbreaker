@@ -262,6 +262,7 @@ describe("heartbeat-wake", () => {
     requestHeartbeatNow({
       reason: "cron:job-1",
       agentId: "ops",
+      sessionKey: "agent:ops:discord:channel:alerts",
       coalesceMs: 0,
     });
 
@@ -270,6 +271,7 @@ describe("heartbeat-wake", () => {
     expect(handler.mock.calls[0]?.[0]).toEqual({
       reason: "cron:job-1",
       agentId: "ops",
+      sessionKey: "agent:ops:discord:channel:alerts",
     });
 
     await vi.advanceTimersByTimeAsync(1000);
@@ -277,6 +279,7 @@ describe("heartbeat-wake", () => {
     expect(handler.mock.calls[1]?.[0]).toEqual({
       reason: "cron:job-1",
       agentId: "ops",
+      sessionKey: "agent:ops:discord:channel:alerts",
     });
   });
 
@@ -288,6 +291,7 @@ describe("heartbeat-wake", () => {
     requestHeartbeatNow({
       reason: "cron:job-a",
       agentId: "ops",
+      sessionKey: "agent:ops:discord:channel:alerts",
       coalesceMs: 100,
     });
     requestHeartbeatNow({
@@ -305,6 +309,7 @@ describe("heartbeat-wake", () => {
         {
           reason: "cron:job-a",
           agentId: "ops",
+          sessionKey: "agent:ops:discord:channel:alerts",
         },
         {
           reason: "cron:job-b",

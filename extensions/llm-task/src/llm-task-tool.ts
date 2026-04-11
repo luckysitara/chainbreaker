@@ -102,7 +102,9 @@ export function createLlmTaskTool(api: ChainbreakerPluginApi) {
         undefined;
 
       const authProfileId =
+        // oxlint-disable-next-line typescript/no-explicit-any
         (typeof (params as any).authProfileId === "string" &&
+          // oxlint-disable-next-line typescript/no-explicit-any
           (params as any).authProfileId.trim()) ||
         (typeof pluginCfg.defaultAuthProfileId === "string" &&
           pluginCfg.defaultAuthProfileId.trim()) ||
@@ -153,6 +155,7 @@ export function createLlmTaskTool(api: ChainbreakerPluginApi) {
               : undefined,
       };
 
+      // oxlint-disable-next-line typescript/no-explicit-any
       const input = (params as any).input as unknown;
       let inputJson: string;
       try {
@@ -196,6 +199,7 @@ export function createLlmTaskTool(api: ChainbreakerPluginApi) {
           disableTools: true,
         });
 
+        // oxlint-disable-next-line typescript/no-explicit-any
         const text = collectText((result as any).payloads);
         if (!text) {
           throw new Error("LLM returned empty output");
@@ -209,9 +213,11 @@ export function createLlmTaskTool(api: ChainbreakerPluginApi) {
           throw new Error("LLM returned invalid JSON");
         }
 
+        // oxlint-disable-next-line typescript/no-explicit-any
         const schema = (params as any).schema as unknown;
         if (schema && typeof schema === "object" && !Array.isArray(schema)) {
           const ajv = new AjvCtor({ allErrors: true, strict: false });
+          // oxlint-disable-next-line typescript/no-explicit-any
           const validate = ajv.compile(schema as any);
           const ok = validate(parsed);
           if (!ok) {

@@ -126,6 +126,7 @@ export async function createWaSocket(
     printQRInTerminal: false,
     browser: ["chainbreaker", "cli", VERSION],
     syncFullHistory: false,
+    markOnlineOnConnect: false,
   });
 
   sock.ev.on("creds.update", () => enqueueSaveCreds(authDir, saveCreds, sessionLogger));

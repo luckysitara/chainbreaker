@@ -330,18 +330,22 @@ function buildDynamicModel(
         },
       );
     }
+    case "zai": {
       if (lower !== "glm-5") {
         return undefined;
       }
+      const template = findTemplate(params, "zai", ["glm-4.7"]);
       return cloneTemplate(
         template,
         modelId,
         {
+          provider: "zai",
           api: "openai-completions",
           baseUrl: ZAI_BASE_URL,
           reasoning: true,
         },
         {
+          provider: "zai",
           api: "openai-completions",
           baseUrl: ZAI_BASE_URL,
           reasoning: true,
@@ -366,6 +370,7 @@ export function createProviderRuntimeTestMock(options: ProviderRuntimeTestMockOp
       "openai",
       "xai",
       "anthropic",
+      "zai",
     ],
   );
   const getOpenRouterModelCapabilities =

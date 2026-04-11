@@ -33,6 +33,7 @@ export function shouldRejectBrowserMutation(params: {
     return false;
   }
 
+  // Strong signal when present: browser says this is cross-site.
   // Avoid being overly clever with "same-site" since localhost vs 127.0.0.1 may differ.
   const secFetchSite = (params.secFetchSite ?? "").trim().toLowerCase();
   if (secFetchSite === "cross-site") {

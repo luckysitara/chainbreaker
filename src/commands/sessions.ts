@@ -204,6 +204,7 @@ export async function sessionsCommand(
     const contextTokens = row.contextTokens ?? lookupContextTokens(model) ?? configContextTokens;
     const total = resolveFreshSessionTotalTokens(row);
 
+    const line = [
       ...(showAgentColumn
         ? [rich ? theme.accentBright(row.agentId.padEnd(AGENT_PAD)) : row.agentId.padEnd(AGENT_PAD)]
         : []),
@@ -215,5 +216,6 @@ export async function sessionsCommand(
       formatSessionFlagsCell(row, rich),
     ].join(" ");
 
+    runtime.log(line.trimEnd());
   }
 }

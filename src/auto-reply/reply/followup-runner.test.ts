@@ -262,6 +262,10 @@ async function loadFreshFollowupRunnerModuleForTest() {
 
 const ROUTABLE_TEST_CHANNELS = new Set([
   "telegram",
+  "slack",
+  "discord",
+  "signal",
+  "imessage",
   "whatsapp",
   "feishu",
 ]);
@@ -786,7 +790,9 @@ describe("createFollowupRunner messaging tool dedupe", () => {
     const { onBlockReply } = await runMessagingCase({
       agentResult: {
         ...makeTextReplyDedupeResult(),
+        messagingToolSentTargets: [{ tool: "slack", provider: "slack", to: "channel:C1" }],
       },
+      queued: baseQueuedRun("slack"),
     });
 
     expect(onBlockReply).not.toHaveBeenCalled();
@@ -870,6 +876,7 @@ describe("createFollowupRunner messaging tool dedupe", () => {
     const { onBlockReply } = await runMessagingCase({
       agentResult: {
         ...makeTextReplyDedupeResult(),
+        messagingToolSentTargets: [{ tool: "slack", provider: "slack", to: "channel:C1" }],
         meta: {
           agentMeta: {
             usage: { input: 1_000, output: 50 },
@@ -885,6 +892,7 @@ describe("createFollowupRunner messaging tool dedupe", () => {
         sessionKey,
         storePath,
       },
+      queued: baseQueuedRun("slack"),
     });
 
     expect(onBlockReply).not.toHaveBeenCalled();
@@ -964,6 +972,7 @@ describe("createFollowupRunner messaging tool dedupe", () => {
       agentResult: { payloads: [{ text: "hello world!" }] },
       queued: {
         ...baseQueuedRun("webchat"),
+        originatingChannel: "discord",
         originatingTo: "channel:C1",
       } as FollowupRun,
     });
@@ -996,6 +1005,7 @@ describe("createFollowupRunner messaging tool dedupe", () => {
       agentResult: { payloads: [{ text: "hello world!" }] },
       queued: {
         ...baseQueuedRun("webchat"),
+        originatingChannel: "discord",
         originatingTo: "channel:C1",
         originatingAccountId: "work",
         originatingThreadId: "1739142736.000100",
@@ -1004,6 +1014,7 @@ describe("createFollowupRunner messaging tool dedupe", () => {
 
     expect(routeReplyMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        channel: "discord",
         to: "channel:C1",
         accountId: "work",
         threadId: "1739142736.000100",

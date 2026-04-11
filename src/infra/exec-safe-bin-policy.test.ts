@@ -152,6 +152,7 @@ describe("exec safe bin policy long-option metadata", () => {
   });
 });
 
+describe("exec safe bin policy denied-flag matrix", () => {
   for (const [binName, fixture] of Object.entries(SAFE_BIN_PROFILE_FIXTURES)) {
     const profile = SAFE_BIN_PROFILES[binName];
     const deniedFlags = fixture.deniedFlags ?? [];

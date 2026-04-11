@@ -187,6 +187,7 @@ describe("TelegramPollingSession", () => {
       accountId: "default",
       runtime: undefined,
       proxyFetch: undefined,
+      abortSignal: abort.signal,
       runnerOptions: {},
       getLastUpdateId: () => null,
       persistUpdateId: async () => undefined,
@@ -251,6 +252,7 @@ describe("TelegramPollingSession", () => {
       accountId: "default",
       runtime: undefined,
       proxyFetch: undefined,
+      abortSignal: abort.signal,
       runnerOptions: {},
       getLastUpdateId: () => null,
       persistUpdateId: async () => undefined,
@@ -319,6 +321,7 @@ describe("TelegramPollingSession", () => {
         accountId: "default",
         runtime: undefined,
         proxyFetch: undefined,
+        abortSignal: abort.signal,
         runnerOptions: {},
         getLastUpdateId: () => null,
         persistUpdateId: async () => undefined,
@@ -350,6 +353,7 @@ describe("TelegramPollingSession", () => {
     mockRestartAfterPollingError(recoverableError, abort);
 
     const session = createPollingSessionWithTransportRestart({
+      abortSignal: abort.signal,
       telegramTransport: transport1,
       createTelegramTransport,
     });
@@ -430,6 +434,7 @@ describe("TelegramPollingSession", () => {
       accountId: "default",
       runtime: undefined,
       proxyFetch: undefined,
+      abortSignal: abort.signal,
       runnerOptions: {},
       getLastUpdateId: () => null,
       persistUpdateId: async () => undefined,
@@ -538,6 +543,7 @@ describe("TelegramPollingSession", () => {
       accountId: "default",
       runtime: undefined,
       proxyFetch: undefined,
+      abortSignal: abort.signal,
       runnerOptions: {},
       getLastUpdateId: () => null,
       persistUpdateId: async () => undefined,
@@ -655,6 +661,7 @@ describe("TelegramPollingSession", () => {
       accountId: "default",
       runtime: undefined,
       proxyFetch: undefined,
+      abortSignal: abort.signal,
       runnerOptions: {},
       getLastUpdateId: () => null,
       persistUpdateId: async () => undefined,
@@ -768,6 +775,7 @@ describe("TelegramPollingSession", () => {
       accountId: "default",
       runtime: undefined,
       proxyFetch: undefined,
+      abortSignal: abort.signal,
       runnerOptions: {},
       getLastUpdateId: () => null,
       persistUpdateId: async () => undefined,
@@ -849,6 +857,7 @@ describe("TelegramPollingSession", () => {
     mockRestartAfterPollingError(conflictError, abort);
 
     const session = createPollingSessionWithTransportRestart({
+      abortSignal: abort.signal,
       telegramTransport: transport1,
       createTelegramTransport,
     });

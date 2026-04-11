@@ -46,6 +46,7 @@ class OpenShellFsBridge implements SandboxFsBridge {
   async readFile(params: {
     filePath: string;
     cwd?: string;
+    signal?: AbortSignal;
   }): Promise<Buffer> {
     const target = this.resolveTarget(params);
     const hostPath = this.requireHostPath(target);
@@ -64,6 +65,7 @@ class OpenShellFsBridge implements SandboxFsBridge {
     data: Buffer | string;
     encoding?: BufferEncoding;
     mkdir?: boolean;
+    signal?: AbortSignal;
   }): Promise<void> {
     const target = this.resolveTarget(params);
     const hostPath = this.requireHostPath(target);
@@ -90,6 +92,7 @@ class OpenShellFsBridge implements SandboxFsBridge {
     await this.backend.syncLocalPathToRemote(hostPath, target.containerPath);
   }
 
+  async mkdirp(params: { filePath: string; cwd?: string; signal?: AbortSignal }): Promise<void> {
     const target = this.resolveTarget(params);
     const hostPath = this.requireHostPath(target);
     this.ensureWritable(target, "create directories");
@@ -103,6 +106,7 @@ class OpenShellFsBridge implements SandboxFsBridge {
     await this.backend.runRemoteShellScript({
       script: 'mkdir -p -- "$1"',
       args: [target.containerPath],
+      signal: params.signal,
     });
   }
 
@@ -111,6 +115,7 @@ class OpenShellFsBridge implements SandboxFsBridge {
     cwd?: string;
     recursive?: boolean;
     force?: boolean;
+    signal?: AbortSignal;
   }): Promise<void> {
     const target = this.resolveTarget(params);
     const hostPath = this.requireHostPath(target);
@@ -130,6 +135,7 @@ class OpenShellFsBridge implements SandboxFsBridge {
         ? 'rm -rf -- "$1"'
         : 'if [ -d "$1" ] && [ ! -L "$1" ]; then rmdir -- "$1"; elif [ -e "$1" ] || [ -L "$1" ]; then rm -f -- "$1"; fi',
       args: [target.containerPath],
+      signal: params.signal,
       allowFailure: params.force !== false,
     });
   }
@@ -138,6 +144,7 @@ class OpenShellFsBridge implements SandboxFsBridge {
     from: string;
     to: string;
     cwd?: string;
+    signal?: AbortSignal;
   }): Promise<void> {
     const { from, to } = this.resolveRenameTargets(params);
     const fromHostPath = this.requireHostPath(from);
@@ -159,12 +166,14 @@ class OpenShellFsBridge implements SandboxFsBridge {
     await this.backend.runRemoteShellScript({
       script: 'mkdir -p -- "$(dirname -- "$2")" && mv -- "$1" "$2"',
       args: [from.containerPath, to.containerPath],
+      signal: params.signal,
     });
   }
 
   async stat(params: {
     filePath: string;
     cwd?: string;
+    signal?: AbortSignal;
   }): Promise<SandboxFsStat | null> {
     const target = this.resolveTarget(params);
     const hostPath = this.requireHostPath(target);

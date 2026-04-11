@@ -78,6 +78,7 @@ function formatTaskRows(tasks: TaskRecord[], rich: boolean) {
     "Child Session",
     "Summary",
   ].join(" ");
+  const lines = [rich ? theme.heading(header) : header];
   for (const task of tasks) {
     const summary = truncate(
       task.terminalSummary?.trim() ||
@@ -86,6 +87,7 @@ function formatTaskRows(tasks: TaskRecord[], rich: boolean) {
         task.task.trim(),
       80,
     );
+    const line = [
       shortToken(task.taskId).padEnd(ID_PAD),
       task.runtime.padEnd(RUNTIME_PAD),
       formatTaskStatusCell(task.status, rich),
@@ -94,7 +96,9 @@ function formatTaskRows(tasks: TaskRecord[], rich: boolean) {
       truncate(task.childSessionKey?.trim() || "n/a", 36).padEnd(36),
       summary,
     ].join(" ");
+    lines.push(line.trimEnd());
   }
+  return lines;
 }
 
 function formatTaskListSummary(tasks: TaskRecord[]) {
@@ -131,6 +135,7 @@ function formatAuditRows(findings: TaskAuditFinding[], rich: boolean) {
     "Age".padEnd(8),
     "Detail",
   ].join(" ");
+  const lines = [rich ? theme.heading(header) : header];
   for (const finding of findings) {
     const severity = finding.severity.padEnd(8);
     const status = formatTaskStatusCell(finding.task.status, rich);
@@ -139,6 +144,7 @@ function formatAuditRows(findings: TaskAuditFinding[], rich: boolean) {
       : finding.severity === "error"
         ? theme.error(severity)
         : theme.warn(severity);
+    lines.push(
       [
         severityCell,
         finding.code.padEnd(22),
@@ -151,6 +157,7 @@ function formatAuditRows(findings: TaskAuditFinding[], rich: boolean) {
         .trimEnd(),
     );
   }
+  return lines;
 }
 
 export async function tasksListCommand(
@@ -198,6 +205,8 @@ export async function tasksListCommand(
     return;
   }
   const rich = isRich();
+  for (const line of formatTaskRows(tasks, rich)) {
+    runtime.log(line);
   }
 }
 
@@ -217,6 +226,7 @@ export async function tasksShowCommand(
     return;
   }
 
+  const lines = [
     "Background task:",
     `taskId: ${task.taskId}`,
     `kind: ${task.runtime}`,
@@ -241,6 +251,8 @@ export async function tasksShowCommand(
     ...(task.progressSummary ? [`progressSummary: ${task.progressSummary}`] : []),
     ...(task.terminalSummary ? [`terminalSummary: ${task.terminalSummary}`] : []),
   ];
+  for (const line of lines) {
+    runtime.log(line);
   }
 }
 
@@ -362,6 +374,8 @@ export async function tasksAuditCommand(
     return;
   }
   const rich = isRich();
+  for (const line of formatAuditRows(displayed, rich)) {
+    runtime.log(line);
   }
 }
 
@@ -411,8 +425,6 @@ export async function tasksMaintenanceCommand(
     );
   }
   if (!opts.apply) {
-    runtime.log(
-      "Dry run only. Re-run with `chainbreaker tasks maintenance --apply` to write changes.",
-    );
+    runtime.log("Dry run only. Re-run with `chainbreaker tasks maintenance --apply` to write changes.");
   }
 }

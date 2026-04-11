@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sessionBindingContractChannelIds } from "./manifest.js";
 
+const discordSessionBindingAdapterChannels = ["discord"] as const;
 
 describe("channel contract registry", () => {
   function expectSessionBindingCoverage(expectedChannelIds: readonly string[]) {
@@ -12,6 +13,7 @@ describe("channel contract registry", () => {
   it.each([
     {
       name: "keeps core session binding coverage aligned with built-in adapters",
+      expectedChannelIds: [...discordSessionBindingAdapterChannels, "telegram"],
     },
   ] as const)("$name", ({ expectedChannelIds }) => {
     expectSessionBindingCoverage(expectedChannelIds);

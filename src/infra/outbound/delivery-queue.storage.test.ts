@@ -127,6 +127,7 @@ describe("delivery-queue storage", () => {
     it("moves entry to failed/ subdirectory", async () => {
       const id = await enqueueTextDelivery(
         {
+          channel: "slack",
           to: "#general",
           payloads: [{ text: "hi" }],
         },

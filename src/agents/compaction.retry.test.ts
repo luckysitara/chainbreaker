@@ -21,6 +21,7 @@ type MockGenerateSummaryCompat = (
   reserveTokens: number,
   apiKey: string,
   headers: Record<string, string> | undefined,
+  signal?: AbortSignal,
   customInstructions?: string,
   previousSummary?: string,
 ) => Promise<string>;
@@ -65,6 +66,8 @@ describe("compaction retry integration", () => {
     model: "claude-3-opus",
   } as unknown as NonNullable<ExtensionContext["model"]>;
 
+  const invokeGenerateSummary = (signal = new AbortController().signal) =>
+    mockGenerateSummaryCompat(testMessages, testModel, 1000, "test-api-key", undefined, signal);
 
   const runSummaryRetry = (options: Parameters<typeof retryAsync>[1]) =>
     retryAsync(() => invokeGenerateSummary(), options);

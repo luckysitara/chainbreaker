@@ -511,6 +511,7 @@ describe("runWithModelFallback + runEmbeddedPiAgent overload policy", () => {
           workspaceDir,
           sessionKey: "agent:test:overloaded-backoff-abort",
           runId: "run:overloaded-backoff-abort",
+          abortSignal: controller.signal,
           config: {
             ...makeConfig(),
             auth: { cooldowns: { overloadedBackoffMs: 321 } },

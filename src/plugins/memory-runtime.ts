@@ -25,10 +25,7 @@ export async function getActiveMemorySearchManager(params: {
   return await runtime.getMemorySearchManager(params);
 }
 
-export function resolveActiveMemoryBackendConfig(params: {
-  cfg: ChainbreakerConfig;
-  agentId: string;
-}) {
+export function resolveActiveMemoryBackendConfig(params: { cfg: ChainbreakerConfig; agentId: string }) {
   return ensureMemoryRuntime(params.cfg)?.resolveMemoryBackendConfig(params) ?? null;
 }
 

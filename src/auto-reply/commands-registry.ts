@@ -126,8 +126,10 @@ export function listChatCommandsForConfig(
 }
 
 const NATIVE_NAME_OVERRIDES: Record<string, Record<string, string>> = {
+  discord: {
     tts: "voice",
   },
+  slack: {
     // Slack reserves /status — registering it returns "invalid name"
     // and invalidates the entire slash_commands manifest array.
     status: "agentstatus",
@@ -385,6 +387,8 @@ export function normalizeCommandBody(raw: string, options?: CommandNormalizeOpti
     return trimmed;
   }
 
+  const newline = trimmed.indexOf("\n");
+  const singleLine = newline === -1 ? trimmed : trimmed.slice(0, newline).trim();
 
   const colonMatch = singleLine.match(/^\/([^\s:]+)\s*:(.*)$/);
   const normalized = colonMatch

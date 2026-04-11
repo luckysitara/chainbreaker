@@ -20,10 +20,7 @@ export function getChannelMcpCapabilities(claudeChannelMode: "off" | "on" | "aut
   };
 }
 
-export function registerChannelMcpTools(
-  server: McpServer,
-  bridge: ChainbreakerChannelBridge,
-): void {
+export function registerChannelMcpTools(server: McpServer, bridge: ChainbreakerChannelBridge): void {
   server.tool(
     "conversations_list",
     "List Chainbreaker channel-backed conversations available through session routes.",

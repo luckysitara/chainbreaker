@@ -344,6 +344,7 @@ describe("handleSystemRunInvoke mac app exec host routing", () => {
   }): Promise<T> {
     const stableHitsBeforeDrift = params.stableHitsBeforeDrift ?? 2;
     const realStatSync = fs.statSync.bind(fs);
+    const baselineStat = realStatSync(params.canonicalCwd);
     const driftStat = realStatSync(params.driftDir);
     let canonicalHits = 0;
     const statSpy = vi.spyOn(fs, "statSync").mockImplementation((...args) => {
@@ -353,6 +354,7 @@ describe("handleSystemRunInvoke mac app exec host routing", () => {
         if (canonicalHits > stableHitsBeforeDrift) {
           return driftStat;
         }
+        return baselineStat;
       }
       return realStatSync(...args);
     });
@@ -1044,10 +1046,7 @@ describe("handleSystemRunInvoke mac app exec host routing", () => {
   });
 
   it("denies ./sh wrapper spoof in allowlist on-miss mode before execution", async () => {
-    const marker = path.join(
-      os.tmpdir(),
-      `chainbreaker-wrapper-spoof-${process.pid}-${Date.now()}`,
-    );
+    const marker = path.join(os.tmpdir(), `chainbreaker-wrapper-spoof-${process.pid}-${Date.now()}`);
     const runCommand = vi.fn(async () => {
       fs.writeFileSync(marker, "executed");
       return createLocalRunResult();
@@ -1269,25 +1268,33 @@ describe("handleSystemRunInvoke mac app exec host routing", () => {
   it.each([
     {
       command: ["python3", "-c", "print('hi')"],
+      expected: "python3 -c requires explicit approval in strictInlineEval mode",
     },
     {
       command: ["awk", 'BEGIN{system("id")}', "/dev/null"],
+      expected: "awk inline program requires explicit approval in strictInlineEval mode",
     },
     {
       command: ["find", ".", "-exec", "id", "{}", ";"],
+      expected: "find -exec requires explicit approval in strictInlineEval mode",
     },
     {
       command: ["xargs", "id"],
+      expected: "xargs inline command requires explicit approval in strictInlineEval mode",
     },
     {
       command: ["make", "-f", "evil.mk"],
+      expected: "make -f requires explicit approval in strictInlineEval mode",
     },
     {
       command: ["sed", "s/.*/id/e", "/dev/null"],
+      expected: "sed inline program requires explicit approval in strictInlineEval mode",
     },
+  ] as const)("requires explicit approval for strict inline-eval carrier %j", async (testCase) => {
     setRuntimeConfigSnapshot({
       tools: {
         exec: {
+          strictInlineEval: true,
         },
       },
     });
@@ -1320,10 +1327,12 @@ describe("handleSystemRunInvoke mac app exec host routing", () => {
     { executable: "xargs", args: ["id"] },
     { executable: "sed", args: ["s/.*/id/e", "/dev/null"] },
   ] as const)(
+    "does not persist allow-always approvals for strict inline-eval carrier %j",
     async (testCase) => {
       setRuntimeConfigSnapshot({
         tools: {
           exec: {
+            strictInlineEval: true,
           },
         },
       });
@@ -1331,6 +1340,7 @@ describe("handleSystemRunInvoke mac app exec host routing", () => {
         await withTempApprovalsHome({
           approvals: createAllowlistOnMissApprovals(),
           run: async () => {
+            const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "chainbreaker-inline-eval-bin-"));
             try {
               const executablePath = createTempExecutable({
                 dir: tempDir,
@@ -1343,9 +1353,11 @@ describe("handleSystemRunInvoke mac app exec host routing", () => {
                 ask: "on-miss",
                 approvalDecision: "allow-always",
                 approved: true,
+                runCommand: vi.fn(async () => createLocalRunResult("inline-eval-ok")),
               });
 
               expect(runCommand).toHaveBeenCalledTimes(1);
+              expectInvokeOk(sendInvokeResult, { payloadContains: "inline-eval-ok" });
               expect(loadExecApprovals().agents?.main?.allowlist ?? []).toEqual([]);
             } finally {
               fs.rmSync(tempDir, { recursive: true, force: true });
@@ -1358,9 +1370,11 @@ describe("handleSystemRunInvoke mac app exec host routing", () => {
     },
   );
 
+  it("persists benign awk allow-always approvals in strict inline-eval mode without reopening inline carriers", async () => {
     setRuntimeConfigSnapshot({
       tools: {
         exec: {
+          strictInlineEval: true,
         },
       },
     });
@@ -1368,6 +1382,7 @@ describe("handleSystemRunInvoke mac app exec host routing", () => {
       await withTempApprovalsHome({
         approvals: createAllowlistOnMissApprovals(),
         run: async () => {
+          const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "chainbreaker-inline-eval-awk-"));
           try {
             const executablePath = createTempExecutable({
               dir: tempDir,
@@ -1400,6 +1415,7 @@ describe("handleSystemRunInvoke mac app exec host routing", () => {
 
             expect(malicious.runCommand).not.toHaveBeenCalled();
             expectInvokeErrorMessage(malicious.sendInvokeResult, {
+              message: "awk inline program requires explicit approval in strictInlineEval mode",
             });
           } finally {
             fs.rmSync(tempDir, { recursive: true, force: true });
@@ -1411,9 +1427,11 @@ describe("handleSystemRunInvoke mac app exec host routing", () => {
     }
   });
 
+  it("does not persist allow-always approvals for strict inline-eval make carriers", async () => {
     setRuntimeConfigSnapshot({
       tools: {
         exec: {
+          strictInlineEval: true,
         },
       },
     });
@@ -1421,12 +1439,14 @@ describe("handleSystemRunInvoke mac app exec host routing", () => {
       await withTempApprovalsHome({
         approvals: createAllowlistOnMissApprovals(),
         run: async () => {
+          const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "chainbreaker-inline-eval-make-"));
           try {
             const executablePath = createTempExecutable({
               dir: tempDir,
               name: "make",
             });
             const makefilePath = path.join(tempDir, "Makefile");
+            fs.writeFileSync(makefilePath, "all:\n\t@echo inline-eval-ok\n");
             const prepared = buildSystemRunApprovalPlan({
               command: [executablePath, "-f", makefilePath],
               cwd: tempDir,
@@ -1446,9 +1466,11 @@ describe("handleSystemRunInvoke mac app exec host routing", () => {
               ask: "on-miss",
               approvalDecision: "allow-always",
               approved: true,
+              runCommand: vi.fn(async () => createLocalRunResult("inline-eval-ok")),
             });
 
             expect(runCommand).toHaveBeenCalledTimes(1);
+            expectInvokeOk(sendInvokeResult, { payloadContains: "inline-eval-ok" });
             expect(loadExecApprovals().agents?.main?.allowlist ?? []).toEqual([]);
           } finally {
             fs.rmSync(tempDir, { recursive: true, force: true });

@@ -173,38 +173,47 @@ function isTransientAnnounceDeliveryError(error: unknown): boolean {
   return TRANSIENT_ANNOUNCE_DELIVERY_ERROR_PATTERNS.some((re) => re.test(message));
 }
 
+async function waitForAnnounceRetryDelay(ms: number, signal?: AbortSignal): Promise<void> {
   if (ms <= 0) {
     return;
   }
+  if (!signal) {
     await new Promise<void>((resolve) => setTimeout(resolve, ms));
     return;
   }
+  if (signal.aborted) {
     return;
   }
   await new Promise<void>((resolve) => {
     const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
       resolve();
     }, ms);
     const onAbort = () => {
       clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
       resolve();
     };
+    signal.addEventListener("abort", onAbort, { once: true });
   });
 }
 
 export async function runAnnounceDeliveryWithRetry<T>(params: {
   operation: string;
+  signal?: AbortSignal;
   run: () => Promise<T>;
 }): Promise<T> {
   const retryDelaysMs = resolveDirectAnnounceTransientRetryDelaysMs();
   let retryIndex = 0;
   for (;;) {
+    if (params.signal?.aborted) {
       throw new Error("announce delivery aborted");
     }
     try {
       return await params.run();
     } catch (err) {
       const delayMs = retryDelaysMs[retryIndex];
+      if (delayMs == null || !isTransientAnnounceDeliveryError(err) || params.signal?.aborted) {
         throw err;
       }
       const nextAttempt = retryIndex + 2;
@@ -213,6 +222,7 @@ export async function runAnnounceDeliveryWithRetry<T>(params: {
         `[warn] Subagent announce ${params.operation} transient failure, retrying ${nextAttempt}/${maxAttempts} in ${Math.round(delayMs / 1000)}s: ${summarizeDeliveryError(err)}`,
       );
       retryIndex += 1;
+      await waitForAnnounceRetryDelay(delayMs, params.signal);
     }
   }
 }
@@ -423,7 +433,9 @@ async function maybeQueueSubagentAnnounce(params: {
   sourceChannel?: string;
   sourceTool?: string;
   internalEvents?: AgentInternalEvent[];
+  signal?: AbortSignal;
 }): Promise<"steered" | "queued" | "none" | "dropped"> {
+  if (params.signal?.aborted) {
     return "none";
   }
   const { cfg, entry } = loadRequesterSessionEntry(params.requesterSessionKey);
@@ -492,7 +504,9 @@ async function sendSubagentAnnounceDirectly(params: {
   sourceChannel?: string;
   sourceTool?: string;
   requesterIsSubagent: boolean;
+  signal?: AbortSignal;
 }): Promise<SubagentAnnounceDeliveryResult> {
+  if (params.signal?.aborted) {
     return {
       delivered: false,
       path: "none",
@@ -531,6 +545,7 @@ async function sendSubagentAnnounceDirectly(params: {
       isGatewayMessageChannel(normalizedSessionOnlyOriginChannel)
         ? normalizedSessionOnlyOriginChannel
         : undefined;
+    if (params.signal?.aborted) {
       return {
         delivered: false,
         path: "none",
@@ -540,6 +555,7 @@ async function sendSubagentAnnounceDirectly(params: {
       operation: params.expectsCompletionMessage
         ? "completion direct announce agent call"
         : "direct announce agent call",
+      signal: params.signal,
       run: async () =>
         await subagentAnnounceDeliveryDeps.callGateway({
           method: "agent",
@@ -610,9 +626,11 @@ export async function deliverSubagentAnnouncement(params: {
   expectsCompletionMessage: boolean;
   bestEffortDeliver?: boolean;
   directIdempotencyKey: string;
+  signal?: AbortSignal;
 }): Promise<SubagentAnnounceDeliveryResult> {
   return await runSubagentAnnounceDispatch({
     expectsCompletionMessage: params.expectsCompletionMessage,
+    signal: params.signal,
     queue: async () =>
       await maybeQueueSubagentAnnounce({
         requesterSessionKey: params.requesterSessionKey,
@@ -625,6 +643,7 @@ export async function deliverSubagentAnnouncement(params: {
         sourceChannel: params.sourceChannel,
         sourceTool: params.sourceTool,
         internalEvents: params.internalEvents,
+        signal: params.signal,
       }),
     direct: async () =>
       await sendSubagentAnnounceDirectly({
@@ -640,6 +659,7 @@ export async function deliverSubagentAnnouncement(params: {
         sourceTool: params.sourceTool,
         requesterIsSubagent: params.requesterIsSubagent,
         expectsCompletionMessage: params.expectsCompletionMessage,
+        signal: params.signal,
         bestEffortDeliver: params.bestEffortDeliver,
       }),
   });

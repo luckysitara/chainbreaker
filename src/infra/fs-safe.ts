@@ -508,6 +508,7 @@ export async function appendFileWithinRoot(params: {
   data: string | Buffer;
   encoding?: BufferEncoding;
   mkdir?: boolean;
+  prependNewlineIfNeeded?: boolean;
 }): Promise<void> {
   const target = await openWritableFileWithinRoot({
     rootDir: params.rootDir,
@@ -519,6 +520,7 @@ export async function appendFileWithinRoot(params: {
   try {
     let prefix = "";
     if (
+      params.prependNewlineIfNeeded === true &&
       !target.createdForWrite &&
       target.openedStat.size > 0 &&
       ((typeof params.data === "string" && !params.data.startsWith("\n")) ||
@@ -989,6 +991,8 @@ async function copyFileWithinRootLegacy(
     targetStream.once("close", () => {
       tempClosedByStream = true;
     });
+    await import("node:stream/promises").then(({ pipeline }) =>
+      pipeline(sourceStream, targetStream),
     );
     const writtenStat = await fs.stat(tempPath);
     if (!tempClosedByStream) {

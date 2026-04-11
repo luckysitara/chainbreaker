@@ -343,6 +343,7 @@ describe("gateway server hooks", () => {
         message: "Do it",
         name: "Email",
         agentId: "hooks",
+        sessionKey: "agent:hooks:slack:channel:c123",
       });
       expect(resAgent.status).toBe(200);
       await waitForSystemEvent();
@@ -351,6 +352,7 @@ describe("gateway server hooks", () => {
         | { sessionKey?: string; job?: { agentId?: string } }
         | undefined;
       expect(routedCall?.job?.agentId).toBe("hooks");
+      expect(routedCall?.sessionKey).toBe("agent:hooks:slack:channel:c123");
       drainSystemEvents(resolveMainKey());
     });
   });
@@ -370,6 +372,7 @@ describe("gateway server hooks", () => {
         message: "Do it",
         name: "Email",
         agentId: "hooks",
+        sessionKey: "agent:main:slack:channel:c123",
       });
       expect(resAgent.status).toBe(200);
       await waitForSystemEvent();
@@ -378,6 +381,7 @@ describe("gateway server hooks", () => {
         | { sessionKey?: string; job?: { agentId?: string } }
         | undefined;
       expect(routedCall?.job?.agentId).toBe("hooks");
+      expect(routedCall?.sessionKey).toBe("agent:hooks:slack:channel:c123");
       drainSystemEvents(resolveMainKey());
     });
   });
@@ -395,6 +399,7 @@ describe("gateway server hooks", () => {
         message: "Do it",
         name: "Email",
         agentId: "hooks",
+        sessionKey: "agent:main:slack:channel:c123",
       });
       expect(denied.status).toBe(400);
       const body = (await denied.json()) as { error?: string };

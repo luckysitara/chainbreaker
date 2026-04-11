@@ -49,6 +49,7 @@ describe("createChainbreakerCodingTools", () => {
       const min =
         name === "gateway"
           ? 1
+          : // Most tools expose multiple actions; keep this signal so schemas stay useful to models.
             2;
       expect(values.size).toBeGreaterThanOrEqual(min);
     }

@@ -240,8 +240,10 @@ export type ExecToolConfig = {
   /** Safe stdin-only binaries that can run without allowlist entries. */
   safeBins?: string[];
   /**
+   * Require explicit approval for interpreter inline-eval forms (`python -c`, `node -e`, etc.).
    * Prevents silent allowlist reuse and allow-always persistence for those forms.
    */
+  strictInlineEval?: boolean;
   /** Extra explicit directories trusted for safeBins path checks (never derived from PATH). */
   safeBinTrustedDirs?: string[];
   /** Optional custom safe-bin profiles for entries in tools.exec.safeBins. */
@@ -415,6 +417,7 @@ export type MemorySearchConfig = {
     sessions?: {
       /** Minimum appended bytes before session transcripts are reindexed. */
       deltaBytes?: number;
+      /** Minimum appended JSONL lines before session transcripts are reindexed. */
       deltaMessages?: number;
       /** Force session reindex after compaction-triggered transcript updates (default: true). */
       postCompactionForce?: boolean;
@@ -465,6 +468,8 @@ type XSearchToolConfig = {
   apiKey?: SecretInput;
   /** Model id to use for X search. */
   model?: string;
+  /** Keep inline citations in the xAI response payload when available. */
+  inlineCitations?: boolean;
   /** Optional max search/tool turns for xAI to use internally. */
   maxTurns?: number;
   /** Timeout in seconds for X search requests. */

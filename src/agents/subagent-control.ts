@@ -78,6 +78,7 @@ export type ResolvedSubagentController = {
 
 export type SubagentListItem = {
   index: number;
+  line: string;
   runId: string;
   sessionKey: string;
   label: string;
@@ -278,14 +279,25 @@ function resolveModelDisplay(entry?: SessionEntry, fallbackModel?: string) {
 }
 
 function buildListText(params: {
+  active: Array<{ line: string }>;
+  recent: Array<{ line: string }>;
   recentMinutes: number;
 }) {
+  const lines: string[] = [];
+  lines.push("active subagents:");
   if (params.active.length === 0) {
+    lines.push("(none)");
   } else {
+    lines.push(...params.active.map((entry) => entry.line));
   }
+  lines.push("");
+  lines.push(`recent (last ${params.recentMinutes}m):`);
   if (params.recent.length === 0) {
+    lines.push("(none)");
   } else {
+    lines.push(...params.recent.map((entry) => entry.line));
   }
+  return lines.join("\n");
 }
 
 export function buildSubagentList(params: {
@@ -336,8 +348,10 @@ export function buildSubagentList(params: {
     const runtime = formatDurationCompact(runtimeMs) ?? "n/a";
     const label = truncateLine(resolveSubagentLabel(entry), 48);
     const task = truncateLine(entry.task.trim(), params.taskMaxChars ?? 72);
+    const line = `${index}. ${label} (${resolveModelDisplay(sessionEntry, entry.model)}, ${runtime}${usageText ? `, ${usageText}` : ""}) ${status}${task.toLowerCase() !== label.toLowerCase() ? ` - ${task}` : ""}`;
     const view: SubagentListItem = {
       index,
+      line,
       runId: entry.runId,
       sessionKey: entry.childSessionKey,
       label,
@@ -625,10 +639,7 @@ export async function killControlledSubagentRun(params: {
   };
 }
 
-export async function killSubagentRunAdmin(params: {
-  cfg: ChainbreakerConfig;
-  sessionKey: string;
-}) {
+export async function killSubagentRunAdmin(params: { cfg: ChainbreakerConfig; sessionKey: string }) {
   const targetSessionKey = params.sessionKey.trim();
   if (!targetSessionKey) {
     return { found: false as const, killed: false };
@@ -894,6 +905,7 @@ export async function sendControlledSubagentMessage(params: {
       method: "chat.history",
       params: { sessionKey: targetSessionKey, limit: SUBAGENT_REPLY_HISTORY_LIMIT },
     });
+    const baselineReply = resolveLatestAssistantReplySnapshot(
       stripToolMessages(Array.isArray(historyBefore?.messages) ? historyBefore.messages : []),
     );
 
@@ -938,6 +950,7 @@ export async function sendControlledSubagentMessage(params: {
       stripToolMessages(Array.isArray(history?.messages) ? history.messages : []),
     );
     const replyText =
+      latestReply.text && latestReply.fingerprint !== baselineReply.fingerprint
         ? latestReply.text
         : undefined;
     return { status: "ok" as const, runId, replyText };

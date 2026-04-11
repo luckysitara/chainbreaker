@@ -65,6 +65,7 @@ describe("compaction toolResult details stripping", () => {
       // Minimal shape; compaction won't use these fields in our mocked generateSummary.
       model: { id: "mock", name: "mock", contextWindow: 10000, maxTokens: 1000 } as never,
       apiKey: "test", // pragma: allowlist secret
+      signal: new AbortController().signal,
       reserveTokens: 100,
       maxChunkTokens: 5000,
       contextWindow: 10000,

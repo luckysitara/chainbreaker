@@ -61,6 +61,7 @@ vi.mock("../../runtime.js", () => ({
 describe("registerAgentCommands", () => {
   async function runCli(args: string[]) {
     const program = new Command();
+    registerAgentCommands(program, { agentChannelOptions: "last|telegram|discord" });
     await program.parseAsync(args, { from: "user" });
   }
 
@@ -130,6 +131,7 @@ describe("registerAgentCommands", () => {
       "--bind",
       "telegram",
       "--bind",
+      "discord:acct",
       "--non-interactive",
       "--json",
     ]);
@@ -138,6 +140,7 @@ describe("registerAgentCommands", () => {
       expect.objectContaining({
         name: "beta",
         workspace: "/tmp/ws",
+        bind: ["telegram", "discord:acct"],
         nonInteractive: true,
         json: true,
       }),
@@ -180,6 +183,7 @@ describe("registerAgentCommands", () => {
       "--agent",
       "ops",
       "--bind",
+      "matrix:ops",
       "--bind",
       "telegram",
       "--json",
@@ -187,6 +191,7 @@ describe("registerAgentCommands", () => {
     expect(agentsBindCommandMock).toHaveBeenCalledWith(
       {
         agent: "ops",
+        bind: ["matrix:ops", "telegram"],
         json: true,
       },
       runtime,
@@ -195,6 +200,7 @@ describe("registerAgentCommands", () => {
 
   it("documents bind accountId resolution behavior in help text", () => {
     const program = new Command();
+    registerAgentCommands(program, { agentChannelOptions: "last|telegram|discord" });
     const agents = program.commands.find((command) => command.name() === "agents");
     const bind = agents?.commands.find((command) => command.name() === "bind");
     const help = bind?.helpInformation() ?? "";

@@ -8,10 +8,7 @@ import {
 import { logInboundDrop } from "chainbreaker/plugin-sdk/channel-inbound";
 import { recordChannelActivity } from "chainbreaker/plugin-sdk/channel-runtime";
 import { loadConfig } from "chainbreaker/plugin-sdk/config-runtime";
-import type {
-  TelegramDirectConfig,
-  TelegramGroupConfig,
-} from "chainbreaker/plugin-sdk/config-runtime";
+import type { TelegramDirectConfig, TelegramGroupConfig } from "chainbreaker/plugin-sdk/config-runtime";
 import { ensureConfiguredBindingRouteReady } from "chainbreaker/plugin-sdk/conversation-runtime";
 import { deriveLastRoutePolicy } from "chainbreaker/plugin-sdk/routing";
 import { DEFAULT_ACCOUNT_ID, resolveThreadSessionKeys } from "chainbreaker/plugin-sdk/routing";

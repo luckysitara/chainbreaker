@@ -18,6 +18,7 @@ const SAMPLE_HTML = `<!doctype html>
       <article>
         <h1>Example Article</h1>
         <p>Main content starts here with enough words to satisfy readability.</p>
+        <p>Second paragraph for a bit more signal.</p>
       </article>
     </main>
     <footer>Footer text</footer>

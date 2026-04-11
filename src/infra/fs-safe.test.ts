@@ -256,6 +256,7 @@ describe("fs-safe", () => {
       rootDir: root,
       relativePath: "nested/out.txt",
       data: "next",
+      prependNewlineIfNeeded: true,
     });
 
     await expect(fs.readFile(targetPath, "utf8")).resolves.toBe("seed\nnext");
@@ -492,6 +493,7 @@ describe("fs-safe", () => {
             rootDir: root,
             relativePath: "alias.txt",
             data: "pwned",
+            prependNewlineIfNeeded: true,
           }),
         ).rejects.toMatchObject({ code: "invalid-path" });
         await expect(fs.readFile(outsideFile, "utf8")).resolves.toBe("outside");
@@ -533,6 +535,7 @@ describe("fs-safe", () => {
           relativePath,
           data: "new-content",
           mkdir: false,
+          prependNewlineIfNeeded: true,
         }),
     });
 

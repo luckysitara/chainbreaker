@@ -505,6 +505,8 @@ describe("runMessageAction plugin dispatch", () => {
       }),
     );
 
+    const discordPollPlugin = createPollForwardingPlugin({
+      pluginId: "discord",
       label: "Discord",
       blurb: "Discord plugin-owned poll test plugin.",
       handleAction,
@@ -514,7 +516,9 @@ describe("runMessageAction plugin dispatch", () => {
       setActivePluginRegistry(
         createTestRegistry([
           {
+            pluginId: "discord",
             source: "test",
+            plugin: discordPollPlugin,
           },
         ]),
       );
@@ -530,12 +534,14 @@ describe("runMessageAction plugin dispatch", () => {
       const result = await runMessageAction({
         cfg: {
           channels: {
+            discord: {
               token: "tok",
             },
           },
         } as ChainbreakerConfig,
         action: "poll",
         params: {
+          channel: "discord",
           target: "channel:123",
           pollQuestion: "Lunch?",
           pollOption: ["Pizza", "Sushi"],
@@ -550,6 +556,7 @@ describe("runMessageAction plugin dispatch", () => {
       expect(handleAction).toHaveBeenCalledWith(
         expect.objectContaining({
           action: "poll",
+          channel: "discord",
           params: expect.objectContaining({
             to: "channel:123",
             pollQuestion: "Lunch?",
@@ -571,9 +578,12 @@ describe("runMessageAction plugin dispatch", () => {
     );
 
     const componentsPlugin: ChannelPlugin = {
+      id: "discord",
       meta: {
+        id: "discord",
         label: "Discord",
         selectionLabel: "Discord",
+        docsPath: "/channels/discord",
         blurb: "Discord components send test plugin.",
       },
       capabilities: { chatTypes: ["direct"] },
@@ -589,6 +599,7 @@ describe("runMessageAction plugin dispatch", () => {
       setActivePluginRegistry(
         createTestRegistry([
           {
+            pluginId: "discord",
             source: "test",
             plugin: componentsPlugin,
           },
@@ -611,6 +622,7 @@ describe("runMessageAction plugin dispatch", () => {
         cfg: {} as ChainbreakerConfig,
         action: "send",
         params: {
+          channel: "discord",
           target: "channel:123",
           message: "hi",
           components: JSON.stringify(components),
@@ -629,6 +641,7 @@ describe("runMessageAction plugin dispatch", () => {
           cfg: {} as ChainbreakerConfig,
           action: "send",
           params: {
+            channel: "discord",
             target: "channel:123",
             message: "hi",
             components: "{not-json}",
@@ -644,9 +657,12 @@ describe("runMessageAction plugin dispatch", () => {
   describe("accountId defaults", () => {
     const handleAction = vi.fn(async () => jsonResult({ ok: true }));
     const accountPlugin: ChannelPlugin = {
+      id: "discord",
       meta: {
+        id: "discord",
         label: "Discord",
         selectionLabel: "Discord",
+        docsPath: "/channels/discord",
         blurb: "Discord test plugin.",
       },
       capabilities: { chatTypes: ["direct"] },
@@ -664,6 +680,7 @@ describe("runMessageAction plugin dispatch", () => {
       setActivePluginRegistry(
         createTestRegistry([
           {
+            pluginId: "discord",
             source: "test",
             plugin: accountPlugin,
           },
@@ -691,6 +708,7 @@ describe("runMessageAction plugin dispatch", () => {
         args: {
           cfg: {
             bindings: [
+              { agentId: "agent-b", match: { channel: "discord", accountId: "account-b" } },
             ],
           } as ChainbreakerConfig,
           agentId: "agent-b",
@@ -702,6 +720,7 @@ describe("runMessageAction plugin dispatch", () => {
         ...args,
         action: "send",
         params: {
+          channel: "discord",
           target: "channel:123",
           message: "hi",
         },

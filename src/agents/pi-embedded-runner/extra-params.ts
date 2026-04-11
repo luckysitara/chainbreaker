@@ -14,6 +14,7 @@ import { createAnthropicToolPayloadCompatibilityWrapper } from "./anthropic-fami
 import { createBedrockNoCacheWrapper, isAnthropicBedrockModel } from "./bedrock-stream-wrappers.js";
 import { createGoogleThinkingPayloadWrapper } from "./google-stream-wrappers.js";
 import { log } from "./logger.js";
+import { createMinimaxFastModeWrapper } from "./minimax-stream-wrappers.js";
 import {
   createMoonshotThinkingWrapper,
   resolveMoonshotThinkingType,

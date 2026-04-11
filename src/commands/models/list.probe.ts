@@ -181,6 +181,7 @@ function formatMissingCredentialProbeError(reasonCode: AuthProbeReasonCode): str
     return `${legacyLine}\n↳ Auth reason [invalid_expires]: token expires must be a positive Unix ms timestamp.`;
   }
   if (reasonCode === "missing_credential") {
+    return `${legacyLine}\n↳ Auth reason [missing_credential]: no inline credential or SecretRef is configured.`;
   }
   if (reasonCode === "unresolved_ref") {
     return `${legacyLine}\n↳ Auth reason [unresolved_ref]: configured SecretRef could not be resolved.`;

@@ -72,6 +72,8 @@ function formatBytesShort(bytes: number): string {
 }
 
 function parseMediaPathFromText(text: string): string | undefined {
+  for (const line of text.split(/\r?\n/u)) {
+    const trimmed = line.trim();
     if (!trimmed.startsWith("MEDIA:")) {
       continue;
     }

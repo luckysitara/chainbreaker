@@ -110,9 +110,7 @@ describe("telegramSetupWizard.finalize", () => {
       "Telegram DM access warning",
     );
     expect(note).toHaveBeenCalledWith(
-      expect.stringContaining(
-        `chainbreaker config set channels.telegram.allowFrom '["YOUR_USER_ID"]'`,
-      ),
+      expect.stringContaining(`chainbreaker config set channels.telegram.allowFrom '["YOUR_USER_ID"]'`),
       "Telegram DM access warning",
     );
   });

@@ -273,16 +273,21 @@ async function resolveProfileSecretString(params: {
   refDefaults: SecretDefaults | undefined;
   configForRefResolution: ChainbreakerConfig;
   cache: SecretRefResolveCache;
+  inlineFailureMessage: string;
   refFailureMessage: string;
 }): Promise<string | undefined> {
   let resolvedValue = params.value?.trim();
   if (resolvedValue) {
+    const inlineRef = coerceSecretRef(resolvedValue, params.refDefaults);
+    if (inlineRef) {
       try {
+        resolvedValue = await resolveSecretRefString(inlineRef, {
           config: params.configForRefResolution,
           env: process.env,
           cache: params.cache,
         });
       } catch (err) {
+        log.debug(params.inlineFailureMessage, {
           profileId: params.profileId,
           provider: params.provider,
           error: err instanceof Error ? err.message : String(err),
@@ -351,6 +356,7 @@ export async function resolveApiKeyForProfile(
       refDefaults,
       configForRefResolution,
       cache: refResolveCache,
+      inlineFailureMessage: "failed to resolve inline auth profile api_key ref",
       refFailureMessage: "failed to resolve auth profile api_key ref",
     });
     if (!key) {
@@ -371,6 +377,7 @@ export async function resolveApiKeyForProfile(
       refDefaults,
       configForRefResolution,
       cache: refResolveCache,
+      inlineFailureMessage: "failed to resolve inline auth profile token ref",
       refFailureMessage: "failed to resolve auth profile token ref",
     });
     if (!token) {

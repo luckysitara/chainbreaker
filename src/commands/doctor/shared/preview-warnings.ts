@@ -3,6 +3,7 @@ import { sanitizeForLog } from "../../../terminal/ansi.js";
 import {
   collectDiscordNumericIdWarnings,
   scanDiscordNumericIdEntries,
+} from "../providers/discord.js";
 import {
   collectTelegramAllowFromUsernameWarnings,
   collectTelegramEmptyAllowlistExtraWarnings,
@@ -61,8 +62,11 @@ export function collectDoctorPreviewWarnings(params: {
     );
   }
 
+  const discordHits = scanDiscordNumericIdEntries(params.cfg);
+  if (discordHits.length > 0) {
     warnings.push(
       collectDiscordNumericIdWarnings({
+        hits: discordHits,
         doctorFixCommand: params.doctorFixCommand,
       }).join("\n"),
     );
@@ -104,6 +108,7 @@ export function collectDoctorPreviewWarnings(params: {
     extraWarningsForAccount: collectTelegramEmptyAllowlistExtraWarnings,
   }).filter((warning) => !isWarningBlockedByChannelPlugin(warning, channelPluginBlockerHits));
   if (emptyAllowlistWarnings.length > 0) {
+    warnings.push(emptyAllowlistWarnings.map((line) => sanitizeForLog(line)).join("\n"));
   }
 
   const toolsBySenderHits = scanLegacyToolsBySenderKeys(params.cfg);

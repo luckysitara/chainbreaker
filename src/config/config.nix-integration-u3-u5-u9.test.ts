@@ -60,9 +60,7 @@ describe("Nix integration (U3, U5, U9)", () => {
 
   describe("U5: CONFIG_PATH and STATE_DIR env var overrides", () => {
     it("STATE_DIR defaults to ~/.chainbreaker when env not set", () => {
-      expect(resolveStateDir(envWith({ CHAINBREAKER_STATE_DIR: undefined }))).toMatch(
-        /\.chainbreaker$/,
-      );
+      expect(resolveStateDir(envWith({ CHAINBREAKER_STATE_DIR: undefined }))).toMatch(/\.chainbreaker$/);
     });
 
     it("STATE_DIR respects CHAINBREAKER_STATE_DIR override", () => {
@@ -74,9 +72,7 @@ describe("Nix integration (U3, U5, U9)", () => {
     it("STATE_DIR respects CHAINBREAKER_HOME when state override is unset", () => {
       const customHome = path.join(path.sep, "custom", "home");
       expect(
-        resolveStateDir(
-          envWith({ CHAINBREAKER_HOME: customHome, CHAINBREAKER_STATE_DIR: undefined }),
-        ),
+        resolveStateDir(envWith({ CHAINBREAKER_HOME: customHome, CHAINBREAKER_STATE_DIR: undefined })),
       ).toBe(path.join(path.resolve(customHome), ".chainbreaker"));
     });
 
@@ -113,10 +109,7 @@ describe("Nix integration (U3, U5, U9)", () => {
       await withTempHome(async (home) => {
         expect(
           resolveConfigPathCandidate(
-            envWith({
-              CHAINBREAKER_HOME: home,
-              CHAINBREAKER_CONFIG_PATH: "~/.chainbreaker/custom.json",
-            }),
+            envWith({ CHAINBREAKER_HOME: home, CHAINBREAKER_CONFIG_PATH: "~/.chainbreaker/custom.json" }),
             () => home,
           ),
         ).toBe(path.join(home, ".chainbreaker", "custom.json"));

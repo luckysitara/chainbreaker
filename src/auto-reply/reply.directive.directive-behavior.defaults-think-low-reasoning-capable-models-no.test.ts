@@ -196,6 +196,7 @@ describe("directive behavior", () => {
             primary: "anthropic/claude-opus-4-5",
             fallbacks: ["openai/gpt-4.1-mini"],
           },
+          imageModel: { primary: "minimax/MiniMax-M2.7" },
           models: undefined,
         },
       });
@@ -213,16 +214,20 @@ describe("directive behavior", () => {
         },
         { provider: "openai", id: "gpt-4.1-mini", name: "GPT-4.1 mini" },
       ]);
+      const configOnlyProviderText = await runModelDirectiveText(home, "/models minimax", {
         defaults: {
           models: {
             "anthropic/claude-opus-4-5": {},
             "openai/gpt-4.1-mini": {},
+            "minimax/MiniMax-M2.7": { alias: "minimax" },
           },
         },
         extra: {
           models: {
             mode: "merge",
             providers: {
+              minimax: {
+                baseUrl: "https://api.minimax.io/anthropic",
                 api: "anthropic-messages",
                 models: [
                   { id: "MiniMax-M2.7", name: "MiniMax M2.7" },
@@ -233,6 +238,8 @@ describe("directive behavior", () => {
           },
         },
       });
+      expect(configOnlyProviderText).toContain("Models (minimax");
+      expect(configOnlyProviderText).toContain("minimax/MiniMax-M2.7");
 
       const missingAuthText = await runModelDirectiveText(home, "/model list", {
         defaults: {
@@ -273,9 +280,11 @@ describe("directive behavior", () => {
       expect(runEmbeddedPiAgentMock).not.toHaveBeenCalled();
     });
   });
+  it("ignores inline /model and /think directives while still running agent content", async () => {
     await withTempHome(async (home) => {
       mockEmbeddedTextResult("done");
 
+      const inlineModelRes = await getReplyFromConfig(
         {
           Body: "please sync /model openai/gpt-4.1-mini now",
           From: "+1004",
@@ -285,6 +294,7 @@ describe("directive behavior", () => {
         makeDefaultModelConfig(home),
       );
 
+      const texts = replyTexts(inlineModelRes);
       expect(texts).toContain("done");
       expect(runEmbeddedPiAgentMock).toHaveBeenCalledOnce();
       const call = runEmbeddedPiAgentMock.mock.calls[0]?.[0];
@@ -293,6 +303,7 @@ describe("directive behavior", () => {
       runEmbeddedPiAgentMock.mockClear();
 
       mockEmbeddedTextResult("done");
+      const inlineThinkRes = await getReplyFromConfig(
         {
           Body: "please sync /think:high now",
           From: "+1004",
@@ -302,6 +313,7 @@ describe("directive behavior", () => {
         makeWhatsAppDirectiveConfig(home, { model: { primary: "anthropic/claude-opus-4-5" } }),
       );
 
+      expect(replyTexts(inlineThinkRes)).toContain("done");
       expect(runEmbeddedPiAgentMock).toHaveBeenCalledOnce();
     });
   });
@@ -340,6 +352,7 @@ describe("directive behavior", () => {
       });
     });
   });
+  it("persists /reasoning off on discord even when model defaults reasoning on", async () => {
     await withTempHome(async (home) => {
       const storePath = sessionStorePath(home);
       mockEmbeddedTextResult("done");
@@ -359,6 +372,7 @@ describe("directive behavior", () => {
         },
         {
           channels: {
+            discord: { allowFrom: ["*"] },
           },
           session: { store: storePath },
         },
@@ -367,7 +381,10 @@ describe("directive behavior", () => {
       const offRes = await getReplyFromConfig(
         {
           Body: "/reasoning off",
+          From: "discord:user:1004",
           To: "channel:general",
+          Provider: "discord",
+          Surface: "discord",
           CommandSource: "text",
           CommandAuthorized: true,
         },
@@ -383,7 +400,10 @@ describe("directive behavior", () => {
       await getReplyFromConfig(
         {
           Body: "hello",
+          From: "discord:user:1004",
           To: "channel:general",
+          Provider: "discord",
+          Surface: "discord",
           CommandSource: "text",
           CommandAuthorized: true,
         },

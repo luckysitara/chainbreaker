@@ -17,10 +17,7 @@ export function hasToolModelConfig(model: ToolModelConfig | undefined): boolean 
   );
 }
 
-export function resolveDefaultModelRef(cfg?: ChainbreakerConfig): {
-  provider: string;
-  model: string;
-} {
+export function resolveDefaultModelRef(cfg?: ChainbreakerConfig): { provider: string; model: string } {
   if (cfg) {
     const resolved = resolveConfiguredModelRef({
       cfg,

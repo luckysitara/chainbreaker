@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   basenameLower,
   extractShellWrapperCommand,
+  extractShellWrapperInlineCommand,
   hasEnvManipulationBeforeShellWrapper,
   isDispatchWrapperExecutable,
   isShellWrapperExecutable,
@@ -166,6 +167,7 @@ describe("unwrapKnownDispatchWrapperInvocation", () => {
       expected: { kind: "unwrapped", wrapper: "time", argv: ["bash", "-lc", "echo hi"] },
     },
     {
+      argv: ["timeout", "--signal=TERM", "5s", "bash", "-lc", "echo hi"],
       expected: { kind: "unwrapped", wrapper: "timeout", argv: ["bash", "-lc", "echo hi"] },
     },
     {
@@ -289,6 +291,7 @@ describe("resolveDispatchWrapperTrustPlan", () => {
       effectiveArgv: ["bash", "-lc", "echo hi"],
     },
     {
+      argv: ["timeout", "--signal=TERM", "5s", "bash", "-lc", "echo hi"],
       wrapper: "timeout",
       effectiveArgv: ["bash", "-lc", "echo hi"],
     },
@@ -383,20 +386,26 @@ describe("extractShellWrapperCommand", () => {
   test.each([
     {
       argv: ["bash", "-lc", "echo hi"],
+      expectedInline: "echo hi",
       expectedCommand: { isWrapper: true, command: "echo hi" },
     },
     {
       argv: ["busybox", "sh", "-lc", "echo hi"],
+      expectedInline: "echo hi",
       expectedCommand: { isWrapper: true, command: "echo hi" },
     },
     {
       argv: ["env", "--", "pwsh", "-Command", "Get-Date"],
+      expectedInline: "Get-Date",
       expectedCommand: { isWrapper: true, command: "Get-Date" },
     },
     {
       argv: ["bash", "script.sh"],
+      expectedInline: null,
       expectedCommand: { isWrapper: false, command: null },
     },
+  ])("extracts inline commands for %j", ({ argv, expectedInline, expectedCommand }) => {
+    expect(extractShellWrapperInlineCommand(argv)).toBe(expectedInline);
     expect(extractShellWrapperCommand(argv)).toEqual(expectedCommand);
   });
 

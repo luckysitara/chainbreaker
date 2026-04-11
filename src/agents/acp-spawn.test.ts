@@ -33,6 +33,7 @@ function createDefaultSpawnConfig(): ChainbreakerConfig {
       scope: "per-sender",
     },
     channels: {
+      discord: {
         threadBindings: {
           enabled: true,
           spawnAcpSessions: true,
@@ -125,6 +126,7 @@ function createSessionBinding(overrides?: Partial<SessionBindingRecord>): Sessio
     targetSessionKey: "agent:codex:acp:s1",
     targetKind: "session",
     conversation: {
+      channel: "discord",
       accountId: "default",
       conversationId: "child-thread",
       parentConversationId: "parent-channel",
@@ -200,6 +202,7 @@ function enableMatrixAcpThreadBindings(): void {
     ...hoisted.state.cfg,
     channels: {
       ...hoisted.state.cfg.channels,
+      matrix: {
         threadBindings: {
           enabled: true,
           spawnAcpSessions: true,
@@ -208,6 +211,7 @@ function enableMatrixAcpThreadBindings(): void {
     },
   });
   registerSessionBindingAdapter({
+    channel: "matrix",
     accountId: "default",
     capabilities: createSessionBindingCapabilities(),
     bind: async (input) => await hoisted.sessionBindingBindMock(input),
@@ -222,6 +226,7 @@ function enableLineCurrentConversationBindings(): void {
     ...hoisted.state.cfg,
     channels: {
       ...hoisted.state.cfg.channels,
+      line: {
         threadBindings: {
           enabled: true,
           spawnAcpSessions: true,
@@ -230,6 +235,7 @@ function enableLineCurrentConversationBindings(): void {
     },
   });
   registerSessionBindingAdapter({
+    channel: "line",
     accountId: "default",
     capabilities: {
       bindSupported: true,
@@ -329,6 +335,7 @@ describe("spawnAcpDirect", () => {
           createSessionBinding({
             targetSessionKey: input.targetSessionKey,
             conversation: {
+              channel: "discord",
               accountId: input.conversation.accountId,
               conversationId: "child-thread",
               parentConversationId: "parent-channel",
@@ -346,6 +353,7 @@ describe("spawnAcpDirect", () => {
     hoisted.sessionBindingUnbindMock.mockReset().mockResolvedValue([]);
     sessionBindingServiceTesting.resetSessionBindingAdaptersForTests();
     registerSessionBindingAdapter({
+      channel: "discord",
       accountId: "default",
       capabilities: createSessionBindingCapabilities(),
       bind: async (input) => await hoisted.sessionBindingBindMock(input),
@@ -424,6 +432,7 @@ describe("spawnAcpDirect", () => {
       },
       {
         agentSessionKey: "agent:main:main",
+        agentChannel: "discord",
         agentAccountId: "default",
         agentTo: "channel:parent-channel",
         agentThreadId: "requester-thread",
@@ -482,6 +491,7 @@ describe("spawnAcpDirect", () => {
         createSessionBinding({
           targetSessionKey: input.targetSessionKey,
           conversation: {
+            channel: "matrix",
             accountId: input.conversation.accountId,
             conversationId: "child-thread",
             parentConversationId: input.conversation.parentConversationId ?? "!room:example",
@@ -503,6 +513,8 @@ describe("spawnAcpDirect", () => {
         thread: true,
       },
       {
+        agentSessionKey: "agent:main:matrix:channel:!room:example",
+        agentChannel: "matrix",
         agentAccountId: "default",
         agentTo: "room:!room:example",
       },
@@ -512,6 +524,7 @@ describe("spawnAcpDirect", () => {
       expect.objectContaining({
         placement: "child",
         conversation: expect.objectContaining({
+          channel: "matrix",
           accountId: "default",
           conversationId: "!room:example",
         }),
@@ -519,6 +532,7 @@ describe("spawnAcpDirect", () => {
     );
     expectAgentGatewayCall({
       deliver: true,
+      channel: "matrix",
       to: "room:!room:example",
       threadId: "child-thread",
     });
@@ -535,6 +549,7 @@ describe("spawnAcpDirect", () => {
         createSessionBinding({
           targetSessionKey: input.targetSessionKey,
           conversation: {
+            channel: "line",
             accountId: input.conversation.accountId,
             conversationId: input.conversation.conversationId,
           },
@@ -554,6 +569,8 @@ describe("spawnAcpDirect", () => {
         thread: true,
       },
       {
+        agentSessionKey: "agent:main:line:direct:U1234567890abcdef1234567890abcdef",
+        agentChannel: "line",
         agentAccountId: "default",
         agentTo: "U1234567890abcdef1234567890abcdef",
       },
@@ -564,6 +581,7 @@ describe("spawnAcpDirect", () => {
       expect.objectContaining({
         placement: "current",
         conversation: expect.objectContaining({
+          channel: "line",
           accountId: "default",
           conversationId: "U1234567890abcdef1234567890abcdef",
         }),
@@ -571,6 +589,7 @@ describe("spawnAcpDirect", () => {
     );
     expectAgentGatewayCall({
       deliver: true,
+      channel: "line",
       to: "U1234567890abcdef1234567890abcdef",
       threadId: undefined,
     });
@@ -583,15 +602,23 @@ describe("spawnAcpDirect", () => {
 
   it.each([
     {
+      name: "canonical line target",
+      agentTo: "line:U1234567890abcdef1234567890abcdef",
       expectedConversationId: "U1234567890abcdef1234567890abcdef",
     },
     {
+      name: "typed line user target",
+      agentTo: "line:user:U1234567890abcdef1234567890abcdef",
       expectedConversationId: "U1234567890abcdef1234567890abcdef",
     },
     {
+      name: "typed line group target",
+      agentTo: "line:group:C1234567890abcdef1234567890abcdef",
       expectedConversationId: "C1234567890abcdef1234567890abcdef",
     },
     {
+      name: "typed line room target",
+      agentTo: "line:room:R1234567890abcdef1234567890abcdef",
       expectedConversationId: "R1234567890abcdef1234567890abcdef",
     },
   ])(
@@ -607,6 +634,7 @@ describe("spawnAcpDirect", () => {
           createSessionBinding({
             targetSessionKey: input.targetSessionKey,
             conversation: {
+              channel: "line",
               accountId: input.conversation.accountId,
               conversationId: input.conversation.conversationId,
             },
@@ -626,6 +654,8 @@ describe("spawnAcpDirect", () => {
           thread: true,
         },
         {
+          agentSessionKey: `agent:main:line:direct:${expectedConversationId}`,
+          agentChannel: "line",
           agentAccountId: "default",
           agentTo,
         },
@@ -636,6 +666,7 @@ describe("spawnAcpDirect", () => {
         expect.objectContaining({
           placement: "current",
           conversation: expect.objectContaining({
+            channel: "line",
             accountId: "default",
             conversationId: expectedConversationId,
           }),
@@ -646,6 +677,7 @@ describe("spawnAcpDirect", () => {
 
   it.each([
     {
+      name: "does not inline delivery for run-mode spawns from non-subagent requester sessions",
       ctx: createRequesterContext(),
       expectedAgentCall: {
         deliver: false,
@@ -656,6 +688,7 @@ describe("spawnAcpDirect", () => {
       expectTranscriptPersistence: false,
     },
     {
+      name: "does not inline delivery for run-mode spawns from subagent requester sessions",
       ctx: createRequesterContext({
         agentSessionKey: "agent:main:subagent:orchestrator",
         agentThreadId: undefined,
@@ -724,6 +757,7 @@ describe("spawnAcpDirect", () => {
       },
       {
         agentSessionKey: "agent:main:main",
+        agentChannel: "discord",
         agentAccountId: "default",
         agentTo: "channel:parent-channel",
       },
@@ -782,6 +816,7 @@ describe("spawnAcpDirect", () => {
     replaceSpawnConfig({
       ...hoisted.state.cfg,
       channels: {
+        discord: {
           threadBindings: {
             enabled: true,
             spawnAcpSessions: false,
@@ -798,6 +833,7 @@ describe("spawnAcpDirect", () => {
         mode: "session",
       },
       {
+        agentChannel: "discord",
         agentAccountId: "default",
         agentTo: "channel:parent-channel",
       },
@@ -867,6 +903,7 @@ describe("spawnAcpDirect", () => {
       },
       {
         agentSessionKey: "agent:main:main",
+        agentChannel: "discord",
         agentAccountId: "default",
         agentTo: "channel:parent-channel",
       },
@@ -934,6 +971,7 @@ describe("spawnAcpDirect", () => {
           sessionId: "parent-sess-1",
           updatedAt: Date.now(),
           deliveryContext: {
+            channel: "discord",
             to: "channel:parent-channel",
             accountId: "default",
           },
@@ -956,6 +994,7 @@ describe("spawnAcpDirect", () => {
       },
       {
         agentSessionKey: "agent:main:subagent:parent",
+        agentChannel: "discord",
         agentAccountId: "default",
         agentTo: "channel:parent-channel",
       },
@@ -990,6 +1029,7 @@ describe("spawnAcpDirect", () => {
         defaults: {
           heartbeat: {
             every: "30m",
+            target: "discord",
             to: "channel:ops-room",
           },
         },
@@ -1142,6 +1182,7 @@ describe("spawnAcpDirect", () => {
       },
       {
         agentSessionKey: "agent:main:subagent:thread-context",
+        agentChannel: "discord",
         agentAccountId: "default",
         agentTo: "channel:parent-channel",
         agentThreadId: "requester-thread",
@@ -1175,6 +1216,7 @@ describe("spawnAcpDirect", () => {
       },
       {
         agentSessionKey: "agent:main:subagent:thread-bound",
+        agentChannel: "discord",
         agentAccountId: "default",
         agentTo: "channel:parent-channel",
       },
@@ -1370,6 +1412,7 @@ describe("spawnAcpDirect", () => {
         streamTo: "parent",
       },
       {
+        agentChannel: "discord",
         agentAccountId: "default",
         agentTo: "channel:parent-channel",
       },

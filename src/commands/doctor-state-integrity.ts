@@ -223,6 +223,8 @@ export type LinuxSdBackedStateDir = {
 
 function parseLinuxMountInfo(rawMountInfo: string): LinuxMountInfoEntry[] {
   const entries: LinuxMountInfoEntry[] = [];
+  for (const line of rawMountInfo.split("\n")) {
+    const trimmed = line.trim();
     if (!trimmed) {
       continue;
     }
@@ -755,7 +757,10 @@ export async function noteStateIntegrity(
           `- Main session transcript missing (${shortenHomePath(transcriptPath)}). History will appear to reset.`,
         );
       } else {
+        const lineCount = countJsonlLines(transcriptPath);
+        if (lineCount <= 1) {
           warnings.push(
+            `- Main session transcript has only ${lineCount} line. Session history may not be appending.`,
           );
         }
       }

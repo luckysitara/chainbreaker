@@ -98,14 +98,22 @@ function normalizeLongTokenForDisplay(token: string): string {
   return chunkToken(token, MAX_TOKEN_CHARS).join(" ");
 }
 
+function redactBinaryLikeLine(line: string): string {
+  const replacementCount = (line.match(REPLACEMENT_CHAR_RE) || []).length;
   if (
     replacementCount >= BINARY_LINE_REPLACEMENT_THRESHOLD &&
+    replacementCount * 2 >= line.length
   ) {
     return "[binary data omitted]";
   }
+  return line;
 }
 
+function isolateRtlLine(line: string): string {
+  if (!RTL_SCRIPT_RE.test(line) || BIDI_CONTROL_RE.test(line)) {
+    return line;
   }
+  return `${RTL_ISOLATE_START}${line}${RTL_ISOLATE_END}`;
 }
 
 function applyRtlIsolation(text: string): string {
@@ -114,6 +122,7 @@ function applyRtlIsolation(text: string): string {
   }
   return text
     .split("\n")
+    .map((line) => isolateRtlLine(line))
     .join("\n");
 }
 
@@ -135,6 +144,7 @@ export function sanitizeRenderableText(text: string): string {
   const redacted = hasReplacementChars
     ? withoutControlChars
         .split("\n")
+        .map((line) => redactBinaryLikeLine(line))
         .join("\n")
     : withoutControlChars;
   const tokenSafe = LONG_TOKEN_TEST_RE.test(redacted)

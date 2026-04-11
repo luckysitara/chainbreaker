@@ -28,9 +28,12 @@ vi.mock("../../infra/outbound/deliver-runtime.js", async () => {
 
 const { routeReply } = await import("./route-reply.js");
 
+const slackMessaging: ChannelMessagingAdapter = {
   enableInteractiveReplies: ({ cfg }) =>
+    (cfg.channels?.slack as { capabilities?: { interactiveReplies?: boolean } } | undefined)
       ?.capabilities?.interactiveReplies === true,
   hasStructuredReplyPayload: ({ payload }) => {
+    const blocks = (payload.channelData?.slack as { blocks?: unknown } | undefined)?.blocks;
     if (typeof blocks === "string") {
       return blocks.trim().length > 0;
     }
@@ -38,6 +41,7 @@ const { routeReply } = await import("./route-reply.js");
   },
 };
 
+const slackThreading: ChannelThreadingAdapter = {
   resolveReplyTransport: ({ threadId, replyToId }) => ({
     replyToId: replyToId ?? (threadId != null && threadId !== "" ? String(threadId) : undefined),
     threadId: null,
@@ -76,6 +80,7 @@ async function expectSlackNoDelivery(
   mocks.deliverOutboundPayloads.mockClear();
   const res = await routeReply({
     payload,
+    channel: "slack",
     to: "channel:C123",
     cfg: {} as never,
     ...overrides,
@@ -90,10 +95,16 @@ describe("routeReply", () => {
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "discord",
+          plugin: createChannelPlugin("discord", { label: "Discord" }),
           source: "test",
         },
         {
+          pluginId: "slack",
+          plugin: createChannelPlugin("slack", {
             label: "Slack",
+            messaging: slackMessaging,
+            threading: slackThreading,
           }),
           source: "test",
         },
@@ -108,9 +119,13 @@ describe("routeReply", () => {
           source: "test",
         },
         {
+          pluginId: "signal",
+          plugin: createChannelPlugin("signal", { label: "Signal" }),
           source: "test",
         },
         {
+          pluginId: "imessage",
+          plugin: createChannelPlugin("imessage", { label: "iMessage" }),
           source: "test",
         },
         {
@@ -133,12 +148,15 @@ describe("routeReply", () => {
     setActivePluginRegistry(createTestRegistry());
   });
 
+  it("skips sends when abort signal is already aborted", async () => {
     const controller = new AbortController();
     controller.abort();
     const res = await routeReply({
       payload: { text: "hi" },
+      channel: "slack",
       to: "channel:C123",
       cfg: {} as never,
+      abortSignal: controller.signal,
     });
     expect(res.ok).toBe(false);
     expect(res.error).toContain("aborted");
@@ -160,11 +178,13 @@ describe("routeReply", () => {
   it("does not drop payloads that merely start with the silent token", async () => {
     const res = await routeReply({
       payload: { text: `${SILENT_REPLY_TOKEN} -- (why am I here?)` },
+      channel: "slack",
       to: "channel:C123",
       cfg: {} as never,
     });
     expect(res.ok).toBe(true);
     expectLastDelivery({
+      channel: "slack",
       to: "channel:C123",
       payloads: [
         expect.objectContaining({
@@ -180,6 +200,7 @@ describe("routeReply", () => {
     } as unknown as ChainbreakerConfig;
     await routeReply({
       payload: { text: "hi" },
+      channel: "slack",
       to: "channel:C123",
       cfg,
     });
@@ -191,11 +212,14 @@ describe("routeReply", () => {
   it("routes directive-only Slack replies when interactive replies are enabled", async () => {
     const cfg = {
       channels: {
+        slack: {
           capabilities: { interactiveReplies: true },
         },
       },
     } as unknown as ChainbreakerConfig;
     await routeReply({
+      payload: { text: "[[slack_select: Choose one | Alpha:alpha]]" },
+      channel: "slack",
       to: "channel:C123",
       cfg,
     });
@@ -220,6 +244,7 @@ describe("routeReply", () => {
     await expectSlackNoDelivery({
       text: " ",
       channelData: {
+        slack: {
           blocks: " ",
         },
       },
@@ -240,6 +265,7 @@ describe("routeReply", () => {
     } as unknown as ChainbreakerConfig;
     await routeReply({
       payload: { text: "hi" },
+      channel: "slack",
       to: "channel:C123",
       sessionKey: "agent:rich:main",
       cfg,
@@ -252,11 +278,13 @@ describe("routeReply", () => {
   it("uses threadId for Slack when replyToId is missing", async () => {
     await routeReply({
       payload: { text: "hi" },
+      channel: "slack",
       to: "channel:C123",
       threadId: "456.789",
       cfg: {} as never,
     });
     expectLastDelivery({
+      channel: "slack",
       replyToId: "456.789",
       threadId: null,
     });
@@ -280,20 +308,25 @@ describe("routeReply", () => {
   it("formats BTW replies prominently on routed sends", async () => {
     await routeReply({
       payload: { text: "323", btw: { question: "what is 17 * 19?" } },
+      channel: "slack",
       to: "channel:C123",
       cfg: {} as never,
     });
     expectLastDelivery({
+      channel: "slack",
       payloads: [expect.objectContaining({ text: "BTW\nQuestion: what is 17 * 19?\n\n323" })],
     });
   });
 
+  it("formats BTW replies prominently on routed discord sends", async () => {
     await routeReply({
       payload: { text: "323", btw: { question: "what is 17 * 19?" } },
+      channel: "discord",
       to: "channel:123456",
       cfg: {} as never,
     });
     expectLastDelivery({
+      channel: "discord",
       payloads: [expect.objectContaining({ text: "BTW\nQuestion: what is 17 * 19?\n\n323" })],
     });
   });
@@ -315,11 +348,13 @@ describe("routeReply", () => {
   it("preserves audioAsVoice on routed outbound payloads", async () => {
     await routeReply({
       payload: { text: "voice caption", mediaUrl: "file:///tmp/clip.mp3", audioAsVoice: true },
+      channel: "slack",
       to: "channel:C123",
       cfg: {} as never,
     });
     expect(mocks.deliverOutboundPayloads).toHaveBeenCalledTimes(1);
     expectLastDelivery({
+      channel: "slack",
       to: "channel:C123",
       payloads: [
         expect.objectContaining({
@@ -334,10 +369,12 @@ describe("routeReply", () => {
   it("uses replyToId as threadTs for Slack", async () => {
     await routeReply({
       payload: { text: "hi", replyToId: "1710000000.0001" },
+      channel: "slack",
       to: "channel:C123",
       cfg: {} as never,
     });
     expectLastDelivery({
+      channel: "slack",
       replyToId: "1710000000.0001",
       threadId: null,
     });
@@ -346,11 +383,13 @@ describe("routeReply", () => {
   it("uses threadId as threadTs for Slack when replyToId is missing", async () => {
     await routeReply({
       payload: { text: "hi" },
+      channel: "slack",
       to: "channel:C123",
       threadId: "1710000000.9999",
       cfg: {} as never,
     });
     expectLastDelivery({
+      channel: "slack",
       replyToId: "1710000000.9999",
       threadId: null,
     });
@@ -383,10 +422,12 @@ describe("routeReply", () => {
   it("preserves multiple mediaUrls as a single outbound payload", async () => {
     await routeReply({
       payload: { text: "caption", mediaUrls: ["a", "b"] },
+      channel: "slack",
       to: "channel:C123",
       cfg: {} as never,
     });
     expectLastDelivery({
+      channel: "slack",
       payloads: [
         expect.objectContaining({
           text: "caption",
@@ -436,6 +477,7 @@ describe("routeReply", () => {
   it("passes mirror data when sessionKey is set", async () => {
     await routeReply({
       payload: { text: "hi" },
+      channel: "slack",
       to: "channel:C123",
       sessionKey: "agent:main:main",
       isGroup: true,
@@ -455,6 +497,7 @@ describe("routeReply", () => {
   it("skips mirror data when mirror is false", async () => {
     await routeReply({
       payload: { text: "hi" },
+      channel: "slack",
       to: "channel:C123",
       sessionKey: "agent:main:main",
       mirror: false,

@@ -77,6 +77,9 @@ export const telegramChannelConfigUiHints = {
     label: "Telegram Auto Topic Label Prompt",
     help: "Custom prompt for LLM-based topic naming. The user message is appended after the prompt.",
   },
+  "capabilities.inlineButtons": {
+    label: "Telegram Inline Buttons",
+    help: "Enable Telegram inline button components for supported command and interaction surfaces. Disable if your deployment needs plain-text-only compatibility behavior.",
   },
   execApprovals: {
     label: "Telegram Exec Approvals",

@@ -17,9 +17,9 @@ describe("SUPERVISOR_HINT_ENV_VARS", () => {
 
 describe("detectRespawnSupervisor", () => {
   it("detects launchd and systemd only from non-blank platform-specific hints", () => {
-    expect(
-      detectRespawnSupervisor({ LAUNCH_JOB_LABEL: " ai.chainbreaker.gateway " }, "darwin"),
-    ).toBe("launchd");
+    expect(detectRespawnSupervisor({ LAUNCH_JOB_LABEL: " ai.chainbreaker.gateway " }, "darwin")).toBe(
+      "launchd",
+    );
     expect(detectRespawnSupervisor({ LAUNCH_JOB_LABEL: "   " }, "darwin")).toBeNull();
 
     expect(detectRespawnSupervisor({ INVOCATION_ID: "abc123" }, "linux")).toBe("systemd");

@@ -9,6 +9,7 @@ import {
   type MediaUnderstandingProvider,
 } from "../../plugin-sdk/media-understanding.js";
 import { resolveUserPath } from "../../utils.js";
+import { isMinimaxVlmProvider } from "../minimax-vlm.js";
 import {
   coerceImageAssistantText,
   coerceImageModelConfig,
@@ -107,6 +108,8 @@ export function resolveImageModelConfigForTool(params: {
     if (providerVisionFromConfig) {
       return [providerVisionFromConfig];
     }
+    if (primary.provider === "zai") {
+      return ["zai/glm-4.6v"];
     }
     if (primary.provider === "openai") {
       return ["openai/gpt-5-mini"];

@@ -325,6 +325,7 @@ function buildPresenceSchema() {
       }),
     ),
     status: Type.Optional(
+      Type.String({ description: "Bot status: online, dnd, idle, invisible." }),
     ),
   };
 }
@@ -674,7 +675,9 @@ export function createMessageTool(options?: MessageToolOptions): AnyAgentTool {
     displaySummary: "Send and manage messages across configured channels.",
     description,
     parameters: schema,
+    execute: async (_toolCallId, args, signal) => {
       // Check if already aborted before doing any work
+      if (signal?.aborted) {
         const err = new Error("Message send aborted");
         err.name = "AbortError";
         throw err;
@@ -789,6 +792,7 @@ export function createMessageTool(options?: MessageToolOptions): AnyAgentTool {
         sessionId: options?.sessionId,
         agentId: resolvedAgentId,
         sandboxRoot: options?.sandboxRoot,
+        abortSignal: signal,
       });
 
       const toolResult = getToolResult(result);

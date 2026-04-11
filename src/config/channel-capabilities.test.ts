@@ -24,6 +24,7 @@ describe("resolveChannelCapabilities", () => {
     const cfg = {
       channels: {
         telegram: {
+          capabilities: [" inlineButtons ", ""],
           accounts: {
             default: {
               capabilities: [" perAccount ", "  "],
@@ -46,6 +47,7 @@ describe("resolveChannelCapabilities", () => {
     const cfg = {
       channels: {
         telegram: {
+          capabilities: ["inlineButtons"],
           accounts: {
             default: {},
           },
@@ -59,11 +61,13 @@ describe("resolveChannelCapabilities", () => {
         channel: "telegram",
         accountId: "default",
       }),
+    ).toEqual(["inlineButtons"]);
   });
 
   it("matches account keys case-insensitively", () => {
     const cfg = {
       channels: {
+        slack: {
           accounts: {
             Family: { capabilities: ["threads"] },
           },
@@ -74,6 +78,7 @@ describe("resolveChannelCapabilities", () => {
     expect(
       resolveChannelCapabilities({
         cfg,
+        channel: "slack",
         accountId: "family",
       }),
     ).toEqual(["threads"]);
@@ -101,9 +106,13 @@ describe("resolveChannelCapabilities", () => {
     ).toEqual(["polls"]);
   });
 
+  it("handles object-format capabilities gracefully (e.g., { inlineButtons: 'dm' })", () => {
     const cfg = {
       channels: {
         telegram: {
+          // Object format - used for granular control like inlineButtons scope.
+          // Channel-specific handlers (resolveTelegramInlineButtonsScope) process these.
+          capabilities: { inlineButtons: "dm" },
         },
       },
     } as unknown as Partial<ChainbreakerConfig>;
@@ -120,6 +129,7 @@ describe("resolveChannelCapabilities", () => {
   it("handles Slack object-format capabilities gracefully", () => {
     const cfg = {
       channels: {
+        slack: {
           capabilities: { interactiveReplies: true },
         },
       },
@@ -128,6 +138,7 @@ describe("resolveChannelCapabilities", () => {
     expect(
       resolveChannelCapabilities({
         cfg,
+        channel: "slack",
       }),
     ).toBeUndefined();
   });
@@ -151,6 +162,7 @@ const createStubPlugin = (id: string): ChannelPlugin => ({
 
 const baseRegistry = createTestRegistry([
   { pluginId: "telegram", source: "test", plugin: createStubPlugin("telegram") },
+  { pluginId: "slack", source: "test", plugin: createStubPlugin("slack") },
 ]);
 
 const createMSTeamsPlugin = (): ChannelPlugin => createStubPlugin("msteams");

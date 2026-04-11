@@ -18,6 +18,7 @@ import { SILENT_REPLY_TOKEN } from "../tokens.js";
 import type { GetReplyOptions, ReplyPayload } from "../types.js";
 import { resolveDefaultModel } from "./directive-handling.defaults.js";
 import { resolveReplyDirectives } from "./get-reply-directives.js";
+import { handleInlineActions } from "./get-reply-inline-actions.js";
 import { runPreparedReply } from "./get-reply-run.js";
 import { finalizeInboundContext } from "./inbound-context.js";
 import { emitPreAgentMessageHooks } from "./message-preprocess-hooks.js";
@@ -340,6 +341,7 @@ export async function getReplyFromConfig(
     model: resolvedModel,
     modelState,
     contextTokens,
+    inlineStatusRequested,
     directiveAck,
     perMessageQueueMode,
     perMessageQueueOptions,
@@ -369,6 +371,7 @@ export async function getReplyFromConfig(
     });
   };
 
+  const inlineActionResult = await handleInlineActions({
     ctx,
     sessionCtx,
     cfg,
@@ -385,6 +388,7 @@ export async function getReplyFromConfig(
     opts: resolvedOpts,
     typing,
     allowTextCommands,
+    inlineStatusRequested,
     command,
     skillCommands,
     directives,
@@ -407,9 +411,13 @@ export async function getReplyFromConfig(
     abortedLastRun,
     skillFilter: mergedSkillFilter,
   });
+  if (inlineActionResult.kind === "reply") {
     await maybeEmitMissingResetHooks();
+    return inlineActionResult.reply;
   }
   await maybeEmitMissingResetHooks();
+  directives = inlineActionResult.directives;
+  abortedLastRun = inlineActionResult.abortedLastRun ?? abortedLastRun;
 
   if (sessionKey && hasInboundMedia(ctx)) {
     const { stageSandboxMedia } = await loadStageSandboxMediaRuntime();

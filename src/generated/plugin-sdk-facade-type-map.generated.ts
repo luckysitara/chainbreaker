@@ -273,6 +273,7 @@ export interface PluginSdkFacadeTypeMap {
       ResolvedTelegramAccount: import("@chainbreaker/telegram/api.js").ResolvedTelegramAccount;
       StickerMetadata: import("@chainbreaker/telegram/api.js").StickerMetadata;
       TelegramButtonStyle: import("@chainbreaker/telegram/api.js").TelegramButtonStyle;
+      TelegramInlineButtons: import("@chainbreaker/telegram/api.js").TelegramInlineButtons;
       TelegramProbe: import("@chainbreaker/telegram/api.js").TelegramProbe;
       TelegramTokenResolution: import("@chainbreaker/telegram/api.js").TelegramTokenResolution;
     };

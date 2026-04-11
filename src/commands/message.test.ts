@@ -124,8 +124,10 @@ type ChannelActionParams = Parameters<
 >[0];
 
 const createDiscordPollPluginRegistration = () => ({
+  pluginId: "discord",
   source: "test",
   plugin: createStubPlugin({
+    id: "discord",
     label: "Discord",
     actions: {
       describeMessageTool: () => ({ actions: ["poll"] }),
@@ -424,6 +426,7 @@ describe("messageCommand", () => {
 
   it("requires channel when multiple configured", async () => {
     process.env.TELEGRAM_BOT_TOKEN = "token-abc";
+    process.env.DISCORD_BOT_TOKEN = "token-discord";
     setActivePluginRegistry(
       createTestRegistry([
         {
@@ -478,6 +481,7 @@ describe("messageCommand", () => {
     expect(callGatewayMock).toHaveBeenCalled();
   });
 
+  it("routes discord polls through message action", async () => {
     setActivePluginRegistry(
       createTestRegistry([
         {
@@ -489,6 +493,7 @@ describe("messageCommand", () => {
     await messageCommand(
       {
         action: "poll",
+        channel: "discord",
         target: "channel:123456789",
         pollQuestion: "Snack?",
         pollOption: ["Pizza", "Sushi"],

@@ -12,6 +12,8 @@ describe("unsupported SecretRef surface policy metadata", () => {
       "hooks.gmail.pushToken",
       "hooks.mappings[].sessionKey",
       "auth-profiles.oauth.*",
+      "channels.discord.threadBindings.webhookToken",
+      "channels.discord.accounts.*.threadBindings.webhookToken",
       "channels.whatsapp.creds.json",
       "channels.whatsapp.accounts.*.creds.json",
     ]);
@@ -26,6 +28,7 @@ describe("unsupported SecretRef surface policy metadata", () => {
         mappings: [{ sessionKey: { source: "env", provider: "default", id: "S0" } }],
       },
       channels: {
+        discord: {
           threadBindings: {
             webhookToken: { source: "env", provider: "default", id: "DISCORD_WEBHOOK" },
           },
@@ -60,6 +63,8 @@ describe("unsupported SecretRef surface policy metadata", () => {
         "hooks.token",
         "hooks.gmail.pushToken",
         "hooks.mappings.0.sessionKey",
+        "channels.discord.threadBindings.webhookToken",
+        "channels.discord.accounts.ops.threadBindings.webhookToken",
         "channels.whatsapp.creds.json",
         "channels.whatsapp.accounts.ops.creds.json",
       ].toSorted(),

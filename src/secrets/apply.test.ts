@@ -289,6 +289,7 @@ describe("secrets apply", () => {
     expect(dryRunAllowed.mode).toBe("dry-run");
     expect(dryRunAllowed.skippedExecRefs).toBe(0);
     const callLog = await fs.readFile(execLogPath, "utf8");
+    expect(callLog.split("\n").filter((line) => line.trim().length > 0).length).toBeGreaterThan(0);
   });
 
   it("rejects write mode for exec plans unless allowExec is set", async () => {

@@ -38,6 +38,7 @@ export type BundleLspToolRuntime = {
 
 type LspPositionParams = {
   uri: string;
+  line: number;
   character: number;
 };
 
@@ -189,13 +190,16 @@ function createLspPositionTool(params: {
       type: "object",
       properties: {
         uri: { type: "string", description: "File URI (file:///path/to/file)" },
+        line: { type: "number", description: "Zero-based line number" },
         character: { type: "number", description: "Zero-based character offset" },
       },
+      required: ["uri", "line", "character"],
     },
     execute: async (_toolCallId, input) => {
       const position = input as LspPositionParams;
       const result = await sendRequest(params.session, params.method, {
         textDocument: { uri: position.uri },
+        position: { line: position.line, character: position.character },
       });
       return formatLspResult(params.session.serverName, params.resultLabel, result);
     },
@@ -242,21 +246,25 @@ function buildLspTools(session: LspSession): AnyAgentTool[] {
         type: "object",
         properties: {
           uri: { type: "string", description: "File URI (file:///path/to/file)" },
+          line: { type: "number", description: "Zero-based line number" },
           character: { type: "number", description: "Zero-based character offset" },
           includeDeclaration: {
             type: "boolean",
             description: "Include the declaration in results",
           },
         },
+        required: ["uri", "line", "character"],
       },
       execute: async (_toolCallId, input) => {
         const params = input as {
           uri: string;
+          line: number;
           character: number;
           includeDeclaration?: boolean;
         };
         const result = await sendRequest(session, "textDocument/references", {
           textDocument: { uri: params.uri },
+          position: { line: params.line, character: params.character },
           context: { includeDeclaration: params.includeDeclaration ?? true },
         });
         return formatLspResult(serverLabel, "references", result);
@@ -335,6 +343,8 @@ export async function createBundleLspToolRuntime(params: {
         child.stdout?.on("data", (chunk: string) => handleIncomingData(session, chunk));
         child.stderr?.setEncoding("utf-8");
         child.stderr?.on("data", (chunk: string) => {
+          for (const line of chunk.split(/\r?\n/).filter(Boolean)) {
+            logDebug(`bundle-lsp:${serverName}: ${line.trim()}`);
           }
         });
 

@@ -41,11 +41,14 @@ const HOT_BROWSER_WINDOW_MS = 5 * 60 * 1000;
 const CDP_SOURCE_RANGE_ENV_KEY = "CHAINBREAKER_BROWSER_CDP_SOURCE_RANGE";
 
 async function waitForSandboxCdp(params: { cdpPort: number; timeoutMs: number }): Promise<boolean> {
+  const deadline = Date.now() + Math.max(0, params.timeoutMs);
   const url = `http://127.0.0.1:${params.cdpPort}/json/version`;
+  while (Date.now() < deadline) {
     try {
       const ctrl = new AbortController();
       const t = setTimeout(ctrl.abort.bind(ctrl), 1000);
       try {
+        const res = await fetch(url, { signal: ctrl.signal });
         if (res.ok) {
           return true;
         }
@@ -251,10 +254,7 @@ export async function ensureSandboxBrowser(params: {
       args.push("-p", `127.0.0.1::${params.cfg.browser.noVncPort}`);
     }
     args.push("-e", `CHAINBREAKER_BROWSER_HEADLESS=${params.cfg.browser.headless ? "1" : "0"}`);
-    args.push(
-      "-e",
-      `CHAINBREAKER_BROWSER_ENABLE_NOVNC=${params.cfg.browser.enableNoVnc ? "1" : "0"}`,
-    );
+    args.push("-e", `CHAINBREAKER_BROWSER_ENABLE_NOVNC=${params.cfg.browser.enableNoVnc ? "1" : "0"}`);
     args.push("-e", `CHAINBREAKER_BROWSER_CDP_PORT=${params.cfg.browser.cdpPort}`);
     if (cdpSourceRange) {
       args.push("-e", `${CDP_SOURCE_RANGE_ENV_KEY}=${cdpSourceRange}`);

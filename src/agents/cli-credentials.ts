@@ -11,6 +11,7 @@ const log = createSubsystemLogger("agents/auth-profiles");
 
 const CLAUDE_CLI_CREDENTIALS_RELATIVE_PATH = ".claude/.credentials.json";
 const CODEX_CLI_AUTH_FILENAME = "auth.json";
+const MINIMAX_CLI_CREDENTIALS_RELATIVE_PATH = ".minimax/oauth_creds.json";
 
 const CLAUDE_CLI_KEYCHAIN_SERVICE = "Claude Code-credentials";
 const CLAUDE_CLI_KEYCHAIN_ACCOUNT = "Claude Code";
@@ -24,10 +25,12 @@ type CachedValue<T> = {
 
 let claudeCliCache: CachedValue<ClaudeCliCredential> | null = null;
 let codexCliCache: CachedValue<CodexCliCredential> | null = null;
+let minimaxCliCache: CachedValue<MiniMaxCliCredential> | null = null;
 
 export function resetCliCredentialCachesForTest(): void {
   claudeCliCache = null;
   codexCliCache = null;
+  minimaxCliCache = null;
 }
 
 export type ClaudeCliCredential =
@@ -56,6 +59,7 @@ export type CodexCliCredential = {
 
 export type MiniMaxCliCredential = {
   type: "oauth";
+  provider: "minimax-portal";
   access: string;
   refresh: string;
   expires: number;
@@ -295,6 +299,7 @@ function readPortalCliOauthCredentials<TProvider extends string>(
 
 function readMiniMaxCliCredentials(options?: { homeDir?: string }): MiniMaxCliCredential | null {
   const credPath = resolveMiniMaxCliCredentialsPath(options?.homeDir);
+  return readPortalCliOauthCredentials(credPath, "minimax-portal");
 }
 
 function readClaudeCliKeychainCredentials(
@@ -564,9 +569,11 @@ export function readMiniMaxCliCredentialsCached(options?: {
   const credPath = resolveMiniMaxCliCredentialsPath(options?.homeDir);
   return readCachedCliCredential({
     ttlMs: options?.ttlMs ?? 0,
+    cache: minimaxCliCache,
     cacheKey: credPath,
     read: () => readMiniMaxCliCredentials({ homeDir: options?.homeDir }),
     setCache: (next) => {
+      minimaxCliCache = next;
     },
     readSourceFingerprint: () => readFileMtimeMs(credPath),
   });

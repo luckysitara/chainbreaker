@@ -31,15 +31,23 @@ async function runCommandSafe(argv: string[], timeoutMs = 5_000): Promise<Comman
 }
 
 function parseLsofFieldOutput(output: string): PortListener[] {
+  const lines = output.split(/\r?\n/).filter(Boolean);
   const listeners: PortListener[] = [];
   let current: PortListener = {};
+  for (const line of lines) {
+    if (line.startsWith("p")) {
       if (current.pid || current.command) {
         listeners.push(current);
       }
+      const pid = Number.parseInt(line.slice(1), 10);
       current = Number.isFinite(pid) ? { pid } : {};
+    } else if (line.startsWith("c")) {
+      current.command = line.slice(1);
+    } else if (line.startsWith("n")) {
       // TCP 127.0.0.1:18789 (LISTEN)
       // TCP *:18789 (LISTEN)
       if (!current.address) {
+        current.address = line.slice(1);
       }
     }
   }
@@ -78,6 +86,8 @@ async function resolveUnixCommandLine(pid: number): Promise<string | undefined> 
   if (res.code !== 0) {
     return undefined;
   }
+  const line = res.stdout.trim();
+  return line || undefined;
 }
 
 async function resolveUnixUser(pid: number): Promise<string | undefined> {
@@ -85,6 +95,8 @@ async function resolveUnixUser(pid: number): Promise<string | undefined> {
   if (res.code !== 0) {
     return undefined;
   }
+  const line = res.stdout.trim();
+  return line || undefined;
 }
 
 async function resolveUnixParentPid(pid: number): Promise<number | undefined> {
@@ -92,13 +104,19 @@ async function resolveUnixParentPid(pid: number): Promise<number | undefined> {
   if (res.code !== 0) {
     return undefined;
   }
+  const line = res.stdout.trim();
+  const parentPid = Number.parseInt(line, 10);
   return Number.isFinite(parentPid) && parentPid > 0 ? parentPid : undefined;
 }
 
 function parseSsListeners(output: string, port: number): PortListener[] {
+  const lines = output.split(/\r?\n/).map((line) => line.trim());
   const listeners: PortListener[] = [];
+  for (const line of lines) {
+    if (!line || !line.includes("LISTEN")) {
       continue;
     }
+    const parts = line.split(/\s+/);
     const localAddress = parts.find((part) => part.includes(`:${port}`));
     if (!localAddress) {
       continue;
@@ -106,12 +124,14 @@ function parseSsListeners(output: string, port: number): PortListener[] {
     const listener: PortListener = {
       address: localAddress,
     };
+    const pidMatch = line.match(/pid=(\d+)/);
     if (pidMatch) {
       const pid = Number.parseInt(pidMatch[1], 10);
       if (Number.isFinite(pid)) {
         listener.pid = pid;
       }
     }
+    const commandMatch = line.match(/users:\(\("([^"]+)"/);
     if (commandMatch?.[1]) {
       listener.command = commandMatch[1];
     }
@@ -183,12 +203,17 @@ function parseNetstatListeners(output: string, port: number): PortListener[] {
   const listeners: PortListener[] = [];
   const portToken = `:${port}`;
   for (const rawLine of output.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) {
       continue;
     }
+    if (!line.toLowerCase().includes("listen")) {
       continue;
     }
+    if (!line.includes(portToken)) {
       continue;
     }
+    const parts = line.split(/\s+/);
     if (parts.length < 4) {
       continue;
     }
@@ -213,8 +238,11 @@ async function resolveWindowsImageName(pid: number): Promise<string | undefined>
     return undefined;
   }
   for (const rawLine of res.stdout.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line.toLowerCase().startsWith("image name:")) {
       continue;
     }
+    const value = line.slice("image name:".length).trim();
     return value || undefined;
   }
   return undefined;
@@ -234,8 +262,11 @@ async function resolveWindowsCommandLine(pid: number): Promise<string | undefine
     return undefined;
   }
   for (const rawLine of res.stdout.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line.toLowerCase().startsWith("commandline=")) {
       continue;
     }
+    const value = line.slice("commandline=".length).trim();
     return value || undefined;
   }
   return undefined;

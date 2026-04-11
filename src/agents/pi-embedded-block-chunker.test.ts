@@ -31,6 +31,8 @@ describe("EmbeddedBlockChunker", () => {
       "console.log('x')",
       "```",
       "",
+      "After first line",
+      "After second line",
     ].join("\n");
 
     chunker.append(text);
@@ -133,6 +135,7 @@ describe("EmbeddedBlockChunker", () => {
       breakPreference: "paragraph",
     });
 
+    chunker.append(`\`\`\`txt\n${"line\n".repeat(600)}\`\`\``);
     const chunks = drainChunks(chunker);
 
     expect(chunks.length).toBeGreaterThan(2);

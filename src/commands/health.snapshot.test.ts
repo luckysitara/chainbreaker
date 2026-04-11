@@ -150,6 +150,7 @@ async function probeTelegramAccountForTest(
   const base = `${apiRoot}/bot${account.token}`;
 
   try {
+    const meRes = await fetch(`${base}/getMe`, { signal: AbortSignal.timeout(timeoutMs) });
     const meJson = (await meRes.json()) as {
       ok?: boolean;
       description?: string;
@@ -167,6 +168,7 @@ async function probeTelegramAccountForTest(
     let webhook: { url?: string | null; hasCustomCert?: boolean | null } | undefined;
     try {
       const webhookRes = await fetch(`${base}/getWebhookInfo`, {
+        signal: AbortSignal.timeout(timeoutMs),
       });
       const webhookJson = (await webhookRes.json()) as {
         ok?: boolean;

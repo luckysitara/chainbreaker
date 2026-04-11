@@ -56,6 +56,7 @@ async function resolveRuntimeChannelId(raw?: string | null): Promise<ChannelId |
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function resolveBuiltInRequireMentionFromConfig(params: {
   cfg: ChainbreakerConfig;
   channel: ChannelId;
@@ -140,13 +141,19 @@ export function buildGroupChatContext(params: { sessionCtx: TemplateContext }): 
   const members = params.sessionCtx.GroupMembers?.trim();
   const providerLabel = resolveProviderLabel(params.sessionCtx.Provider);
 
+  const lines: string[] = [];
   if (subject) {
+    lines.push(`You are in the ${providerLabel} group chat "${subject}".`);
   } else {
+    lines.push(`You are in a ${providerLabel} group chat.`);
   }
   if (members) {
+    lines.push(`Participants: ${members}.`);
   }
+  lines.push(
     "Your replies are automatically sent to this group chat. Do not use the message tool to send to this same group — just reply normally.",
   );
+  return lines.join(" ");
 }
 
 export function buildGroupIntro(params: {
@@ -175,6 +182,7 @@ export function buildGroupIntro(params: {
   const lurkLine =
     "Be a good group participant: mostly lurk and follow the conversation; reply only when directly addressed or you can add clear value. Emoji reactions are welcome when available.";
   const styleLine =
+    "Write like a human. Avoid Markdown tables. Don't type literal \\n sequences; use real line breaks sparingly.";
   return [activationLine, providerIdsLine, silenceLine, cautionLine, lurkLine, styleLine]
     .filter(Boolean)
     .join(" ")

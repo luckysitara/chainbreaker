@@ -27,6 +27,7 @@ afterEach(async () => {
 });
 
 describe("sandbox ssh helpers", () => {
+  it("materializes inline ssh auth data into a temp config", async () => {
     const session = await createSshSandboxSessionFromSettings({
       command: "ssh",
       target: "peter@example.com:2222",
@@ -54,6 +55,7 @@ describe("sandbox ssh helpers", () => {
     );
   });
 
+  it("normalizes CRLF and escaped-newline private keys before writing temp files", async () => {
     const session = await createSshSandboxSessionFromSettings({
       command: "ssh",
       target: "peter@example.com:2222",
@@ -74,12 +76,14 @@ describe("sandbox ssh helpers", () => {
     );
   });
 
+  it("normalizes mixed real and escaped newlines in private keys", async () => {
     const session = await createSshSandboxSessionFromSettings({
       command: "ssh",
       target: "peter@example.com:2222",
       strictHostKeyChecking: true,
       updateHostKeys: false,
       identityData:
+        "-----BEGIN OPENSSH PRIVATE KEY-----\nline-1\\nline-2\n-----END OPENSSH PRIVATE KEY-----",
       knownHostsData: "example.com ssh-ed25519 AAAATEST",
     });
     sessions.push(session);
@@ -87,6 +91,8 @@ describe("sandbox ssh helpers", () => {
     const configDir = session.configPath.slice(0, session.configPath.lastIndexOf("/"));
     expect(await fs.readFile(`${configDir}/identity`, "utf8")).toBe(
       "-----BEGIN OPENSSH PRIVATE KEY-----\n" +
+        "line-1\n" +
+        "line-2\n" +
         "-----END OPENSSH PRIVATE KEY-----\n",
     );
   });

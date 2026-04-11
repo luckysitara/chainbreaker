@@ -145,13 +145,13 @@ function renderZone(opts: WideAreaGatewayZoneOpts & { serial: number }): string 
   }
 
   records.push(`_chainbreaker-gw._tcp IN PTR ${instanceLabel}._chainbreaker-gw._tcp`);
-  records.push(
-    `${instanceLabel}._chainbreaker-gw._tcp IN SRV 0 0 ${opts.gatewayPort} ${hostLabel}`,
-  );
+  records.push(`${instanceLabel}._chainbreaker-gw._tcp IN SRV 0 0 ${opts.gatewayPort} ${hostLabel}`);
   records.push(`${instanceLabel}._chainbreaker-gw._tcp IN TXT ${txt.map(txtQuote).join(" ")}`);
 
   const contentBody = `${records.join("\n")}\n`;
   const hashBody = `${records
+    .map((line) =>
+      line === soaLine ? `@ IN SOA ns1 hostmaster SERIAL 7200 3600 1209600 60` : line,
     )
     .join("\n")}\n`;
   const contentHash = computeContentHash(hashBody);

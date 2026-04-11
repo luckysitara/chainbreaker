@@ -135,6 +135,7 @@ export async function discoverHuggingfaceModels(apiKey: string): Promise<ModelDe
 
   try {
     const response = await fetch(`${HUGGINGFACE_BASE_URL}/models`, {
+      signal: AbortSignal.timeout(10_000),
       headers: {
         Authorization: `Bearer ${trimmedKey}`,
         "Content-Type": "application/json",

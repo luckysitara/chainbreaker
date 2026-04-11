@@ -9,14 +9,21 @@ export function parseVcard(vcard?: string): ParsedVcard {
   if (!vcard) {
     return { phones: [] };
   }
+  const lines = vcard.split(/\r?\n/);
   let nameFromN: string | undefined;
   let nameFromFn: string | undefined;
   const phones: string[] = [];
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
       continue;
     }
+    const colonIndex = line.indexOf(":");
     if (colonIndex === -1) {
       continue;
     }
+    const key = line.slice(0, colonIndex).toUpperCase();
+    const rawValue = line.slice(colonIndex + 1).trim();
     if (!rawValue) {
       continue;
     }

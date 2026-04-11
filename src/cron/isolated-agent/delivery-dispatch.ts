@@ -309,17 +309,20 @@ function resolveDirectCronRetryDelaysMs(): readonly number[] {
 
 async function retryTransientDirectCronDelivery<T>(params: {
   jobId: string;
+  signal?: AbortSignal;
   run: () => Promise<T>;
 }): Promise<T> {
   const retryDelaysMs = resolveDirectCronRetryDelaysMs();
   let retryIndex = 0;
   for (;;) {
+    if (params.signal?.aborted) {
       throw new Error("cron delivery aborted");
     }
     try {
       return await params.run();
     } catch (err) {
       const delayMs = retryDelaysMs[retryIndex];
+      if (delayMs == null || !isTransientDirectCronDeliveryError(err) || params.signal?.aborted) {
         throw err;
       }
       const nextAttempt = retryIndex + 2;
@@ -328,6 +331,7 @@ async function retryTransientDirectCronDelivery<T>(params: {
         `[cron:${params.jobId}] transient direct announce delivery failure, retrying ${nextAttempt}/${maxAttempts} in ${Math.round(delayMs / 1000)}s: ${summarizeDirectCronDeliveryError(err)}`,
       );
       retryIndex += 1;
+      await sleepWithAbort(delayMs, params.signal);
     }
   }
 }
@@ -462,6 +466,7 @@ export async function dispatchCronDelivery(
       const deliveryResults = options?.retryTransient
         ? await retryTransientDirectCronDelivery({
             jobId: params.job.id,
+            signal: params.abortSignal,
             run: runDelivery,
           })
         : await runDelivery();

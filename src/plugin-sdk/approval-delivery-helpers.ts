@@ -28,10 +28,7 @@ export function createApproverRestrictedNativeApprovalAdapter(params: {
   hasApprovers: (params: ApprovalAdapterParams) => boolean;
   isExecAuthorizedSender: (params: ApprovalAdapterParams) => boolean;
   isPluginAuthorizedSender?: (params: ApprovalAdapterParams) => boolean;
-  isNativeDeliveryEnabled: (params: {
-    cfg: ChainbreakerConfig;
-    accountId?: string | null;
-  }) => boolean;
+  isNativeDeliveryEnabled: (params: { cfg: ChainbreakerConfig; accountId?: string | null }) => boolean;
   resolveNativeDeliveryMode: (params: {
     cfg: ChainbreakerConfig;
     accountId?: string | null;

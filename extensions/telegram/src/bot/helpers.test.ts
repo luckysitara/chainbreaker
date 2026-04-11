@@ -164,6 +164,7 @@ describe("normalizeForwardedContext", () => {
         sender_user: { first_name: "Ada", last_name: "Lovelace", username: "ada", id: 42 },
         date: 123,
       },
+      // oxlint-disable-next-line typescript/no-explicit-any
     } as any);
     expect(ctx).not.toBeNull();
     expect(ctx?.from).toBe("Ada Lovelace (@ada)");
@@ -177,6 +178,7 @@ describe("normalizeForwardedContext", () => {
   it("handles hidden forward_origin names", () => {
     const ctx = normalizeForwardedContext({
       forward_origin: { type: "hidden_user", sender_user_name: "Hidden Name", date: 456 },
+      // oxlint-disable-next-line typescript/no-explicit-any
     } as any);
     expect(ctx).not.toBeNull();
     expect(ctx?.from).toBe("Hidden Name");
@@ -199,6 +201,7 @@ describe("normalizeForwardedContext", () => {
         author_signature: "Editor",
         message_id: 42,
       },
+      // oxlint-disable-next-line typescript/no-explicit-any
     } as any);
     expect(ctx).not.toBeNull();
     expect(ctx?.from).toBe("Tech News (Editor)");
@@ -224,6 +227,7 @@ describe("normalizeForwardedContext", () => {
         date: 600,
         author_signature: "Admin",
       },
+      // oxlint-disable-next-line typescript/no-explicit-any
     } as any);
     expect(ctx).not.toBeNull();
     expect(ctx?.from).toBe("Discussion Group (Admin)");
@@ -244,6 +248,7 @@ describe("normalizeForwardedContext", () => {
         author_signature: "New Sig",
         message_id: 1,
       },
+      // oxlint-disable-next-line typescript/no-explicit-any
     } as any);
     expect(ctx).not.toBeNull();
     expect(ctx?.fromSignature).toBe("New Sig");
@@ -259,6 +264,7 @@ describe("normalizeForwardedContext", () => {
         author_signature: "   ",
         message_id: 1,
       },
+      // oxlint-disable-next-line typescript/no-explicit-any
     } as any);
     expect(ctx).not.toBeNull();
     expect(ctx?.fromSignature).toBeUndefined();
@@ -273,6 +279,7 @@ describe("normalizeForwardedContext", () => {
         date: 900,
         message_id: 1,
       },
+      // oxlint-disable-next-line typescript/no-explicit-any
     } as any);
     expect(ctx).not.toBeNull();
     expect(ctx?.from).toBe("News");
@@ -284,6 +291,7 @@ describe("normalizeForwardedContext", () => {
 describe("describeReplyTarget", () => {
   it("returns null when no reply_to_message", () => {
     const result = describeReplyTarget(
+      // oxlint-disable-next-line typescript/no-explicit-any
       { message_id: 1, date: 1000, chat: { id: 1, type: "private" } } as any,
     );
     expect(result).toBeNull();
@@ -301,6 +309,7 @@ describe("describeReplyTarget", () => {
         text: "Original message",
         from: { id: 42, first_name: "Alice", is_bot: false },
       },
+      // oxlint-disable-next-line typescript/no-explicit-any
     } as any);
     expect(result).not.toBeNull();
     expect(result?.body).toBe("Original message");
@@ -322,6 +331,7 @@ describe("describeReplyTarget", () => {
         text: { some: "object" },
         from: { id: 42, first_name: "Alice", is_bot: false },
       },
+      // oxlint-disable-next-line typescript/no-explicit-any
     } as any);
     // Should not throw when reply text is malformed; return null instead.
     expect(result).toBeNull();
@@ -340,6 +350,7 @@ describe("describeReplyTarget", () => {
         caption: "Caption body",
         from: { id: 42, first_name: "Alice", is_bot: false },
       },
+      // oxlint-disable-next-line typescript/no-explicit-any
     } as any);
     expect(result?.body).toBe("Caption body");
     expect(result?.kind).toBe("reply");
@@ -371,6 +382,7 @@ describe("describeReplyTarget", () => {
           date: 500,
         },
       },
+      // oxlint-disable-next-line typescript/no-explicit-any
     } as any);
     expect(result).not.toBeNull();
     expect(result?.body).toBe("This is the forwarded content");
@@ -402,6 +414,7 @@ describe("describeReplyTarget", () => {
           author_signature: "Editor",
         },
       },
+      // oxlint-disable-next-line typescript/no-explicit-any
     } as any);
     expect(result).not.toBeNull();
     expect(result?.forwardedFrom).toBeDefined();
@@ -433,6 +446,7 @@ describe("describeReplyTarget", () => {
           date: 700,
         },
       },
+      // oxlint-disable-next-line typescript/no-explicit-any
     } as any);
     expect(result).not.toBeNull();
     expect(result?.id).toBe("4");
@@ -452,6 +466,7 @@ describe("hasBotMention", () => {
         chat: { id: 1, type: "private" },
         date: 1,
         message_id: 1,
+        // oxlint-disable-next-line typescript/no-explicit-any
       } as any),
     ).toEqual({
       text: "@gaian hello",
@@ -465,6 +480,7 @@ describe("hasBotMention", () => {
         {
           text: "@gaian what is the group id?",
           chat: { id: 1, type: "supergroup" },
+          // oxlint-disable-next-line typescript/no-explicit-any
         } as any,
         "gaian",
       ),
@@ -477,6 +493,7 @@ describe("hasBotMention", () => {
         {
           text: "@GaianChat_Bot what is the group id?",
           chat: { id: 1, type: "supergroup" },
+          // oxlint-disable-next-line typescript/no-explicit-any
         } as any,
         "gaian",
       ),
@@ -490,6 +507,7 @@ describe("hasBotMention", () => {
           text: "@GaianChat_Bot hi @gaian",
           entities: [{ type: "mention", offset: 18, length: 6 }],
           chat: { id: 1, type: "supergroup" },
+          // oxlint-disable-next-line typescript/no-explicit-any
         } as any,
         "gaian",
       ),
@@ -502,6 +520,7 @@ describe("hasBotMention", () => {
         {
           text: "@gaian, what's up?",
           chat: { id: 1, type: "supergroup" },
+          // oxlint-disable-next-line typescript/no-explicit-any
         } as any,
         "gaian",
       ),
@@ -514,6 +533,7 @@ describe("hasBotMention", () => {
         {
           text: "@gaian how are you",
           chat: { id: 1, type: "supergroup" },
+          // oxlint-disable-next-line typescript/no-explicit-any
         } as any,
         "gaian",
       ),
@@ -526,6 +546,7 @@ describe("hasBotMention", () => {
         {
           text: "@gaianchat_bot hello",
           chat: { id: 1, type: "supergroup" },
+          // oxlint-disable-next-line typescript/no-explicit-any
         } as any,
         "gaian",
       ),
@@ -538,6 +559,7 @@ describe("hasBotMention", () => {
         {
           text: "@gaianbot do something",
           chat: { id: 1, type: "supergroup" },
+          // oxlint-disable-next-line typescript/no-explicit-any
         } as any,
         "gaian",
       ),

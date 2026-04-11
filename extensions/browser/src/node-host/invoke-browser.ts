@@ -152,10 +152,12 @@ async function readBrowserProxyStatus(params: {
   const query = params.profile ? { profile: params.profile } : {};
   try {
     const response = await withTimeout(
+      (signal) =>
         params.dispatcher.dispatch({
           method: "GET",
           path: "/",
           query,
+          signal,
         }),
       BROWSER_PROXY_STATUS_TIMEOUT_MS,
       "browser proxy status",
@@ -267,11 +269,13 @@ export async function runBrowserProxyCommand(paramsJSON?: string | null): Promis
   let response;
   try {
     response = await withTimeout(
+      (signal) =>
         dispatcher.dispatch({
           method: method === "DELETE" ? "DELETE" : method === "POST" ? "POST" : "GET",
           path,
           query,
           body,
+          signal,
         }),
       timeoutMs,
       "browser proxy request",

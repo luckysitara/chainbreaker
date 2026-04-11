@@ -30,6 +30,7 @@ export function createMemorySearchTool(options: {
     label: "Memory Search",
     name: "memory_search",
     description:
+      "Mandatory recall step: semantically search MEMORY.md + memory/*.md (and optional session transcripts) before answering questions about prior work, decisions, dates, people, preferences, or todos; returns top snippets with path + lines. If response has disabled=true, memory retrieval is unavailable and should be surfaced to the user.",
     parameters: MemorySearchSchema,
     execute:
       ({ cfg, agentId }) =>
@@ -86,12 +87,14 @@ export function createMemoryGetTool(options: {
     label: "Memory Get",
     name: "memory_get",
     description:
+      "Safe snippet read from MEMORY.md or memory/*.md with optional from/lines; use after memory_search to pull only the needed lines and keep context small.",
     parameters: MemoryGetSchema,
     execute:
       ({ cfg, agentId }) =>
       async (_toolCallId, params) => {
         const relPath = readStringParam(params, "path", { required: true });
         const from = readNumberParam(params, "from", { integer: true });
+        const lines = readNumberParam(params, "lines", { integer: true });
         const { readAgentMemoryFile, resolveMemoryBackendConfig } = await loadMemoryToolRuntime();
         const resolved = resolveMemoryBackendConfig({ cfg, agentId });
         if (resolved.backend === "builtin") {
@@ -101,6 +104,7 @@ export function createMemoryGetTool(options: {
               agentId,
               relPath,
               from: from ?? undefined,
+              lines: lines ?? undefined,
             });
             return jsonResult(result);
           } catch (err) {
@@ -120,6 +124,7 @@ export function createMemoryGetTool(options: {
           const result = await memory.manager.readFile({
             relPath,
             from: from ?? undefined,
+            lines: lines ?? undefined,
           });
           return jsonResult(result);
         } catch (err) {

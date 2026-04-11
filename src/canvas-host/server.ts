@@ -75,6 +75,7 @@ function defaultIndexHTML() {
   html, body { height: 100%; margin: 0; background: #000; color: #fff; font: 16px/1.4 -apple-system, BlinkMacSystemFont, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
   .wrap { min-height: 100%; display: grid; place-items: center; padding: 24px; }
   .card { width: min(720px, 100%); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10); border-radius: 16px; padding: 18px 18px 14px; }
+  .title { display: flex; align-items: baseline; gap: 10px; }
   h1 { margin: 0; font-size: 22px; letter-spacing: 0.2px; }
   .sub { opacity: 0.75; font-size: 13px; }
   .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }

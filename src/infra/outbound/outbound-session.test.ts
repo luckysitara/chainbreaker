@@ -14,10 +14,13 @@ describe("resolveOutboundSessionRoute", () => {
     session: {
       dmScope: "per-peer",
       identityLinks: {
+        alice: ["discord:123"],
       },
     },
   } as ChainbreakerConfig;
+  const slackMpimCfg = {
     channels: {
+      slack: {
         dm: {
           groupChannels: ["G123"],
         },
@@ -65,9 +68,7 @@ describe("resolveOutboundSessionRoute", () => {
   type RouteCase = Parameters<typeof expectResolvedRoute>[0];
   type NamedRouteCase = RouteCase & { name: string };
 
-  const perChannelPeerSessionCfg = {
-    session: { dmScope: "per-channel-peer" },
-  } as ChainbreakerConfig;
+  const perChannelPeerSessionCfg = { session: { dmScope: "per-channel-peer" } } as ChainbreakerConfig;
 
   it.each([
     {
@@ -85,7 +86,12 @@ describe("resolveOutboundSessionRoute", () => {
     {
       name: "Matrix room target",
       cfg: baseConfig,
+      channel: "matrix",
+      target: "room:!ops:matrix.example",
       expected: {
+        sessionKey: "agent:main:matrix:channel:!ops:matrix.example",
+        from: "matrix:channel:!ops:matrix.example",
+        to: "room:!ops:matrix.example",
         chatType: "channel",
       },
     },
@@ -104,9 +110,12 @@ describe("resolveOutboundSessionRoute", () => {
     {
       name: "Slack thread",
       cfg: baseConfig,
+      channel: "slack",
       target: "channel:C123",
       replyToId: "456",
       expected: {
+        sessionKey: "agent:main:slack:channel:c123:thread:456",
+        from: "slack:channel:C123",
         to: "channel:C123",
         threadId: "456",
       },
@@ -163,6 +172,7 @@ describe("resolveOutboundSessionRoute", () => {
     {
       name: "identity-links per-peer",
       cfg: identityLinksCfg,
+      channel: "discord",
       target: "user:123",
       expected: {
         sessionKey: "agent:main:direct:alice",
@@ -238,8 +248,12 @@ describe("resolveOutboundSessionRoute", () => {
     },
     {
       name: "Slack mpim allowlist -> group key",
+      cfg: slackMpimCfg,
+      channel: "slack",
       target: "channel:G123",
       expected: {
+        sessionKey: "agent:main:slack:group:g123",
+        from: "slack:group:G123",
       },
     },
     {
@@ -281,8 +295,11 @@ describe("resolveOutboundSessionRoute", () => {
     {
       name: "Slack user DM target",
       cfg: perChannelPeerCfg,
+      channel: "slack",
       target: "user:U12345ABC",
       expected: {
+        sessionKey: "agent:main:slack:direct:u12345abc",
+        from: "slack:U12345ABC",
         to: "user:U12345ABC",
         chatType: "direct",
       },
@@ -290,8 +307,11 @@ describe("resolveOutboundSessionRoute", () => {
     {
       name: "Slack channel target without thread",
       cfg: baseConfig,
+      channel: "slack",
       target: "channel:C999XYZ",
       expected: {
+        sessionKey: "agent:main:slack:channel:c999xyz",
+        from: "slack:channel:C999XYZ",
         to: "channel:C999XYZ",
         chatType: "channel",
       },
@@ -310,6 +330,8 @@ describe("resolveOutboundSessionRoute", () => {
         source: "directory" as const,
       },
       expected: {
+        sessionKey: "agent:main:discord:direct:123",
+        from: "discord:123",
         to: "user:123",
         chatType: "direct",
       },
@@ -324,6 +346,9 @@ describe("resolveOutboundSessionRoute", () => {
         source: "directory" as const,
       },
       expected: {
+        sessionKey: "agent:main:discord:channel:456",
+        baseSessionKey: "agent:main:discord:channel:456",
+        from: "discord:channel:456",
         to: "channel:456",
         chatType: "channel",
         threadId: "789",
@@ -345,6 +370,7 @@ describe("resolveOutboundSessionRoute", () => {
         chatType: "direct",
       },
     },
+  ])("$name", async ({ channel = "discord", target, threadId, resolvedTarget, expected }) => {
     const route = await resolveOutboundSessionRoute({
       cfg: perChannelPeerSessionCfg,
       channel,
@@ -361,6 +387,7 @@ describe("resolveOutboundSessionRoute", () => {
     await expect(
       resolveOutboundSessionRoute({
         cfg: perChannelPeerSessionCfg,
+        channel: "discord",
         agentId: "main",
         target: "123",
       }),

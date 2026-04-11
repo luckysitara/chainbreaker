@@ -144,13 +144,16 @@ function getCachedAgentRun(runId: string) {
 export async function waitForAgentJob(params: {
   runId: string;
   timeoutMs: number;
+  signal?: AbortSignal;
   ignoreCachedSnapshot?: boolean;
 }): Promise<AgentRunSnapshot | null> {
+  const { runId, timeoutMs, signal, ignoreCachedSnapshot = false } = params;
   ensureAgentRunListener();
   const cached = ignoreCachedSnapshot ? undefined : getCachedAgentRun(runId);
   if (cached) {
     return cached;
   }
+  if (timeoutMs <= 0 || signal?.aborted) {
     return null;
   }
 
@@ -176,6 +179,7 @@ export async function waitForAgentJob(params: {
       clearPendingErrorTimer();
       unsubscribe();
       if (onAbort) {
+        signal?.removeEventListener("abort", onAbort);
       }
       resolve(entry);
     };
@@ -241,6 +245,7 @@ export async function waitForAgentJob(params: {
     const timerDelayMs = Math.max(1, Math.min(Math.floor(timeoutMs), 2_147_483_647));
     const timer = setTimeout(() => finish(null), timerDelayMs);
     onAbort = () => finish(null);
+    signal?.addEventListener("abort", onAbort, { once: true });
   });
 }
 

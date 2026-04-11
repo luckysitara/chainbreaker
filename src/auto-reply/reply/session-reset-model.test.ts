@@ -6,6 +6,7 @@ import type { SessionEntry } from "../../config/sessions.js";
 import { applyResetModelOverride } from "./session-reset-model.js";
 
 const modelCatalog: ModelCatalogEntry[] = [
+  { provider: "minimax", id: "m2.7", name: "M2.7" },
   { provider: "openai", id: "gpt-4o-mini", name: "GPT-4o mini" },
 ];
 
@@ -22,6 +23,7 @@ function createResetFixture(entry: Partial<SessionEntry> = {}) {
     aliasIndex,
     sessionEntry,
     sessionStore: { "agent:main:dm:1": sessionEntry } as Record<string, SessionEntry>,
+    sessionCtx: { BodyStripped: "minimax summarize" },
     ctx: { ChatType: "direct" },
   };
 }
@@ -34,6 +36,7 @@ async function applyResetFixture(params: {
   await applyResetModelOverride({
     cfg: fixture.cfg,
     resetTriggered: params.resetTriggered,
+    bodyStripped: "minimax summarize",
     sessionCtx: fixture.sessionCtx,
     ctx: fixture.ctx,
     sessionEntry: fixture.sessionEntry,
@@ -53,6 +56,7 @@ describe("applyResetModelOverride", () => {
       resetTriggered: true,
     });
 
+    expect(sessionEntry.providerOverride).toBe("minimax");
     expect(sessionEntry.modelOverride).toBe("m2.7");
     expect(sessionCtx.BodyStripped).toBe("summarize");
   });
@@ -79,5 +83,6 @@ describe("applyResetModelOverride", () => {
 
     expect(sessionEntry.providerOverride).toBeUndefined();
     expect(sessionEntry.modelOverride).toBeUndefined();
+    expect(sessionCtx.BodyStripped).toBe("minimax summarize");
   });
 });

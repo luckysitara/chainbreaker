@@ -28,6 +28,7 @@ describe("resolveAllowAlwaysPatterns", () => {
     dir: string;
     env: Record<string, string | undefined>;
     safeBins: ReturnType<typeof resolveSafeBins>;
+    strictInlineEval?: boolean;
   }) {
     const analysis = evaluateShellAllowlist({
       command: params.command,
@@ -44,6 +45,7 @@ describe("resolveAllowAlwaysPatterns", () => {
         cwd: params.dir,
         env: params.env,
         platform: process.platform,
+        strictInlineEval: params.strictInlineEval,
       }),
     };
   }
@@ -211,6 +213,7 @@ describe("resolveAllowAlwaysPatterns", () => {
     expect(patterns).toEqual([]);
   });
 
+  it("persists benign awk interpreters when strict inline-eval is enabled", () => {
     if (process.platform === "win32") {
       return;
     }
@@ -224,6 +227,7 @@ describe("resolveAllowAlwaysPatterns", () => {
       dir,
       env,
       safeBins,
+      strictInlineEval: true,
     });
     expect(persisted).toEqual([awk]);
 
@@ -238,6 +242,7 @@ describe("resolveAllowAlwaysPatterns", () => {
     expect(second.allowlistSatisfied).toBe(true);
   });
 
+  it("keeps inline awk programs out of allow-always persistence in strict inline-eval mode", () => {
     if (process.platform === "win32") {
       return;
     }
@@ -251,6 +256,7 @@ describe("resolveAllowAlwaysPatterns", () => {
       dir,
       env,
       safeBins,
+      strictInlineEval: true,
     });
     expect(persisted).toEqual([]);
   });
@@ -311,6 +317,7 @@ describe("resolveAllowAlwaysPatterns", () => {
     expect(new Set(patterns)).toEqual(new Set([whoami, ls]));
   });
 
+  it("persists shell script paths for wrapper invocations without inline commands", () => {
     if (process.platform === "win32") {
       return;
     }
@@ -397,6 +404,7 @@ describe("resolveAllowAlwaysPatterns", () => {
     expectPositionalArgvCarrierRejected(`sh -lc "'$0' "$1"" touch {marker}`);
   });
 
+  it("rejects positional argv carriers when exec is separated from $0 by a newline", () => {
     if (process.platform === "win32") {
       return;
     }
@@ -404,6 +412,7 @@ describe("resolveAllowAlwaysPatterns", () => {
 $0 \\"$1\\"" touch {marker}`);
   });
 
+  it("rejects positional argv carriers when inline command contains extra shell operations", () => {
     if (process.platform === "win32") {
       return;
     }
@@ -432,6 +441,7 @@ $0 \\"$1\\"" touch {marker}`);
     expect(second.allowlistSatisfied).toBe(false);
   });
 
+  it("does not treat inline shell commands as persisted script paths", () => {
     if (process.platform === "win32") {
       return;
     }

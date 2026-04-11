@@ -18,6 +18,7 @@ export type DiffRenderTarget = "viewer" | "image" | "both";
 export type DiffPresentationDefaults = {
   fontFamily: string;
   fontSize: number;
+  lineSpacing: number;
   layout: DiffLayout;
   showLineNumbers: boolean;
   diffIndicators: DiffIndicators;

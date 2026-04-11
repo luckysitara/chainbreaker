@@ -166,6 +166,7 @@ describe("resolveExtraParams", () => {
   it("returns undefined with no model config", () => {
     const result = resolveExtraParams({
       cfg: undefined,
+      provider: "zai",
       modelId: "glm-4.7",
     });
 
@@ -1296,6 +1297,7 @@ describe("applyExtraParamsToAgent", () => {
             parts: [
               { text: "describe image" },
               {
+                inlineData: {
                   mimeType: "image/png",
                   data: "ZmFrZQ==",
                 },
@@ -1337,7 +1339,9 @@ describe("applyExtraParamsToAgent", () => {
     expect(
       (
         payloads[0]?.contents as
+          | Array<{ parts?: Array<{ inlineData?: { mimeType?: string; data?: string } }> }>
           | undefined
+      )?.[0]?.parts?.[1]?.inlineData,
     ).toEqual({
       mimeType: "image/png",
       data: "ZmFrZQ==",
@@ -2404,11 +2408,14 @@ describe("applyExtraParamsToAgent", () => {
 
   it("maps MiniMax /fast to the matching highspeed model", () => {
     const resolvedModelId = runResolvedModelIdCase({
+      applyProvider: "minimax",
       applyModelId: "MiniMax-M2.7",
       extraParamsOverride: { fastMode: true },
       model: {
         api: "anthropic-messages",
+        provider: "minimax",
         id: "MiniMax-M2.7",
+        baseUrl: "https://api.minimax.io/anthropic",
       } as Model<"anthropic-messages">,
     });
 
@@ -2417,11 +2424,14 @@ describe("applyExtraParamsToAgent", () => {
 
   it("maps MiniMax M2.7 /fast to the matching highspeed model", () => {
     const resolvedModelId = runResolvedModelIdCase({
+      applyProvider: "minimax",
       applyModelId: "MiniMax-M2.7",
       extraParamsOverride: { fastMode: true },
       model: {
         api: "anthropic-messages",
+        provider: "minimax",
         id: "MiniMax-M2.7",
+        baseUrl: "https://api.minimax.io/anthropic",
       } as Model<"anthropic-messages">,
     });
 
@@ -2430,11 +2440,14 @@ describe("applyExtraParamsToAgent", () => {
 
   it("keeps explicit MiniMax highspeed models unchanged when /fast is off", () => {
     const resolvedModelId = runResolvedModelIdCase({
+      applyProvider: "minimax-portal",
       applyModelId: "MiniMax-M2.7-highspeed",
       extraParamsOverride: { fastMode: false },
       model: {
         api: "anthropic-messages",
+        provider: "minimax-portal",
         id: "MiniMax-M2.7-highspeed",
+        baseUrl: "https://api.minimax.io/anthropic",
       } as unknown as Model<"anthropic-messages">,
     });
 

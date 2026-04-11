@@ -171,9 +171,12 @@ describe("registerPluginCliCommands", () => {
     mocks.loadChainbreakerPluginCliRegistry.mockResolvedValue({
       cliRegistrars: [
         {
+          pluginId: "matrix",
           register: vi.fn(),
+          commands: ["matrix"],
           descriptors: [
             {
+              name: "matrix",
               description: "Matrix channel utilities",
               hasSubcommands: true,
             },
@@ -181,9 +184,12 @@ describe("registerPluginCliCommands", () => {
           source: "bundled",
         },
         {
+          pluginId: "duplicate-matrix",
           register: vi.fn(),
+          commands: ["matrix"],
           descriptors: [
             {
+              name: "matrix",
               description: "Duplicate Matrix channel utilities",
               hasSubcommands: true,
             },
@@ -195,6 +201,7 @@ describe("registerPluginCliCommands", () => {
 
     await expect(getPluginCliCommandDescriptors(rawConfig)).resolves.toEqual([
       {
+        name: "matrix",
         description: "Matrix channel utilities",
         hasSubcommands: true,
       },
@@ -315,15 +322,9 @@ describe("registerPluginCliCommands", () => {
       program.command("memory-admin");
     });
 
-    await registerPluginCliCommands(
-      createProgram(),
-      {} as ChainbreakerConfig,
-      undefined,
-      undefined,
-      {
-        mode: "lazy",
-      },
-    );
+    await registerPluginCliCommands(createProgram(), {} as ChainbreakerConfig, undefined, undefined, {
+      mode: "lazy",
+    });
 
     expect(mocks.memoryRegister).toHaveBeenCalledTimes(1);
   });

@@ -1,5 +1,5 @@
-import { resolveSendableOutboundReplyParts } from "chainbreaker/plugin-sdk/reply-payload";
 import chalk from "chalk";
+import { resolveSendableOutboundReplyParts } from "chainbreaker/plugin-sdk/reply-payload";
 import { isVerbose } from "../globals.js";
 import { shouldLogSubsystemToConsole } from "../logging/console.js";
 import { getDefaultRedactPatterns, redactSensitiveText } from "../logging/redact.js";
@@ -45,6 +45,7 @@ function collectWsRestMeta(meta?: Record<string, unknown>): string[] {
   return restMeta;
 }
 
+function buildWsHeadline(params: {
   kind: string;
   method?: string;
   event?: string;
@@ -68,6 +69,7 @@ function buildWsStatusToken(kind: string, ok?: boolean): string | undefined {
 function logWsInfoLine(params: {
   prefix: string;
   statusToken?: string;
+  headline?: string;
   durationToken?: string;
   restMeta: string[];
   trailing: string[];
@@ -75,6 +77,7 @@ function logWsInfoLine(params: {
   const tokens = [
     params.prefix,
     params.statusToken,
+    params.headline,
     params.durationToken,
     ...params.restMeta,
     ...params.trailing,
@@ -295,6 +298,7 @@ export function logWs(direction: "in" | "out", kind: string, meta?: Record<strin
   const dirColor = direction === "in" ? chalk.greenBright : chalk.cyanBright;
   const prefix = `${dirColor(dirArrow)} ${chalk.bold(kind)}`;
 
+  const headline = buildWsHeadline({ kind, method, event });
   const statusToken = buildWsStatusToken(kind, ok);
 
   const durationToken = typeof durationMs === "number" ? chalk.dim(`${durationMs}ms`) : undefined;
@@ -309,6 +313,7 @@ export function logWs(direction: "in" | "out", kind: string, meta?: Record<strin
     trailing.push(`${chalk.dim("id")}=${chalk.gray(shortId(id))}`);
   }
 
+  logWsInfoLine({ prefix, statusToken, headline, durationToken, restMeta, trailing });
 }
 
 function logWsOptimized(direction: "in" | "out", kind: string, meta?: Record<string, unknown>) {
@@ -365,6 +370,7 @@ function logWsOptimized(direction: "in" | "out", kind: string, meta?: Record<str
   logWsInfoLine({
     prefix: `${chalk.yellowBright("⇄")} ${chalk.bold("res")}`,
     statusToken,
+    headline: method ? chalk.bold(method) : undefined,
     durationToken,
     restMeta,
     trailing: [
@@ -414,6 +420,7 @@ function logWsCompact(direction: "in" | "out", kind: string, meta?: Record<strin
   const durationToken =
     typeof startedAt === "number" ? chalk.dim(`${now - startedAt}ms`) : undefined;
 
+  const headline = buildWsHeadline({
     kind,
     method,
     event: typeof meta?.event === "string" ? meta.event : undefined,
@@ -430,4 +437,5 @@ function logWsCompact(direction: "in" | "out", kind: string, meta?: Record<strin
     trailing.push(`${chalk.dim("id")}=${chalk.gray(shortId(id))}`);
   }
 
+  logWsInfoLine({ prefix, statusToken, headline, durationToken, restMeta, trailing });
 }

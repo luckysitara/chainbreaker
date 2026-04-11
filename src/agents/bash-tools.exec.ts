@@ -145,11 +145,13 @@ async function validateScriptFileForShellBleed(params: {
   if (first) {
     const idx = first.index;
     const before = content.slice(0, idx);
+    const line = before.split("\n").length;
     const token = first[0];
     throw new Error(
       [
         `exec preflight: detected likely shell variable injection (${token}) in ${target.kind} script: ${path.basename(
           absPath,
+        )}:${line}.`,
         target.kind === "python"
           ? `In Python, use os.environ.get(${JSON.stringify(token.slice(1))}) instead of raw ${token}.`
           : `In Node.js, use process.env[${JSON.stringify(token.slice(1))}] instead of raw ${token}.`,
@@ -205,7 +207,10 @@ function rejectExecApprovalShellCommand(command: string): void {
     "-S",
     "-u",
     "--argv0",
+    "--block-signal",
     "--chdir",
+    "--default-signal",
+    "--ignore-signal",
     "--split-string",
     "--unset",
   ]);
@@ -406,7 +411,11 @@ function rejectExecApprovalShellCommand(command: string): void {
     ? analysis.segments.flatMap((segment) => buildCandidates(segment.argv))
     : rawCommand
         .split(/\r?\n/)
+        .map((line) => line.trim())
         .filter(Boolean)
+        .flatMap((line) => {
+          const argv = splitShellArgs(line);
+          return argv ? buildCandidates(argv) : [line];
         });
   for (const candidate of candidates) {
     if (!parseExecApprovalShellCommand(candidate)) {
@@ -423,6 +432,7 @@ function rejectExecApprovalShellCommand(command: string): void {
 
 export function createExecTool(
   defaults?: ExecToolDefaults,
+  // oxlint-disable-next-line typescript/no-explicit-any
 ): AgentTool<any, ExecToolDetails> {
   const defaultBackgroundMs = clampWithDefault(
     defaults?.backgroundMs ?? readEnvInt("PI_BASH_YIELD_MS"),
@@ -478,6 +488,7 @@ export function createExecTool(
     description:
       "Execute shell commands with background continuation. Use yieldMs/background to continue later via process tool. Use pty=true for TTY-required commands (terminal UIs, coding agents).",
     parameters: execSchema,
+    execute: async (_toolCallId, args, signal, onUpdate) => {
       const params = args as {
         command: string;
         workdir?: string;
@@ -718,6 +729,7 @@ export function createExecTool(
           agentId,
           security,
           ask,
+          strictInlineEval: defaults?.strictInlineEval,
           trigger: defaults?.trigger,
           timeoutSec: params.timeout,
           defaultTimeoutSec,
@@ -741,6 +753,7 @@ export function createExecTool(
           ask,
           safeBins,
           safeBinProfiles,
+          strictInlineEval: defaults?.strictInlineEval,
           trigger: defaults?.trigger,
           agentId,
           sessionKey: defaults?.sessionKey,
@@ -808,7 +821,10 @@ export function createExecTool(
         run.kill();
       };
 
+      if (signal?.aborted) {
         onAbortSignal();
+      } else if (signal) {
+        signal.addEventListener("abort", onAbortSignal, { once: true });
       }
 
       return new Promise<AgentToolResult<ExecToolDetails>>((resolve, reject) => {

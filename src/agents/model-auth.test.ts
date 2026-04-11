@@ -240,6 +240,7 @@ describe("resolveModelAuthMode", () => {
 });
 
 describe("requireApiKey", () => {
+  it("normalizes line breaks in resolved API keys", () => {
     const key = requireApiKey(
       {
         apiKey: "\n sk-test-abc\r\n",

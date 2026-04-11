@@ -20,10 +20,7 @@ import type {
 import type { ConfiguredBindingConsumer } from "./configured-binding-consumers.js";
 import type { ChannelConfiguredBindingConversationRef } from "./types.adapters.js";
 
-function resolveAgentRuntimeAcpDefaults(params: {
-  cfg: ChainbreakerConfig;
-  ownerAgentId: string;
-}): {
+function resolveAgentRuntimeAcpDefaults(params: { cfg: ChainbreakerConfig; ownerAgentId: string }): {
   acpAgentId?: string;
   mode?: string;
   cwd?: string;

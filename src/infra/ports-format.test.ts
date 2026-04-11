@@ -68,10 +68,14 @@ describe("ports-format", () => {
       }),
     ).toEqual(["Port 18789 is free."]);
 
+    const lines = formatPortDiagnostics({
       port: 18789,
       status: "busy",
       listeners: [{ pid: 123, user: "alice", commandLine: "ssh -N -L 18789:127.0.0.1:18789" }],
       hints: buildPortHints([{ pid: 123, commandLine: "ssh -N -L 18789:127.0.0.1:18789" }], 18789),
     });
+    expect(lines[0]).toContain("Port 18789 is already in use");
+    expect(lines).toContain("- pid 123 alice: ssh -N -L 18789:127.0.0.1:18789");
+    expect(lines.some((line) => line.includes("SSH tunnel"))).toBe(true);
   });
 });

@@ -116,6 +116,7 @@ function toDefaultCommandName(rootDir: string, filePath: string): string {
 function toDefaultDescription(rawName: string, promptTemplate: string): string {
   const firstLine = promptTemplate
     .split(/\r?\n/u)
+    .map((line) => line.trim())
     .find(Boolean);
   return firstLine || rawName;
 }

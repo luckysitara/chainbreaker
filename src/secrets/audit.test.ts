@@ -323,6 +323,7 @@ describe("secrets audit", () => {
     expect(report.summary.unresolvedRefCount).toBe(0);
 
     const callLog = await fs.readFile(execLogPath, "utf8");
+    const callCount = callLog.split("\n").filter((line) => line.trim().length > 0).length;
     expect(callCount).toBe(1);
   });
 
@@ -386,6 +387,7 @@ describe("secrets audit", () => {
     expect(report.summary.unresolvedRefCount).toBeGreaterThanOrEqual(2);
 
     const callLog = await fs.readFile(execLogPath, "utf8");
+    const callCount = callLog.split("\n").filter((line) => line.trim().length > 0).length;
     expect(callCount).toBe(1);
   });
 

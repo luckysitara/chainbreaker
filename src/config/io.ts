@@ -820,13 +820,20 @@ function resolveConfigObserveSuspiciousReasons(params: {
   lastKnownGood?: ConfigHealthFingerprint;
 }): string[] {
   const reasons: string[] = [];
+  const baseline = params.lastKnownGood;
+  if (!baseline) {
     return reasons;
   }
+  if (baseline.bytes >= 512 && params.bytes < Math.floor(baseline.bytes * 0.5)) {
+    reasons.push(`size-drop-vs-last-good:${baseline.bytes}->${params.bytes}`);
   }
+  if (baseline.hasMeta && !params.hasMeta) {
     reasons.push("missing-meta-vs-last-good");
   }
+  if (baseline.gatewayMode && !params.gatewayMode) {
     reasons.push("gateway-mode-missing-vs-last-good");
   }
+  if (baseline.gatewayMode && isUpdateChannelOnlyRoot(params.parsed)) {
     reasons.push("update-channel-only-root");
   }
   return reasons;
@@ -949,6 +956,7 @@ async function maybeRecoverSuspiciousConfigRead(params: {
   let healthState = await readConfigHealthState(params.deps);
   const entry = getConfigHealthEntry(healthState, params.configPath);
   const backupPath = `${params.configPath}.bak`;
+  const backupBaseline =
     entry.lastKnownGood ??
     (await readConfigFingerprintForPath(params.deps, backupPath)) ??
     undefined;
@@ -957,6 +965,7 @@ async function maybeRecoverSuspiciousConfigRead(params: {
     hasMeta: current.hasMeta,
     gatewayMode: current.gatewayMode,
     parsed: params.parsed,
+    lastKnownGood: backupBaseline,
   });
   if (!suspicious.includes("update-channel-only-root")) {
     return { raw: params.raw, parsed: params.parsed };
@@ -971,6 +980,7 @@ async function maybeRecoverSuspiciousConfigRead(params: {
   if (!backupParsedRes.ok) {
     return { raw: params.raw, parsed: params.parsed };
   }
+  const backup = backupBaseline ?? (await readConfigFingerprintForPath(params.deps, backupPath));
   if (!backup?.gatewayMode) {
     return { raw: params.raw, parsed: params.parsed };
   }
@@ -1076,12 +1086,14 @@ function maybeRecoverSuspiciousConfigReadSync(params: {
   let healthState = readConfigHealthStateSync(params.deps);
   const entry = getConfigHealthEntry(healthState, params.configPath);
   const backupPath = `${params.configPath}.bak`;
+  const backupBaseline =
     entry.lastKnownGood ?? readConfigFingerprintForPathSync(params.deps, backupPath) ?? undefined;
   const suspicious = resolveConfigObserveSuspiciousReasons({
     bytes: current.bytes,
     hasMeta: current.hasMeta,
     gatewayMode: current.gatewayMode,
     parsed: params.parsed,
+    lastKnownGood: backupBaseline,
   });
   if (!suspicious.includes("update-channel-only-root")) {
     return { raw: params.raw, parsed: params.parsed };
@@ -1098,6 +1110,7 @@ function maybeRecoverSuspiciousConfigReadSync(params: {
   if (!backupParsedRes.ok) {
     return { raw: params.raw, parsed: params.parsed };
   }
+  const backup = backupBaseline ?? readConfigFingerprintForPathSync(params.deps, backupPath);
   if (!backup?.gatewayMode) {
     return { raw: params.raw, parsed: params.parsed };
   }
@@ -1227,6 +1240,7 @@ async function observeConfigSnapshot(
 
   let healthState = await readConfigHealthState(deps);
   const entry = getConfigHealthEntry(healthState, snapshot.path);
+  const backupBaseline =
     entry.lastKnownGood ??
     (await readConfigFingerprintForPath(deps, `${snapshot.path}.bak`)) ??
     undefined;
@@ -1235,6 +1249,7 @@ async function observeConfigSnapshot(
     hasMeta: current.hasMeta,
     gatewayMode: current.gatewayMode,
     parsed: snapshot.parsed,
+    lastKnownGood: backupBaseline,
   });
 
   if (suspicious.length === 0) {
@@ -1260,6 +1275,7 @@ async function observeConfigSnapshot(
   }
 
   const backup =
+    (backupBaseline?.hash ? backupBaseline : null) ??
     (await readConfigFingerprintForPath(deps, `${snapshot.path}.bak`));
   const clobberedPath = await persistClobberedConfigSnapshot({
     deps,
@@ -1352,6 +1368,7 @@ function observeConfigSnapshotSync(
 
   let healthState = readConfigHealthStateSync(deps);
   const entry = getConfigHealthEntry(healthState, snapshot.path);
+  const backupBaseline =
     entry.lastKnownGood ??
     readConfigFingerprintForPathSync(deps, `${snapshot.path}.bak`) ??
     undefined;
@@ -1360,6 +1377,7 @@ function observeConfigSnapshotSync(
     hasMeta: current.hasMeta,
     gatewayMode: current.gatewayMode,
     parsed: snapshot.parsed,
+    lastKnownGood: backupBaseline,
   });
 
   if (suspicious.length === 0) {
@@ -1385,6 +1403,7 @@ function observeConfigSnapshotSync(
   }
 
   const backup =
+    (backupBaseline?.hash ? backupBaseline : null) ??
     readConfigFingerprintForPathSync(deps, `${snapshot.path}.bak`);
   const clobberedPath = persistClobberedConfigSnapshotSync({
     deps,
@@ -1490,10 +1509,7 @@ function stampConfigVersion(cfg: ChainbreakerConfig): ChainbreakerConfig {
   };
 }
 
-function warnIfConfigFromFuture(
-  cfg: ChainbreakerConfig,
-  logger: Pick<typeof console, "warn">,
-): void {
+function warnIfConfigFromFuture(cfg: ChainbreakerConfig, logger: Pick<typeof console, "warn">): void {
   const touched = cfg.meta?.lastTouchedVersion;
   if (!touched) {
     return;
@@ -1726,13 +1742,10 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
         });
         return {};
       }
-      const preValidationDuplicates = findDuplicateAgentDirs(
-        effectiveConfigRaw as ChainbreakerConfig,
-        {
-          env: deps.env,
-          homedir: deps.homedir,
-        },
-      );
+      const preValidationDuplicates = findDuplicateAgentDirs(effectiveConfigRaw as ChainbreakerConfig, {
+        env: deps.env,
+        homedir: deps.homedir,
+      });
       if (preValidationDuplicates.length > 0) {
         throw new DuplicateAgentDirError(preValidationDuplicates);
       }
@@ -2445,9 +2458,7 @@ function isCompatibleTopLevelRuntimeProjectionShape(params: {
   return true;
 }
 
-export function projectConfigOntoRuntimeSourceSnapshot(
-  config: ChainbreakerConfig,
-): ChainbreakerConfig {
+export function projectConfigOntoRuntimeSourceSnapshot(config: ChainbreakerConfig): ChainbreakerConfig {
   if (!runtimeConfigSnapshot || !runtimeConfigSourceSnapshot) {
     return config;
   }

@@ -17,6 +17,7 @@ function createDeferred<T>() {
 
 function createManagedRun(
   exit: Promise<{
+    reason: "exit" | "overall-timeout" | "no-output-timeout" | "signal" | "manual-cancel";
     exitCode: number | null;
     exitSignal: NodeJS.Signals | null;
     durationMs: number;

@@ -118,8 +118,10 @@ function findMarkdownIRPreservedSplitIndex(text: string, start: number, limit: n
     return text.length;
   }
 
+  let lastOutsideParenNewlineBreak = -1;
   let lastOutsideParenWhitespaceBreak = -1;
   let lastOutsideParenWhitespaceRunStart = -1;
+  let lastAnyNewlineBreak = -1;
   let lastAnyWhitespaceBreak = -1;
   let lastAnyWhitespaceRunStart = -1;
   let parenDepth = 0;
@@ -145,7 +147,9 @@ function findMarkdownIRPreservedSplitIndex(text: string, start: number, limit: n
       continue;
     }
     if (char === "\n") {
+      lastAnyNewlineBreak = index + 1;
       if (parenDepth === 0) {
+        lastOutsideParenNewlineBreak = index + 1;
       }
       continue;
     }
@@ -169,6 +173,8 @@ function findMarkdownIRPreservedSplitIndex(text: string, start: number, limit: n
     return /\s/.test(text[breakIndex] ?? "") ? runStart : breakIndex;
   };
 
+  if (lastOutsideParenNewlineBreak > start) {
+    return lastOutsideParenNewlineBreak;
   }
   if (lastOutsideParenWhitespaceBreak > start) {
     return resolveWhitespaceBreak(
@@ -176,6 +182,8 @@ function findMarkdownIRPreservedSplitIndex(text: string, start: number, limit: n
       lastOutsideParenWhitespaceRunStart,
     );
   }
+  if (lastAnyNewlineBreak > start) {
+    return lastAnyNewlineBreak;
   }
   if (lastAnyWhitespaceBreak > start) {
     return resolveWhitespaceBreak(lastAnyWhitespaceBreak, lastAnyWhitespaceRunStart);

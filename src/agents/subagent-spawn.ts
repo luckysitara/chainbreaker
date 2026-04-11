@@ -199,6 +199,8 @@ function sanitizeMountPathHint(value?: string): string | undefined {
   if (!trimmed) {
     return undefined;
   }
+  // Prevent prompt injection via control/newline characters in system prompt hints.
+  // eslint-disable-next-line no-control-regex
   if (/[\r\n\u0000-\u001F\u007F\u0085\u2028\u2029]/.test(trimmed)) {
     return undefined;
   }
@@ -658,6 +660,7 @@ export async function spawnSubagentDirect(
       : undefined,
     `[Subagent Task]: ${task}`,
   ]
+    .filter((line): line is string => Boolean(line))
     .join("\n\n");
 
   const toolSpawnMetadata = mapToolContextToSpawnedRunMetadata({

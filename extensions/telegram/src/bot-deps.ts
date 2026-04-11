@@ -1,3 +1,4 @@
+import { createChannelReplyPipeline } from "chainbreaker/plugin-sdk/channel-reply-pipeline";
 import { enqueueSystemEvent } from "chainbreaker/plugin-sdk/channel-runtime";
 import {
   buildModelsProviderData,
@@ -34,6 +35,7 @@ export type TelegramBotDeps = {
   deliverReplies?: typeof deliverReplies;
   emitInternalMessageSentHook?: typeof emitInternalMessageSentHook;
   editMessageTelegram?: typeof editMessageTelegram;
+  createChannelReplyPipeline?: typeof createChannelReplyPipeline;
 };
 
 export const defaultTelegramBotDeps: TelegramBotDeps = {
@@ -88,5 +90,7 @@ export const defaultTelegramBotDeps: TelegramBotDeps = {
   get editMessageTelegram() {
     return editMessageTelegram;
   },
+  get createChannelReplyPipeline() {
+    return createChannelReplyPipeline;
   },
 };

@@ -8,12 +8,14 @@ describe("best-effort delivery helpers", () => {
   it("resolves external delivery targets only for deliverable channels with to", () => {
     expect(
       resolveExternalBestEffortDeliveryTarget({
+        channel: "discord",
         to: "channel:123",
         accountId: "default",
         threadId: "thread-1",
       }),
     ).toEqual({
       deliver: true,
+      channel: "discord",
       to: "channel:123",
       accountId: "default",
       threadId: "thread-1",
@@ -70,6 +72,7 @@ describe("best-effort delivery helpers", () => {
       shouldDowngradeDeliveryToSessionOnly({
         wantsDelivery: true,
         bestEffortDeliver: true,
+        resolvedChannel: "discord",
       }),
     ).toBe(false);
   });

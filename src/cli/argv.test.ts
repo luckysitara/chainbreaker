@@ -184,16 +184,7 @@ describe("argv helpers", () => {
   it("extracts routed config get positionals with interleaved root options", () => {
     expect(
       getCommandPositionalsWithRootOptions(
-        [
-          "node",
-          "chainbreaker",
-          "config",
-          "get",
-          "--log-level",
-          "debug",
-          "update.channel",
-          "--json",
-        ],
+        ["node", "chainbreaker", "config", "get", "--log-level", "debug", "update.channel", "--json"],
         {
           commandPath: ["config", "get"],
           booleanFlags: ["--json"],
@@ -295,9 +286,9 @@ describe("argv helpers", () => {
   it("parses verbose flags", () => {
     expect(getVerboseFlag(["node", "chainbreaker", "status", "--verbose"])).toBe(true);
     expect(getVerboseFlag(["node", "chainbreaker", "status", "--debug"])).toBe(false);
-    expect(
-      getVerboseFlag(["node", "chainbreaker", "status", "--debug"], { includeDebug: true }),
-    ).toBe(true);
+    expect(getVerboseFlag(["node", "chainbreaker", "status", "--debug"], { includeDebug: true })).toBe(
+      true,
+    );
   });
 
   it.each([

@@ -189,6 +189,7 @@ export function applyBasicWebhookRequestGuards(params: {
 }
 
 /** Start the shared webhook request lifecycle and return a release hook for in-flight tracking. */
+export function beginWebhookRequestPipelineOrReject(params: {
   req: IncomingMessage;
   res: ServerResponse;
   allowMethods?: readonly string[];

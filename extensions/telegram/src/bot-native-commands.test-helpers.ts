@@ -13,8 +13,7 @@ import { registerTelegramNativeCommands } from "./bot-native-commands.js";
 
 type GetPluginCommandSpecsFn =
   typeof import("chainbreaker/plugin-sdk/plugin-runtime").getPluginCommandSpecs;
-type MatchPluginCommandFn =
-  typeof import("chainbreaker/plugin-sdk/plugin-runtime").matchPluginCommand;
+type MatchPluginCommandFn = typeof import("chainbreaker/plugin-sdk/plugin-runtime").matchPluginCommand;
 type ExecutePluginCommandFn =
   typeof import("chainbreaker/plugin-sdk/plugin-runtime").executePluginCommand;
 type DispatchReplyWithBufferedBlockDispatcherFn =
@@ -49,6 +48,7 @@ vi.mock("chainbreaker/plugin-sdk/plugin-runtime", () => ({
   executePluginCommand: pluginCommandMocks.executePluginCommand,
 }));
 
+const replyPipelineMocks = vi.hoisted(() => {
   const dispatchReplyResult: DispatchReplyWithBufferedBlockDispatcherResult = {
     queuedFinal: false,
     counts: {} as DispatchReplyWithBufferedBlockDispatcherResult["counts"],
@@ -58,30 +58,37 @@ vi.mock("chainbreaker/plugin-sdk/plugin-runtime", () => ({
     dispatchReplyWithBufferedBlockDispatcher: vi.fn<DispatchReplyWithBufferedBlockDispatcherFn>(
       async () => dispatchReplyResult,
     ),
+    createChannelReplyPipeline: vi.fn(() => ({ onModelSelected: () => {} })),
     recordInboundSessionMetaSafe: vi.fn<RecordInboundSessionMetaSafeFn>(async () => undefined),
   };
 });
 export const dispatchReplyWithBufferedBlockDispatcher =
+  replyPipelineMocks.dispatchReplyWithBufferedBlockDispatcher;
 
 vi.mock("chainbreaker/plugin-sdk/reply-dispatch-runtime", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("chainbreaker/plugin-sdk/reply-dispatch-runtime")>();
   return {
     ...actual,
+    finalizeInboundContext: replyPipelineMocks.finalizeInboundContext,
     dispatchReplyWithBufferedBlockDispatcher:
+      replyPipelineMocks.dispatchReplyWithBufferedBlockDispatcher,
   };
 });
 vi.mock("chainbreaker/plugin-sdk/conversation-runtime", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("chainbreaker/plugin-sdk/conversation-runtime")>();
+  const actual = await importOriginal<typeof import("chainbreaker/plugin-sdk/conversation-runtime")>();
   return {
     ...actual,
+    recordInboundSessionMetaSafe: replyPipelineMocks.recordInboundSessionMetaSafe,
     readChannelAllowFromStore: vi.fn(async () => []),
   };
 });
+vi.mock("chainbreaker/plugin-sdk/channel-reply-pipeline", async (importOriginal) => {
   const actual =
+    await importOriginal<typeof import("chainbreaker/plugin-sdk/channel-reply-pipeline")>();
   return {
     ...actual,
+    createChannelReplyPipeline: replyPipelineMocks.createChannelReplyPipeline,
   };
 });
 
@@ -115,6 +122,7 @@ export function createNativeCommandsHarness(params?: {
     upsertChannelPairingRequest: vi.fn(async () => ({ code: "PAIRCODE", created: true })),
     enqueueSystemEvent: vi.fn(),
     dispatchReplyWithBufferedBlockDispatcher:
+      replyPipelineMocks.dispatchReplyWithBufferedBlockDispatcher,
     buildModelsProviderData: vi.fn(async () => ({
       byProvider: new Map<string, Set<string>>(),
       providers: [],

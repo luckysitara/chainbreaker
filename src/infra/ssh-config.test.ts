@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 
 type MockSpawnChild = EventEmitter & {
   stdout?: EventEmitter & { setEncoding?: (enc: string) => void };
+  kill?: (signal?: string) => void;
 };
 
 function createMockSpawnChild() {
@@ -57,6 +58,7 @@ describe("ssh-config", () => {
     expect(parsed.identityFiles).toEqual(["/tmp/id"]);
   });
 
+  it("ignores invalid ports and blank lines in ssh -G output", () => {
     const parsed = parseSshConfigOutput(
       "user bob\nhostname example.com\nport not-a-number\nidentityfile none\nidentityfile   \n",
     );

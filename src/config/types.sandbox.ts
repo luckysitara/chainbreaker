@@ -19,6 +19,7 @@ export type SandboxDockerSettings = {
   capDrop?: string[];
   /** Extra environment variables for sandbox exec. */
   env?: Record<string, string>;
+  /** Optional setup command run once after container creation (array entries are joined by newline). */
   setupCommand?: string;
   /** Limit container PIDs (0 = Docker default). */
   pidsLimit?: number;
@@ -113,7 +114,10 @@ export type SandboxSshSettings = {
   certificateFile?: string;
   /** Existing known_hosts file path on the host. */
   knownHostsFile?: string;
+  /** Inline or SecretRef-backed private key contents. */
   identityData?: SecretInput;
+  /** Inline or SecretRef-backed SSH certificate contents. */
   certificateData?: SecretInput;
+  /** Inline or SecretRef-backed known_hosts contents. */
   knownHostsData?: SecretInput;
 };

@@ -203,6 +203,7 @@ export async function maybeRepairSandboxImages(
 
   const dockerAvailable = await isDockerAvailable();
   if (!dockerAvailable) {
+    const lines = [
       `Sandbox mode is enabled (mode: "${mode}") but Docker is not available.`,
       "Docker is required for sandbox mode to function.",
       "Isolated sessions (cron jobs, sub-agents) will fail without Docker.",
@@ -211,6 +212,7 @@ export async function maybeRepairSandboxImages(
       "- Install Docker and restart the gateway",
       "- Disable sandbox mode: chainbreaker config set agents.defaults.sandbox.mode off",
     ];
+    note(lines.join("\n"), "Sandbox");
     return cfg;
   }
 

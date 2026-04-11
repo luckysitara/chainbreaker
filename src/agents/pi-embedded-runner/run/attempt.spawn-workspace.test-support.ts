@@ -226,10 +226,7 @@ vi.mock("../../cache-trace.js", () => ({
 }));
 
 vi.mock("../../pi-tools.js", () => ({
-  createChainbreakerCodingTools: (options?: {
-    workspaceDir?: string;
-    spawnWorkspaceDir?: string;
-  }) => [
+  createChainbreakerCodingTools: (options?: { workspaceDir?: string; spawnWorkspaceDir?: string }) => [
     {
       name: "sessions_spawn",
       execute: async (
@@ -644,9 +641,7 @@ export async function createContextEngineAttemptRunner(params: {
   tempPaths: string[];
 }) {
   const { maintain: rawMaintain, ...contextEngineRest } = params.contextEngine;
-  const workspaceDir = await fs.mkdtemp(
-    path.join(os.tmpdir(), "chainbreaker-ctx-engine-workspace-"),
-  );
+  const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "chainbreaker-ctx-engine-workspace-"));
   const agentDir = await fs.mkdtemp(path.join(os.tmpdir(), "chainbreaker-ctx-engine-agent-"));
   const sessionFile = path.join(workspaceDir, "session.jsonl");
   params.tempPaths.push(workspaceDir, agentDir);

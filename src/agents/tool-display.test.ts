@@ -23,12 +23,14 @@ describe("tool display details", () => {
         name: "message",
         args: {
           action: "react",
+          provider: "discord",
           to: "chan-1",
           remove: false,
         },
       }),
     );
 
+    expect(detail).toContain("provider discord");
     expect(detail).toContain("to chan-1");
     expect(detail).not.toContain("remove");
   });
@@ -70,6 +72,7 @@ describe("tool display details", () => {
       }),
     );
 
+    expect(readDetail).toBe("lines 2-3 from /tmp/a.txt");
     expect(writeDetail).toBe("to /tmp/a.txt (3 chars)");
     expect(editDetail).toBe("in /tmp/a.txt (4 chars)");
   });
@@ -97,6 +100,7 @@ describe("tool display details", () => {
       }),
     );
 
+    expect(detail).toContain("check git status -> show first 3 lines");
     expect(detail).toContain(".chainbreaker/workspace)");
   });
 
@@ -250,10 +254,12 @@ describe("tool display details", () => {
     );
 
     // The && inside quotes must not be treated as a separator —
+    // summary line should be "print text", not "run export" (which would happen
     // if the quoted && was mistaken for a real separator).
     expect(detail).toMatch(/^print text/);
   });
 
+  it("recognizes heredoc/inline script exec details", () => {
     const pyDetail = formatToolDetail(
       resolveToolDisplay({
         name: "exec",
@@ -282,6 +288,7 @@ describe("tool display details", () => {
       }),
     );
 
+    expect(pyDetail).toContain("run python3 inline script (heredoc)");
     expect(nodeCheckDetail).toContain("check js syntax for /tmp/test.js");
     expect(nodeShortCheckDetail).toContain("check js syntax for /tmp/test.js");
   });

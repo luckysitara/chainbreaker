@@ -32,6 +32,7 @@ vi.mock("../../agents/session-write-lock.js", () => ({
 
 vi.mock("../../agents/model-catalog.js", () => ({
   loadModelCatalog: vi.fn(async () => [
+    { provider: "minimax", id: "m2.7", name: "M2.7" },
     { provider: "openai", id: "gpt-4o-mini", name: "GPT-4o mini" },
   ]),
 }));
@@ -74,8 +75,10 @@ function setMinimalCurrentConversationBindingRegistryForTests(): void {
   setActivePluginRegistry(
     createTestRegistry([
       {
+        pluginId: "slack",
         source: "test",
         plugin: {
+          ...createChannelTestPluginBase({ id: "slack", label: "Slack" }),
           bindings: {
             resolveCommandConversation: ({
               originatingTo,
@@ -95,8 +98,10 @@ function setMinimalCurrentConversationBindingRegistryForTests(): void {
         },
       },
       {
+        pluginId: "signal",
         source: "test",
         plugin: {
+          ...createChannelTestPluginBase({ id: "signal", label: "Signal" }),
           bindings: {
             resolveCommandConversation: ({
               originatingTo,
@@ -108,6 +113,7 @@ function setMinimalCurrentConversationBindingRegistryForTests(): void {
               fallbackTo?: string;
             }) => {
               const conversationId = [originatingTo, commandTo, fallbackTo]
+                .map((candidate) => candidate?.trim().replace(/^signal:/i, ""))
                 .find((candidate) => candidate && candidate.length > 0);
               return conversationId ? { conversationId } : null;
             },
@@ -143,6 +149,7 @@ function setMinimalCurrentConversationBindingRegistryForTests(): void {
 }
 
 function registerCurrentConversationBindingAdapterForTest(params: {
+  channel: "slack" | "signal" | "googlechat";
   accountId: string;
 }): void {
   const bindings: Array<{
@@ -231,6 +238,7 @@ describe("initSessionState thread forking", () => {
     );
 
     const storePath = path.join(root, "sessions.json");
+    const parentSessionKey = "agent:main:slack:channel:c1";
     await writeSessionStoreFast(storePath, {
       [parentSessionKey]: {
         sessionId: parentSessionId,
@@ -243,6 +251,7 @@ describe("initSessionState thread forking", () => {
       session: { store: storePath },
     } as ChainbreakerConfig;
 
+    const threadSessionKey = "agent:main:slack:channel:c1:thread:123";
     const threadLabel = "Slack thread #general: starter";
     const result = await initSessionState({
       ctx: {
@@ -266,6 +275,7 @@ describe("initSessionState thread forking", () => {
     }
     const [headerLine] = (await fs.readFile(newSessionFile, "utf-8"))
       .split(/\r?\n/)
+      .filter((line) => line.trim().length > 0);
     const parsedHeader = JSON.parse(headerLine) as {
       parentSession?: string;
     };
@@ -313,6 +323,8 @@ describe("initSessionState thread forking", () => {
     );
 
     const storePath = path.join(root, "sessions.json");
+    const parentSessionKey = "agent:main:slack:channel:c1";
+    const threadSessionKey = "agent:main:slack:channel:c1:thread:123";
     await writeSessionStoreFast(storePath, {
       [parentSessionKey]: {
         sessionId: parentSessionId,
@@ -392,6 +404,7 @@ describe("initSessionState thread forking", () => {
     );
 
     const storePath = path.join(root, "sessions.json");
+    const parentSessionKey = "agent:main:slack:channel:c1";
     // Set totalTokens well above PARENT_FORK_MAX_TOKENS (100_000)
     await writeSessionStoreFast(storePath, {
       [parentSessionKey]: {
@@ -406,6 +419,7 @@ describe("initSessionState thread forking", () => {
       session: { store: storePath },
     } as ChainbreakerConfig;
 
+    const threadSessionKey = "agent:main:slack:channel:c1:thread:456";
     const result = await initSessionState({
       ctx: {
         Body: "Thread reply",
@@ -459,6 +473,7 @@ describe("initSessionState thread forking", () => {
     );
 
     const storePath = path.join(root, "sessions.json");
+    const parentSessionKey = "agent:main:slack:channel:c1";
     await writeSessionStoreFast(storePath, {
       [parentSessionKey]: {
         sessionId: parentSessionId,
@@ -475,6 +490,7 @@ describe("initSessionState thread forking", () => {
       },
     } as ChainbreakerConfig;
 
+    const threadSessionKey = "agent:main:slack:channel:c1:thread:789";
     const result = await initSessionState({
       ctx: {
         Body: "Thread reply",
@@ -488,6 +504,7 @@ describe("initSessionState thread forking", () => {
     expect(result.sessionEntry.forkedFromParent).toBe(true);
     expect(result.sessionEntry.sessionFile).toBeTruthy();
     const forkedContent = await fs.readFile(result.sessionEntry.sessionFile ?? "", "utf-8");
+    const [headerLine] = forkedContent.split(/\r?\n/).filter((line) => line.trim().length > 0);
     const parsedHeader = JSON.parse(headerLine) as { parentSession?: string };
     const expectedParentSession = await fs.realpath(parentSessionFile);
     const actualParentSession = parsedHeader.parentSession
@@ -585,6 +602,7 @@ describe("initSessionState RawBody", () => {
   it("does not rotate local session state for /new on bound ACP sessions", async () => {
     const root = await makeCaseDir("chainbreaker-rawbody-acp-reset-");
     const storePath = path.join(root, "sessions.json");
+    const sessionKey = "agent:codex:acp:binding:discord:default:feedface";
     const existingSessionId = "session-existing";
     const now = Date.now();
 
@@ -603,6 +621,7 @@ describe("initSessionState RawBody", () => {
           type: "acp",
           agentId: "codex",
           match: {
+            channel: "discord",
             accountId: "default",
             peer: { kind: "channel", id: "1478836151241412759" },
           },
@@ -610,6 +629,7 @@ describe("initSessionState RawBody", () => {
         },
       ],
       channels: {
+        discord: {
           allowFrom: ["*"],
         },
       },
@@ -619,7 +639,10 @@ describe("initSessionState RawBody", () => {
       ctx: {
         RawBody: "/new",
         CommandBody: "/new",
+        Provider: "discord",
+        Surface: "discord",
         SenderId: "12345",
+        From: "discord:12345",
         To: "1478836151241412759",
         SessionKey: sessionKey,
       },
@@ -635,6 +658,7 @@ describe("initSessionState RawBody", () => {
   it("rotates local session state for ACP /new when no matching conversation binding exists", async () => {
     const root = await makeCaseDir("chainbreaker-rawbody-acp-reset-no-conversation-");
     const storePath = path.join(root, "sessions.json");
+    const sessionKey = "agent:codex:acp:binding:discord:default:feedface";
     const existingSessionId = "session-existing";
     const now = Date.now();
 
@@ -649,6 +673,7 @@ describe("initSessionState RawBody", () => {
     const cfg = {
       session: { store: storePath },
       channels: {
+        discord: {
           allowFrom: ["*"],
         },
       },
@@ -658,7 +683,10 @@ describe("initSessionState RawBody", () => {
       ctx: {
         RawBody: "/new",
         CommandBody: "/new",
+        Provider: "discord",
+        Surface: "discord",
         SenderId: "12345",
+        From: "discord:12345",
         To: "user:12345",
         OriginatingTo: "user:12345",
         SessionKey: sessionKey,
@@ -675,6 +703,7 @@ describe("initSessionState RawBody", () => {
   it("keeps custom reset triggers working on bound ACP sessions", async () => {
     const root = await makeCaseDir("chainbreaker-rawbody-acp-custom-reset-");
     const storePath = path.join(root, "sessions.json");
+    const sessionKey = "agent:codex:acp:binding:discord:default:feedface";
     const existingSessionId = "session-existing";
     const now = Date.now();
 
@@ -696,6 +725,7 @@ describe("initSessionState RawBody", () => {
           type: "acp",
           agentId: "codex",
           match: {
+            channel: "discord",
             accountId: "default",
             peer: { kind: "channel", id: "1478836151241412759" },
           },
@@ -703,6 +733,7 @@ describe("initSessionState RawBody", () => {
         },
       ],
       channels: {
+        discord: {
           allowFrom: ["*"],
         },
       },
@@ -712,7 +743,10 @@ describe("initSessionState RawBody", () => {
       ctx: {
         RawBody: "/fresh",
         CommandBody: "/fresh",
+        Provider: "discord",
+        Surface: "discord",
         SenderId: "12345",
+        From: "discord:12345",
         To: "1478836151241412759",
         SessionKey: sessionKey,
       },
@@ -728,6 +762,7 @@ describe("initSessionState RawBody", () => {
   it("keeps normal /new behavior for unbound ACP-shaped session keys", async () => {
     const root = await makeCaseDir("chainbreaker-rawbody-acp-unbound-reset-");
     const storePath = path.join(root, "sessions.json");
+    const sessionKey = "agent:codex:acp:binding:discord:default:feedface";
     const existingSessionId = "session-existing";
     const now = Date.now();
 
@@ -742,6 +777,7 @@ describe("initSessionState RawBody", () => {
     const cfg = {
       session: { store: storePath },
       channels: {
+        discord: {
           allowFrom: ["*"],
         },
       },
@@ -751,7 +787,10 @@ describe("initSessionState RawBody", () => {
       ctx: {
         RawBody: "/new",
         CommandBody: "/new",
+        Provider: "discord",
+        Surface: "discord",
         SenderId: "12345",
+        From: "discord:12345",
         To: "1478836151241412759",
         SessionKey: sessionKey,
       },
@@ -767,9 +806,11 @@ describe("initSessionState RawBody", () => {
   it("does not suppress /new when active conversation binding points to a non-ACP session", async () => {
     const root = await makeCaseDir("chainbreaker-rawbody-acp-nonacp-binding-");
     const storePath = path.join(root, "sessions.json");
+    const sessionKey = "agent:codex:acp:binding:discord:default:feedface";
     const existingSessionId = "session-existing";
     const now = Date.now();
     const channelId = "1478836151241412759";
+    const nonAcpFocusSessionKey = "agent:main:discord:channel:focus-target";
 
     await writeSessionStoreFast(storePath, {
       [sessionKey]: {
@@ -786,6 +827,7 @@ describe("initSessionState RawBody", () => {
           type: "acp",
           agentId: "codex",
           match: {
+            channel: "discord",
             accountId: "default",
             peer: { kind: "channel", id: channelId },
           },
@@ -793,6 +835,7 @@ describe("initSessionState RawBody", () => {
         },
       ],
       channels: {
+        discord: {
           allowFrom: ["*"],
         },
       },
@@ -800,6 +843,7 @@ describe("initSessionState RawBody", () => {
 
     sessionBindingTesting.resetSessionBindingAdaptersForTests();
     registerSessionBindingAdapter({
+      channel: "discord",
       accountId: "default",
       capabilities: { bindSupported: false, unbindSupported: false, placements: ["current"] },
       listBySession: () => [],
@@ -812,6 +856,7 @@ describe("initSessionState RawBody", () => {
           targetSessionKey: nonAcpFocusSessionKey,
           targetKind: "session",
           conversation: {
+            channel: "discord",
             accountId: "default",
             conversationId: channelId,
           },
@@ -825,7 +870,10 @@ describe("initSessionState RawBody", () => {
         ctx: {
           RawBody: "/new",
           CommandBody: "/new",
+          Provider: "discord",
+          Surface: "discord",
           SenderId: "12345",
+          From: "discord:12345",
           To: channelId,
           SessionKey: sessionKey,
         },
@@ -845,6 +893,7 @@ describe("initSessionState RawBody", () => {
     const root = await makeCaseDir("chainbreaker-rawbody-acp-configured-fallback-target-");
     const storePath = path.join(root, "sessions.json");
     const channelId = "1478836151241412759";
+    const fallbackSessionKey = "agent:main:discord:channel:focus-target";
     const existingSessionId = "session-existing";
     const now = Date.now();
 
@@ -863,6 +912,7 @@ describe("initSessionState RawBody", () => {
           type: "acp",
           agentId: "codex",
           match: {
+            channel: "discord",
             accountId: "default",
             peer: { kind: "channel", id: channelId },
           },
@@ -870,6 +920,7 @@ describe("initSessionState RawBody", () => {
         },
       ],
       channels: {
+        discord: {
           allowFrom: ["*"],
         },
       },
@@ -879,7 +930,10 @@ describe("initSessionState RawBody", () => {
       ctx: {
         RawBody: "/new",
         CommandBody: "/new",
+        Provider: "discord",
+        Surface: "discord",
         SenderId: "12345",
+        From: "discord:12345",
         To: channelId,
         SessionKey: fallbackSessionKey,
       },
@@ -937,10 +991,14 @@ describe("initSessionState RawBody", () => {
     {
       name: "Slack DM",
       conversation: {
+        channel: "slack",
         accountId: "default",
         conversationId: "user:U123",
       },
       ctx: {
+        Provider: "slack",
+        Surface: "slack",
+        From: "slack:user:U123",
         To: "user:U123",
         OriginatingTo: "user:U123",
         SenderId: "U123",
@@ -950,11 +1008,16 @@ describe("initSessionState RawBody", () => {
     {
       name: "Signal DM",
       conversation: {
+        channel: "signal",
         accountId: "default",
         conversationId: "+15550001111",
       },
       ctx: {
+        Provider: "signal",
+        Surface: "signal",
+        From: "signal:+15550001111",
         To: "+15550001111",
+        OriginatingTo: "signal:+15550001111",
         SenderId: "+15550001111",
         ChatType: "direct",
       },
@@ -979,6 +1042,7 @@ describe("initSessionState RawBody", () => {
   ])("routes generic current-conversation bindings for $name", async ({ conversation, ctx }) => {
     setMinimalCurrentConversationBindingRegistryForTests();
     registerCurrentConversationBindingAdapterForTest({
+      channel: conversation.channel as "slack" | "signal" | "googlechat",
       accountId: "default",
     });
     const storePath = await createStorePath("chainbreaker-generic-current-binding-");
@@ -1110,6 +1174,7 @@ describe("initSessionState reset policy", () => {
     vi.setSystemTime(new Date(2026, 0, 18, 5, 0, 0));
     const root = await makeCaseDir("chainbreaker-reset-thread-");
     const storePath = path.join(root, "sessions.json");
+    const sessionKey = "agent:main:slack:channel:c1:thread:123";
     const existingSessionId = "thread-session-id";
 
     await writeSessionStoreFast(storePath, {
@@ -1140,6 +1205,7 @@ describe("initSessionState reset policy", () => {
     vi.setSystemTime(new Date(2026, 0, 18, 5, 0, 0));
     const root = await makeCaseDir("chainbreaker-reset-thread-nosuffix-");
     const storePath = path.join(root, "sessions.json");
+    const sessionKey = "agent:main:discord:channel:c1";
     const existingSessionId = "thread-nosuffix";
 
     await writeSessionStoreFast(storePath, {
@@ -1234,6 +1300,7 @@ describe("initSessionState channel reset overrides", () => {
   it("uses channel-specific reset policy when configured", async () => {
     const root = await makeCaseDir("chainbreaker-channel-idle-");
     const storePath = path.join(root, "sessions.json");
+    const sessionKey = "agent:main:discord:dm:123";
     const sessionId = "session-override";
     const updatedAt = Date.now() - (10080 - 1) * 60_000;
 
@@ -1249,6 +1316,7 @@ describe("initSessionState channel reset overrides", () => {
         store: storePath,
         idleMinutes: 60,
         resetByType: { direct: { mode: "idle", idleMinutes: 10 } },
+        resetByChannel: { discord: { mode: "idle", idleMinutes: 10080 } },
       },
     } as ChainbreakerConfig;
 
@@ -1256,6 +1324,7 @@ describe("initSessionState channel reset overrides", () => {
       ctx: {
         Body: "Hello",
         SessionKey: sessionKey,
+        Provider: "discord",
       },
       cfg,
       commandAuthorized: true,
@@ -1375,7 +1444,9 @@ describe("initSessionState reset triggers in Slack channels", () => {
 
   it("supports mention-prefixed Slack reset commands and preserves args", async () => {
     const existingSessionId = "existing-session-123";
+    const sessionKey = "agent:main:slack:channel:c2";
     const body = "<@U123> /new take notes";
+    const storePath = await createStorePath("chainbreaker-slack-channel-new-");
     await seedSessionStore({
       storePath,
       sessionKey,
@@ -1390,9 +1461,12 @@ describe("initSessionState reset triggers in Slack channels", () => {
         Body: body,
         RawBody: body,
         CommandBody: body,
+        From: "slack:channel:C1",
         To: "channel:C1",
         ChatType: "channel",
         SessionKey: sessionKey,
+        Provider: "slack",
+        Surface: "slack",
         SenderId: "U123",
         SenderName: "Owner",
       },
@@ -1839,6 +1913,7 @@ describe("drainFormattedSystemEvents", () => {
     }
   });
 
+  it("keeps channel summary lines prefixed as trusted system output on new main sessions", async () => {
     setActivePluginRegistry(
       createTestRegistry([
         {
@@ -1853,11 +1928,13 @@ describe("drainFormattedSystemEvents", () => {
                 accountId: "default",
                 enabled: true,
                 configured: true,
+                name: "line one\nline two",
               }),
               resolveAccount: () => ({
                 accountId: "default",
                 enabled: true,
                 configured: true,
+                name: "line one\nline two",
               }),
             },
             status: {
@@ -1876,6 +1953,8 @@ describe("drainFormattedSystemEvents", () => {
     });
 
     expect(result).toContain("System: WhatsApp: linked");
+    for (const line of result!.split("\n")) {
+      expect(line).toMatch(/^System:/);
     }
   });
 });
@@ -2371,12 +2450,15 @@ describe("initSessionState internal channel routing preservation", () => {
     // external delivery route (e.g. Telegram/iMessage) on a channel-scoped session.
     // Subagent completions should still be delivered to the original channel.
     const storePath = await createStorePath("webchat-direct-route-preserve-");
+    const sessionKey = "agent:main:imessage:direct:+1555";
     await writeSessionStoreFast(storePath, {
       [sessionKey]: {
         sessionId: "sess-webchat-direct",
         updatedAt: Date.now(),
+        lastChannel: "imessage",
         lastTo: "+1555",
         deliveryContext: {
+          channel: "imessage",
           to: "+1555",
         },
       },
@@ -2398,7 +2480,9 @@ describe("initSessionState internal channel routing preservation", () => {
     });
 
     // External route must be preserved — webchat is admin/monitoring only
+    expect(result.sessionEntry.lastChannel).toBe("imessage");
     expect(result.sessionEntry.lastTo).toBe("+1555");
+    expect(result.sessionEntry.deliveryContext?.channel).toBe("imessage");
     expect(result.sessionEntry.deliveryContext?.to).toBe("+1555");
   });
 
@@ -2437,12 +2521,15 @@ describe("initSessionState internal channel routing preservation", () => {
 
   it("keeps persisted external route when OriginatingChannel is non-deliverable", async () => {
     const storePath = await createStorePath("preserve-nondeliverable-route-");
+    const sessionKey = "agent:main:discord:channel:24680";
     await writeSessionStoreFast(storePath, {
       [sessionKey]: {
         sessionId: "sess-2",
         updatedAt: Date.now(),
+        lastChannel: "discord",
         lastTo: "channel:24680",
         deliveryContext: {
+          channel: "discord",
           to: "channel:24680",
         },
       },
@@ -2460,7 +2547,9 @@ describe("initSessionState internal channel routing preservation", () => {
       commandAuthorized: true,
     });
 
+    expect(result.sessionEntry.lastChannel).toBe("discord");
     expect(result.sessionEntry.lastTo).toBe("channel:24680");
+    expect(result.sessionEntry.deliveryContext?.channel).toBe("discord");
     expect(result.sessionEntry.deliveryContext?.to).toBe("channel:24680");
   });
 

@@ -37,6 +37,7 @@ export function normalizeProviderId(provider?: string | null): string {
   }
   const normalized = provider.trim().toLowerCase();
   if (normalized === "z.ai" || normalized === "z-ai") {
+    return "zai";
   }
   if (normalized === "bedrock" || normalized === "aws-bedrock") {
     return "amazon-bedrock";
@@ -45,6 +46,7 @@ export function normalizeProviderId(provider?: string | null): string {
 }
 
 export function isBinaryThinkingProvider(provider?: string | null): boolean {
+  return normalizeProviderId(provider) === "zai";
 }
 
 export function supportsBuiltInXHighThinking(

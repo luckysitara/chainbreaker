@@ -703,6 +703,7 @@ describe("createAcpReplyProjector", () => {
     });
   });
 
+  it("does not duplicate newlines when previous visible text already ends with newline", async () => {
     await runHiddenBoundaryCase({
       cfgOverrides: createHiddenBoundaryCfg(),
       toolCallId: "call_hidden_4",

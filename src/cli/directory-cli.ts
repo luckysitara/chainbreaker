@@ -72,13 +72,14 @@ export function registerDirectoryCli(program: Command) {
       "after",
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
+          ["chainbreaker directory self --channel slack", "Show the connected account identity."],
           [
+            'chainbreaker directory peers list --channel slack --query "alice"',
             "Search contact/user IDs by name.",
           ],
+          ["chainbreaker directory groups list --channel discord", "List available groups/channels."],
           [
-            "List available groups/channels.",
-          ],
-          [
+            "chainbreaker directory groups members --channel discord --group-id <id>",
             "List members for a specific group.",
           ],
         ])}\n\n${theme.muted("Docs:")} ${formatDocsLink(

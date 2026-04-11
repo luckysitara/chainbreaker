@@ -13,6 +13,7 @@ import { sanitizeForPromptLiteral } from "./sanitize-for-prompt.js";
  * Controls which hardcoded sections are included in the system prompt.
  * - "full": All sections (default, for main agent)
  * - "minimal": Reduced sections (Tooling, Workspace, Runtime) - used for subagents
+ * - "none": Just basic identity line, no sections
  */
 export type PromptMode = "full" | "minimal" | "none";
 type OwnerIdDisplay = "raw" | "hash";
@@ -94,6 +95,7 @@ function buildReplyTagsSection(isMinimal: boolean) {
   return [
     "## Reply Tags",
     "To request a native reply/quote on supported surfaces, include one tag in your reply:",
+    "- Reply tags must be the very first token in the message (no leading text/newlines): [[reply_to_current]] your reply.",
     "- [[reply_to_current]] replies to the triggering message.",
     "- Prefer [[reply_to_current]]. Use [[reply_to:<id>]] only when an id was explicitly provided (e.g. by the user or a tool).",
     "Whitespace inside the tag is allowed (e.g. [[ reply_to_current ]] / [[ reply_to: 123 ]]).",
@@ -106,6 +108,7 @@ function buildMessagingSection(params: {
   isMinimal: boolean;
   availableTools: Set<string>;
   messageChannelOptions: string;
+  inlineButtonsEnabled: boolean;
   runtimeChannel?: string;
   messageToolHints?: string[];
 }) {
@@ -127,7 +130,10 @@ function buildMessagingSection(params: {
           "- For `action=send`, include `to` and `message`.",
           `- If multiple channels are configured, pass \`channel\` (${params.messageChannelOptions}).`,
           `- If you use \`message\` (\`action=send\`) to deliver your user-visible reply, respond with ONLY: ${SILENT_REPLY_TOKEN} (avoid duplicate replies).`,
+          params.inlineButtonsEnabled
+            ? "- Inline buttons supported. Use `action=send` with `buttons=[[{text,callback_data,style?}]]`; `style` can be `primary`, `success`, or `danger`."
             : params.runtimeChannel
+              ? `- Inline buttons not enabled for ${params.runtimeChannel}. If you need them, ask to set ${params.runtimeChannel}.capabilities.inlineButtons ("dm"|"group"|"all"|"allowlist").`
               : "",
           ...(params.messageToolHints ?? []),
         ]
@@ -159,6 +165,7 @@ function buildDocsSection(params: { docsPath?: string; isMinimal: boolean; readT
     `Chainbreaker docs: ${docsPath}`,
     "Mirror: https://docs.chainbreaker.ai",
     "Source: https://github.com/chainbreaker/chainbreaker",
+    "Community: https://discord.com/invite/clawd",
     "Find new skills: https://clawhub.ai",
     "For Chainbreaker behavior, commands, config, or architecture: consult local docs first.",
     "When diagnosing issues, run `chainbreaker status` yourself when possible; only ask the user if you lack access (e.g., sandboxed).",
@@ -168,6 +175,7 @@ function buildDocsSection(params: { docsPath?: string; isMinimal: boolean; readT
 
 function buildExecApprovalPromptGuidance(params: { runtimeChannel?: string }) {
   const runtimeChannel = params.runtimeChannel?.trim().toLowerCase();
+  if (runtimeChannel === "discord" || runtimeChannel === "slack" || runtimeChannel === "telegram") {
     return "When exec returns approval-pending on Discord, Slack, or Telegram, rely on the native approval card/buttons when they appear and do not also send plain chat /approve instructions. Only include the concrete /approve command if the tool result says chat approvals are unavailable or only manual approval is possible.";
   }
   return "When exec returns approval-pending, include the concrete /approve command from tool output (with allow-once|allow-always|deny) as plain chat text for the user, and do not ask for a different or rotated code.";
@@ -360,6 +368,7 @@ export function buildAgentSystemPrompt(params: {
     .map((cap) => String(cap).trim())
     .filter(Boolean);
   const runtimeCapabilitiesLower = new Set(runtimeCapabilities.map((cap) => cap.toLowerCase()));
+  const inlineButtonsEnabled = runtimeCapabilitiesLower.has("inlinebuttons");
   const messageChannelOptions = listDeliverableMessageChannels().join("|");
   const promptMode = params.promptMode ?? "full";
   const isMinimal = promptMode === "minimal" || promptMode === "none";
@@ -399,10 +408,12 @@ export function buildAgentSystemPrompt(params: {
   });
   const workspaceNotes = (params.workspaceNotes ?? []).map((note) => note.trim()).filter(Boolean);
 
+  // For "none" mode, return just the basic identity line
   if (promptMode === "none") {
     return "You are a personal assistant running inside Chainbreaker.";
   }
 
+  const lines = [
     "You are a personal assistant running inside Chainbreaker.",
     "",
     "## Tooling",
@@ -452,6 +463,7 @@ export function buildAgentSystemPrompt(params: {
     }),
     "Never execute /approve through exec or any other shell/tool path; /approve is a user-facing approval command, not a shell command.",
     "Treat allow-once as single-command only: if another elevated command needs approval, request a fresh /approve and do not claim prior approval covered it.",
+    "When approvals are required, preserve and show the full command/script exactly as provided (including chained operators like &&, ||, |, ;, or multiline shells) so the user can approve what will actually run.",
     "",
     ...safetySection,
     "## Chainbreaker CLI Quick Reference",
@@ -558,6 +570,7 @@ export function buildAgentSystemPrompt(params: {
       isMinimal,
       availableTools,
       messageChannelOptions,
+      inlineButtonsEnabled,
       runtimeChannel,
       messageToolHints: params.messageToolHints,
     }),
@@ -568,6 +581,7 @@ export function buildAgentSystemPrompt(params: {
     // Use "Subagent Context" header for minimal mode (subagents), otherwise "Group Chat Context"
     const contextHeader =
       promptMode === "minimal" ? "## Subagent Context" : "## Group Chat Context";
+    lines.push(contextHeader, extraSystemPrompt, "");
   }
   if (params.reactionGuidance) {
     const { level, channel } = params.reactionGuidance;
@@ -579,6 +593,7 @@ export function buildAgentSystemPrompt(params: {
             "- Acknowledge important user requests or confirmations",
             "- Express genuine sentiment (humor, appreciation) sparingly",
             "- Avoid reacting to routine messages or your own replies",
+            "Guideline: at most 1 reaction per 5-10 exchanges.",
           ].join("\n")
         : [
             `Reactions are enabled for ${channel} in EXTENSIVE mode.`,
@@ -587,9 +602,12 @@ export function buildAgentSystemPrompt(params: {
             "- Express sentiment and personality through reactions",
             "- React to interesting content, humor, or notable events",
             "- Use reactions to confirm understanding or agreement",
+            "Guideline: react whenever it feels natural.",
           ].join("\n");
+    lines.push("## Reactions", guidanceText, "");
   }
   if (reasoningHint) {
+    lines.push("## Reasoning Format", reasoningHint, "");
   }
 
   const contextFiles = params.contextFiles ?? [];
@@ -597,23 +615,29 @@ export function buildAgentSystemPrompt(params: {
     (file) => typeof file.path === "string" && file.path.trim().length > 0,
   );
   if (validContextFiles.length > 0) {
+    lines.push("# Project Context", "");
     if (validContextFiles.length > 0) {
       const hasSoulFile = validContextFiles.some((file) => {
         const normalizedPath = file.path.trim().replace(/\\/g, "/");
         const baseName = normalizedPath.split("/").pop() ?? normalizedPath;
         return baseName.toLowerCase() === "soul.md";
       });
+      lines.push("The following project context files have been loaded:");
       if (hasSoulFile) {
+        lines.push(
           "If SOUL.md is present, embody its persona and tone. Avoid stiff, generic replies; follow its guidance unless higher-priority instructions override it.",
         );
       }
+      lines.push("");
     }
     for (const file of validContextFiles) {
+      lines.push(`## ${file.path}`, "", file.content, "");
     }
   }
 
   // Skip silent replies for subagent/none modes
   if (!isMinimal) {
+    lines.push(
       "## Silent Replies",
       `When you have nothing to say, respond with ONLY: ${SILENT_REPLY_TOKEN}`,
       "",
@@ -631,6 +655,7 @@ export function buildAgentSystemPrompt(params: {
 
   // Skip heartbeats for subagent/none modes
   if (!isMinimal && heartbeatPrompt) {
+    lines.push(
       "## Heartbeats",
       `Heartbeat prompt: ${heartbeatPrompt}`,
       "If you receive a heartbeat poll (a user message matching the heartbeat prompt above), and there is nothing that needs attention, reply exactly:",
@@ -641,11 +666,13 @@ export function buildAgentSystemPrompt(params: {
     );
   }
 
+  lines.push(
     "## Runtime",
     buildRuntimeLine(runtimeInfo, runtimeChannel, runtimeCapabilities, params.defaultThinkLevel),
     `Reasoning: ${reasoningLevel} (hidden unless on/stream). Toggle /reasoning; /status shows Reasoning when enabled.`,
   );
 
+  return lines.filter(Boolean).join("\n");
 }
 
 export function buildRuntimeLine(

@@ -2,6 +2,7 @@ function normalizeProcArg(arg: string): string {
   return arg.replaceAll("\\", "/").toLowerCase();
 }
 
+export function parseProcCmdline(raw: string): string[] {
   return raw
     .split("\0")
     .map((entry) => entry.trim())

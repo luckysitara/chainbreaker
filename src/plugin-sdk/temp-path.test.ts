@@ -17,11 +17,14 @@ describe("buildRandomTempFilePath", () => {
     {
       name: "builds deterministic paths when now/uuid are provided",
       input: {
+        prefix: "line-media",
         extension: ".jpg",
         tmpDir: "/tmp",
         now: 123,
         uuid: "abc",
       },
+      expectedPath: path.join("/tmp", "line-media-123-abc.jpg"),
+      expectedBasename: "line-media-123-abc.jpg",
       verifyInsideTmpRoot: false,
     },
     {
@@ -51,6 +54,7 @@ describe("withTempDownloadPath", () => {
   it.each([
     {
       name: "creates a temp path under tmp dir and cleans up the temp directory",
+      input: { prefix: "line-media" },
       expectCleanup: true,
       expectedBasename: undefined,
     },
@@ -73,8 +77,7 @@ describe("withTempDownloadPath", () => {
     if (expectedBasename) {
       expect(path.basename(capturedPath)).toBe(expectedBasename);
     } else {
-      expect(capturedPath).toContain(
-      );
+      expect(capturedPath).toContain(path.join(resolvePreferredChainbreakerTmpDir(), "line-media-"));
     }
     if (expectCleanup) {
       await expect(fs.stat(capturedPath)).rejects.toMatchObject({ code: "ENOENT" });

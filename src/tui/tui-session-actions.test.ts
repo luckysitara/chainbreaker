@@ -105,6 +105,7 @@ describe("tui session actions", () => {
         {
           key: "agent:main:main",
           model: "Minimax-M2.7",
+          modelProvider: "minimax",
         },
       ],
     });

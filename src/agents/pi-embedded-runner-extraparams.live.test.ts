@@ -197,10 +197,12 @@ describeGeminiLive("pi embedded extra params (gemini live)", () => {
 
   function mapGeminiContentPart(
     part: { type: "text"; text: string } | { type: "image"; mimeType: string; data: string },
+  ): { text: string } | { inlineData: { mimeType: string; data: string } } {
     if (part.type === "text") {
       return { text: part.text };
     }
     return {
+      inlineData: {
         mimeType: part.mimeType,
         data: part.data,
       },
@@ -210,6 +212,7 @@ describeGeminiLive("pi embedded extra params (gemini live)", () => {
   // Payload mutation is covered by extra-params.google.test.ts, and Gemini
   // roundtrips are exercised by the dedicated live gateway/model suites. This
   // direct live test currently flakes on Vitest timeout teardown without
+  // providing unique signal.
   it.skip("sanitizes Gemini thinking payload and keeps image parts with reasoning enabled", async () => {
     const model = getModel("google", "gemini-2.5-pro") as unknown as Model<"google-generative-ai">;
 
@@ -238,7 +241,9 @@ describeGeminiLive("pi embedded extra params (gemini live)", () => {
 
     const imagePart = (
       capturedPayload?.contents as
+        | Array<{ parts?: Array<{ inlineData?: { mimeType?: string; data?: string } }> }>
         | undefined
+    )?.[0]?.parts?.find((part) => part.inlineData !== undefined)?.inlineData;
     expect(imagePart).toEqual({
       mimeType: "image/png",
       data: oneByOneRedPngBase64,

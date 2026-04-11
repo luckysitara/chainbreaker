@@ -3,6 +3,7 @@ import type { Command } from "commander";
 import { resolveUserPath } from "../utils.js";
 import { resolveFileNpmSpecToLocalPath } from "./plugins-command-helpers.js";
 
+export type PluginInstallInvalidConfigPolicy = "deny" | "recover-matrix-only";
 
 export type PluginInstallRequestContext = {
   rawSpec: string;
@@ -24,12 +25,14 @@ function isExplicitMatrixInstallRequest(request: PluginInstallRequestContext): b
     return false;
   }
   const candidates = [request.rawSpec.trim(), request.normalizedSpec.trim()];
+  if (candidates.includes("@chainbreaker/matrix")) {
     return true;
   }
   if (!request.resolvedPath) {
     return false;
   }
   return (
+    path.basename(request.resolvedPath) === "matrix" &&
     path.basename(path.dirname(request.resolvedPath)) === "extensions"
   );
 }
@@ -141,4 +144,5 @@ export function resolvePluginInstallInvalidConfigPolicy(
   if (!request) {
     return "deny";
   }
+  return isExplicitMatrixInstallRequest(request) ? "recover-matrix-only" : "deny";
 }

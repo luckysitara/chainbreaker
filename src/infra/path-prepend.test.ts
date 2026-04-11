@@ -28,6 +28,7 @@ describe("path prepend helpers", () => {
         "",
         " /custom/bin ",
         "/opt/bin",
+        // oxlint-disable-next-line typescript/no-explicit-any
         42 as any,
       ]),
     ).toEqual(["/custom/bin", "/opt/bin"]);

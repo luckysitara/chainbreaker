@@ -327,6 +327,8 @@ describeLive("gateway live (ACP bind)", () => {
       const port = await getFreeGatewayPort();
       const token = `test-${randomUUID()}`;
       const originalSessionKey = "main";
+      const slackUserId = `U${randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
+      const conversationId = `user:${slackUserId}`;
       const accountId = "default";
       const followupNonce = randomBytes(4).toString("hex").toUpperCase();
 
@@ -406,6 +408,7 @@ describeLive("gateway live (ACP bind)", () => {
           client,
           sessionKey: originalSessionKey,
           liveAgent,
+          originatingChannel: "slack",
           originatingTo: conversationId,
           originatingAccountId: accountId,
         });
@@ -419,6 +422,7 @@ describeLive("gateway live (ACP bind)", () => {
           sessionKey: originalSessionKey,
           idempotencyKey: `idem-followup-${randomUUID()}`,
           message: `Please include the token ACP-BIND-${followupNonce} in your reply.`,
+          originatingChannel: "slack",
           originatingTo: conversationId,
           originatingAccountId: accountId,
         });

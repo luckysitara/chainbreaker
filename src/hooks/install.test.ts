@@ -350,6 +350,7 @@ describe("installHooksFromNpmSpec", () => {
             },
           ]),
           stderr: "",
+          signal: null,
           killed: false,
           termination: "exit",
         };

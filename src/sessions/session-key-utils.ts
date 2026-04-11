@@ -62,6 +62,8 @@ export function deriveSessionChatType(sessionKey: string | undefined | null): Se
     return "direct";
   }
   // Legacy Discord keys can be shaped like:
+  // discord:<accountId>:guild-<guildId>:channel-<channelId>
+  if (/^discord:(?:[^:]+:)?guild-[^:]+:channel-[^:]+$/.test(scoped)) {
     return "channel";
   }
   return "unknown";

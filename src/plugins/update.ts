@@ -171,11 +171,7 @@ function replacePluginIdInList(
   return next;
 }
 
-function migratePluginConfigId(
-  cfg: ChainbreakerConfig,
-  fromId: string,
-  toId: string,
-): ChainbreakerConfig {
+function migratePluginConfigId(cfg: ChainbreakerConfig, fromId: string, toId: string): ChainbreakerConfig {
   if (fromId === toId) {
     return cfg;
   }

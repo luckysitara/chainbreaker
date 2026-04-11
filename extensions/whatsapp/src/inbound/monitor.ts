@@ -1,9 +1,6 @@
 import type { AnyMessageContent, proto, WAMessage } from "@whiskeysockets/baileys";
 import { DisconnectReason, isJidGroup } from "@whiskeysockets/baileys";
-import {
-  createInboundDebouncer,
-  formatLocationText,
-} from "chainbreaker/plugin-sdk/channel-inbound";
+import { createInboundDebouncer, formatLocationText } from "chainbreaker/plugin-sdk/channel-inbound";
 import { recordChannelActivity } from "chainbreaker/plugin-sdk/channel-runtime";
 import { saveMediaBuffer } from "chainbreaker/plugin-sdk/media-runtime";
 import { logVerbose, shouldLogVerbose } from "chainbreaker/plugin-sdk/runtime-env";
@@ -140,6 +137,7 @@ export async function monitorWebInbox(options: {
     { subject?: string; participants?: string[]; expires: number }
   >();
   const GROUP_META_TTL_MS = 5 * 60 * 1000; // 5 minutes
+  const lidLookup = sock.signalRepository?.lidMapping;
 
   const resolveInboundJid = async (jid: string | null | undefined): Promise<string | null> =>
     resolveJidToE164(jid, { authDir: options.authDir, lidLookup });
@@ -478,6 +476,7 @@ export async function monitorWebInbox(options: {
 
       await maybeMarkInboundAsRead(inbound);
 
+      // If this is history/offline catch-up, mark read above but skip auto-reply.
       if (upsert.type === "append") {
         const APPEND_RECENT_GRACE_MS = 60_000;
         const msgTsRaw = msg.messageTimestamp;
@@ -565,6 +564,7 @@ export async function monitorWebInbox(options: {
       }
     },
     onClose,
+    signalClose: (reason?: WebListenerCloseReason) => {
       resolveClose(reason ?? { status: undefined, isLoggedOut: false, error: "closed" });
     },
     // IPC surface (sendMessage/sendPoll/sendReaction/sendComposingTo)

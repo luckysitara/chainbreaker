@@ -14,10 +14,12 @@ describe("doctor allowlist-policy repair", () => {
     readChannelAllowFromStoreMock.mockReset();
   });
 
+  it("restores matrix dm allowFrom from the pairing store into the nested path", async () => {
     readChannelAllowFromStoreMock.mockResolvedValue(["@alice:example.org"]);
 
     const result = await maybeRepairAllowlistPolicyAllowFrom({
       channels: {
+        matrix: {
           dm: {
             policy: "allowlist",
           },
@@ -26,6 +28,9 @@ describe("doctor allowlist-policy repair", () => {
     });
 
     expect(result.changes).toEqual([
+      '- channels.matrix.dm.allowFrom: restored 1 sender entry from pairing store (dmPolicy="allowlist").',
     ]);
+    expect(result.config.channels?.matrix?.dm?.allowFrom).toEqual(["@alice:example.org"]);
+    expect(result.config.channels?.matrix?.allowFrom).toBeUndefined();
   });
 });

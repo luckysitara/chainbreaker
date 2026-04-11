@@ -122,9 +122,7 @@ export async function runNodeDaemonInstall(opts: NodeDaemonInstallOptions) {
     });
     if (!json) {
       defaultRuntime.log(`Node service already ${service.loadedText}.`);
-      defaultRuntime.log(
-        `Reinstall with: ${formatCliCommand("chainbreaker node install --force")}`,
-      );
+      defaultRuntime.log(`Reinstall with: ${formatCliCommand("chainbreaker node install --force")}`);
     }
     return;
   }

@@ -10,6 +10,7 @@ describe("chunkTextForOutbound", () => {
       expected: [],
     },
     {
+      name: "splits on newline or whitespace boundaries",
       text: "alpha\nbeta gamma",
       maxLen: 8,
       expected: ["alpha", "beta", "gamma"],

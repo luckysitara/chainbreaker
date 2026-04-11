@@ -95,9 +95,16 @@ async function postResponses(port: number, body: unknown, headers?: Record<strin
 
 function parseSseEvents(text: string): Array<{ event?: string; data: string }> {
   const events: Array<{ event?: string; data: string }> = [];
+  const lines = text.split("\n");
   let currentEvent: string | undefined;
   let currentData: string[] = [];
 
+  for (const line of lines) {
+    if (line.startsWith("event: ")) {
+      currentEvent = line.slice("event: ".length);
+    } else if (line.startsWith("data: ")) {
+      currentData.push(line.slice("data: ".length));
+    } else if (line.trim() === "" && currentData.length > 0) {
       events.push({ event: currentEvent, data: currentData.join("\n") });
       currentEvent = undefined;
       currentData = [];
@@ -281,10 +288,7 @@ describe("OpenResponses HTTP API (e2e)", () => {
       await ensureResponseConsumed(resModel);
 
       mockAgentOnce([{ text: "hello" }]);
-      const resDefaultAlias = await postResponses(port, {
-        model: "chainbreaker/default",
-        input: "hi",
-      });
+      const resDefaultAlias = await postResponses(port, { model: "chainbreaker/default", input: "hi" });
       expect(resDefaultAlias.status).toBe(200);
       const optsDefaultAlias = (agentCommand.mock.calls[0] as unknown[] | undefined)?.[0];
       expect((optsDefaultAlias as { sessionKey?: string } | undefined)?.sessionKey ?? "").toMatch(

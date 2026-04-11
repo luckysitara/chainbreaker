@@ -110,22 +110,30 @@ describe("directive behavior", () => {
       expect(runEmbeddedPiAgentMock).not.toHaveBeenCalled();
     });
   });
+  it("picks the best fuzzy match for global and provider-scoped minimax queries", async () => {
     await withTempHome(async (home) => {
       for (const testCase of [
         {
+          body: "/model minimax",
           storePath: path.join(home, "sessions-global-fuzzy.json"),
           expectedSelection: {},
           config: {
             agents: {
               defaults: {
+                model: { primary: "minimax/MiniMax-M2.7" },
                 workspace: path.join(home, "chainbreaker"),
                 models: {
+                  "minimax/MiniMax-M2.7": {},
+                  "minimax/MiniMax-M2.7-highspeed": {},
+                  "lmstudio/minimax-m2.5-gs32": {},
                 },
               },
             },
             models: {
               mode: "merge",
               providers: {
+                minimax: {
+                  baseUrl: "https://api.minimax.io/anthropic",
                   apiKey: "sk-test", // pragma: allowlist secret
                   api: "anthropic-messages",
                   models: [
@@ -137,27 +145,35 @@ describe("directive behavior", () => {
                   baseUrl: "http://127.0.0.1:1234/v1",
                   apiKey: "lmstudio", // pragma: allowlist secret
                   api: "openai-responses",
+                  models: [makeModelDefinition("minimax-m2.5-gs32", "MiniMax M2.5 GS32")],
                 },
               },
             },
           },
         },
         {
+          body: "/model minimax/highspeed",
           storePath: path.join(home, "sessions-provider-fuzzy.json"),
           expectedSelection: {
+            provider: "minimax",
             model: "MiniMax-M2.7-highspeed",
           },
           config: {
             agents: {
               defaults: {
+                model: { primary: "minimax/MiniMax-M2.7" },
                 workspace: path.join(home, "chainbreaker"),
                 models: {
+                  "minimax/MiniMax-M2.7": {},
+                  "minimax/MiniMax-M2.7-highspeed": {},
                 },
               },
             },
             models: {
               mode: "merge",
               providers: {
+                minimax: {
+                  baseUrl: "https://api.minimax.io/anthropic",
                   apiKey: "sk-test", // pragma: allowlist secret
                   api: "anthropic-messages",
                   models: [

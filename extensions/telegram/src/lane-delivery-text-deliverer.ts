@@ -1,5 +1,6 @@
 import { resolveSendableOutboundReplyParts } from "chainbreaker/plugin-sdk/reply-payload";
 import type { ReplyPayload } from "chainbreaker/plugin-sdk/reply-runtime";
+import type { TelegramInlineButtons } from "./button-types.js";
 import type { TelegramDraftStream } from "./draft-stream.js";
 import {
   isRecoverableTelegramNetworkError,
@@ -80,6 +81,7 @@ type CreateLaneTextDelivererParams = {
     messageId: number;
     text: string;
     context: "final" | "update";
+    previewButtons?: TelegramInlineButtons;
   }) => Promise<void>;
   deletePreviewMessage: (messageId: number) => Promise<void>;
   log: (message: string) => void;
@@ -91,6 +93,7 @@ type DeliverLaneTextParams = {
   text: string;
   payload: ReplyPayload;
   infoKind: string;
+  previewButtons?: TelegramInlineButtons;
   allowPreviewUpdateForNonFinal?: boolean;
 };
 
@@ -98,6 +101,7 @@ type TryUpdatePreviewParams = {
   lane: DraftLaneState;
   laneName: LaneName;
   text: string;
+  previewButtons?: TelegramInlineButtons;
   stopBeforeEdit?: boolean;
   updateLaneSnapshot?: boolean;
   skipRegressive: "always" | "existingOnly";
@@ -112,6 +116,7 @@ type ConsumeArchivedAnswerPreviewParams = {
   lane: DraftLaneState;
   text: string;
   payload: ReplyPayload;
+  previewButtons?: TelegramInlineButtons;
   canEditViaPreview: boolean;
 };
 
@@ -183,6 +188,7 @@ export function createLaneTextDeliverer(params: CreateLaneTextDelivererParams) {
   const isDraftPreviewLane = (lane: DraftLaneState) => lane.stream?.previewMode?.() === "draft";
   const canMaterializeDraftFinal = (
     lane: DraftLaneState,
+    previewButtons?: TelegramInlineButtons,
   ) => {
     const hasPreviewButtons = Boolean(previewButtons && previewButtons.length > 0);
     return (
@@ -221,6 +227,7 @@ export function createLaneTextDeliverer(params: CreateLaneTextDelivererParams) {
     messageId: number;
     text: string;
     context: "final" | "update";
+    previewButtons?: TelegramInlineButtons;
     updateLaneSnapshot: boolean;
     lane: DraftLaneState;
     finalTextAlreadyLanded: boolean;

@@ -4,6 +4,7 @@ import type { DoctorConfigPreflightResult } from "../../doctor-config-preflight.
 import { applyLegacyCompatibilityStep, applyUnknownConfigKeyStep } from "./config-flow-steps.js";
 
 describe("doctor config flow steps", () => {
+  it("collects legacy compatibility issue lines and preview fix hints", () => {
     const result = applyLegacyCompatibilityStep({
       snapshot: {
         exists: true,
@@ -50,8 +51,6 @@ describe("doctor config flow steps", () => {
 
     expect(result.removed).toEqual(["bogus"]);
     expect(result.state.candidate).toEqual({});
-    expect(result.state.fixHints).toContain(
-      'Run "chainbreaker doctor --fix" to remove these keys.',
-    );
+    expect(result.state.fixHints).toContain('Run "chainbreaker doctor --fix" to remove these keys.');
   });
 });

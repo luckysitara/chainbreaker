@@ -116,6 +116,7 @@ async function writeRegistryFile<T extends RegistryEntry>(
   registryPath: string,
   registry: RegistryFile<T>,
 ): Promise<void> {
+  await writeJsonAtomic(registryPath, registry, { trailingNewline: true });
 }
 
 export async function readRegistry(): Promise<SandboxRegistry> {

@@ -174,6 +174,7 @@ describe("anthropic-vertex implicit provider", () => {
     }
   });
 
+  it("does not accept generic Kubernetes env without a GCP ADC signal", async () => {
     const agentDir = mkdtempSync(join(tmpdir(), "chainbreaker-test-"));
     const envSnapshot = captureEnv(["KUBERNETES_SERVICE_HOST", "GOOGLE_CLOUD_LOCATION"]);
     process.env.KUBERNETES_SERVICE_HOST = "10.0.0.1";

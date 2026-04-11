@@ -10,6 +10,7 @@ describe("splitTelegramCaption", () => {
     });
   });
 
+  it("keeps short captions inline", () => {
     expect(splitTelegramCaption(" hello ")).toEqual({
       caption: "hello",
       followUpText: undefined,

@@ -95,6 +95,7 @@ const GATEWAY_AUTH_MODES: readonly GatewayAuthMode[] = [
 ];
 const GATEWAY_TAILSCALE_MODES: readonly GatewayTailscaleMode[] = ["off", "serve", "funnel"];
 
+function warnInlinePasswordFlag() {
   defaultRuntime.error(
     "Warning: --password can be exposed via process listings. Prefer --password-file or CHAINBREAKER_GATEWAY_PASSWORD.",
   );
@@ -328,6 +329,7 @@ async function runGatewayCommand(opts: GatewayRunOpts) {
     return;
   }
   if (toOptionString(opts.password)) {
+    warnInlinePasswordFlag();
   }
   const tokenRaw = toOptionString(opts.token);
 
@@ -480,6 +482,8 @@ async function runGatewayCommand(opts: GatewayRunOpts) {
       try {
         const diagnostics = await inspectPortUsage(port);
         if (diagnostics.status === "busy") {
+          for (const line of formatPortDiagnostics(diagnostics)) {
+            defaultRuntime.error(line);
           }
         }
       } catch {

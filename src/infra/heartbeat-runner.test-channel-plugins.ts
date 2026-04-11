@@ -6,6 +6,7 @@ import type {
 import { createOutboundTestPlugin } from "../test-utils/channel-plugins.js";
 import { resolveOutboundSendDep, type OutboundSendDeps } from "./outbound/send-deps.js";
 
+type HeartbeatSendChannelId = "slack" | "telegram" | "whatsapp";
 type HeartbeatSendFn = (
   to: string,
   text: string,
@@ -61,7 +62,9 @@ function createHeartbeatChannelPlugin(params: {
 }
 
 export const heartbeatRunnerSlackPlugin = createHeartbeatChannelPlugin({
+  id: "slack",
   label: "Slack",
+  docsPath: "/channels/slack",
 });
 
 export const heartbeatRunnerTelegramPlugin = createHeartbeatChannelPlugin({

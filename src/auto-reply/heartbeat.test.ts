@@ -202,6 +202,7 @@ Keep this file empty unless you want a tiny checklist. Keep it small.
     expect(isHeartbeatContentEffectivelyEmpty(defaultTemplate)).toBe(false);
   });
 
+  it("returns true for header with only empty lines", () => {
     expect(isHeartbeatContentEffectivelyEmpty("# HEARTBEAT.md\n\n\n")).toBe(true);
   });
 

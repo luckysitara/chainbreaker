@@ -19,10 +19,7 @@ import { discoverAuthStorage, discoverModels } from "./pi-model-discovery.js";
 const LIVE = isLiveTestEnabled();
 const DIRECT_ENABLED = Boolean(process.env.CHAINBREAKER_LIVE_MODELS?.trim());
 const REQUIRE_PROFILE_KEYS = isLiveProfileKeyModeEnabled();
-const LIVE_HEARTBEAT_MS = Math.max(
-  1_000,
-  toInt(process.env.CHAINBREAKER_LIVE_HEARTBEAT_MS, 30_000),
-);
+const LIVE_HEARTBEAT_MS = Math.max(1_000, toInt(process.env.CHAINBREAKER_LIVE_HEARTBEAT_MS, 30_000));
 const LIVE_SETUP_TIMEOUT_MS = Math.max(
   1_000,
   toInt(process.env.CHAINBREAKER_LIVE_SETUP_TIMEOUT_MS, 45_000),
@@ -107,13 +104,16 @@ function formatFailurePreview(
   maxItems: number,
 ): string {
   const limit = Math.max(1, maxItems);
+  const lines = failures.slice(0, limit).map((failure, index) => {
     const normalized = failure.error.replace(/\s+/g, " ").trim();
     const clipped = normalized.length > 320 ? `${normalized.slice(0, 317)}...` : normalized;
     return `${index + 1}. ${failure.model}: ${clipped}`;
   });
   const remaining = failures.length - limit;
   if (remaining > 0) {
+    lines.push(`... and ${remaining} more`);
   }
+  return lines.join("\n");
 }
 
 function isGoogleModelNotFoundError(err: unknown): boolean {
@@ -156,6 +156,7 @@ function isModelNotFoundErrorMessage(raw: string): boolean {
 describe("isModelNotFoundErrorMessage", () => {
   it("matches whitespace-separated not found errors", () => {
     expect(isModelNotFoundErrorMessage("404 model not found")).toBe(true);
+    expect(isModelNotFoundErrorMessage("model: minimax-text-01 not found")).toBe(true);
   });
 
   it("still matches underscore and hyphen variants", () => {
@@ -318,6 +319,7 @@ async function completeSimpleWithTimeout<TApi extends Api>(
       Promise.race([
         completeSimple(model, context, {
           ...options,
+          signal: controller.signal,
         }),
         timeout,
       ]),
@@ -465,6 +467,7 @@ describeLive("live models (profile keys)", () => {
         maxModels > 0 ? maxModels : candidates.length,
         (entry) => entry.model.provider,
       );
+      logProgress(`[live-models] selection=${useExplicit ? "explicit" : "high-signal"}`);
       if (selectedCandidates.length < candidates.length) {
         logProgress(
           `[live-models] capped to ${selectedCandidates.length}/${candidates.length} via CHAINBREAKER_LIVE_MAX_MODELS=${maxModels}`,
@@ -652,6 +655,7 @@ describeLive("live models (profile keys)", () => {
             if (
               ok.text.length === 0 &&
               allowNotFoundSkip &&
+              (model.provider === "minimax" || model.provider === "zai")
             ) {
               skipped.push({
                 model: id,
@@ -709,13 +713,16 @@ describeLive("live models (profile keys)", () => {
             }
             if (
               allowNotFoundSkip &&
+              model.provider === "minimax" &&
               message.includes("request ended without sending any chunks")
             ) {
               skipped.push({ model: id, reason: message });
+              logProgress(`${progressLabel}: skip (minimax empty response)`);
               break;
             }
             if (
               allowNotFoundSkip &&
+              (model.provider === "minimax" || model.provider === "zai") &&
               isRateLimitErrorMessage(message)
             ) {
               skipped.push({ model: id, reason: message });

@@ -20,7 +20,11 @@ const { emitResetCommandHooks } = await import("./commands-core.js");
 describe("emitResetCommandHooks", () => {
   async function runBeforeResetContext(sessionKey?: string) {
     const command = {
+      surface: "discord",
       senderId: "rai",
+      channel: "discord",
+      from: "discord:rai",
+      to: "discord:bot",
       resetHookTriggered: false,
     } as HandleCommandsParams["command"];
 

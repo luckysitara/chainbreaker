@@ -30,6 +30,7 @@ const whatsappMessaging = {
   },
 };
 
+const noopOutbound = (channel: "discord" | "imessage" | "slack"): ChannelOutboundAdapter => ({
   deliveryMode: "direct",
   sendText: async () => ({ channel, messageId: `${channel}-msg` }),
 });
@@ -38,12 +39,18 @@ beforeEach(() => {
   setActivePluginRegistry(
     createTestRegistry([
       {
+        pluginId: "discord",
+        plugin: createOutboundTestPlugin({ id: "discord", outbound: noopOutbound("discord") }),
         source: "test",
       },
       {
+        pluginId: "imessage",
+        plugin: createOutboundTestPlugin({ id: "imessage", outbound: noopOutbound("imessage") }),
         source: "test",
       },
       {
+        pluginId: "slack",
+        plugin: createOutboundTestPlugin({ id: "slack", outbound: noopOutbound("slack") }),
         source: "test",
       },
       {
@@ -285,6 +292,7 @@ describe("resolveSessionDeliveryTarget", () => {
       entry: {
         sessionId: "sess-heartbeat-thread",
         updatedAt: 1,
+        lastChannel: "slack",
         lastTo: "user:U123",
         lastThreadId: "1739142736.000100",
       },
@@ -304,9 +312,11 @@ describe("resolveSessionDeliveryTarget", () => {
         lastTo: "+1555",
       },
       requestedChannel: "webchat",
+      fallbackChannel: "slack",
     });
 
     expectImplicitRoute(resolved, {
+      channel: "slack",
       to: undefined,
       lastChannel: "whatsapp",
       lastTo: "+1555",
@@ -333,7 +343,9 @@ describe("resolveSessionDeliveryTarget", () => {
   it("skips :topic: parsing for non-telegram channels", () => {
     const resolved = resolveSessionDeliveryTarget({
       entry: {
+        sessionId: "sess-slack",
         updatedAt: 1,
+        lastChannel: "slack",
         lastTo: "C12345",
       },
       requestedChannel: "last",
@@ -352,6 +364,7 @@ describe("resolveSessionDeliveryTarget", () => {
         lastChannel: "telegram",
         lastTo: "63448508",
       },
+      requestedChannel: "slack",
       explicitTo: "C12345:topic:999",
     });
 
@@ -424,16 +437,21 @@ describe("resolveSessionDeliveryTarget", () => {
     {
       name: "allows heartbeat delivery to Slack DMs by default and drops inherited thread ids",
       entry: {
+        sessionId: "sess-heartbeat-slack-direct",
         updatedAt: 1,
+        lastChannel: "slack",
         lastTo: "user:U123",
         lastThreadId: "1739142736.000100",
       },
+      expectedChannel: "slack",
       expectedTo: "user:U123",
     },
     {
       name: "blocks heartbeat delivery to Slack DMs when directPolicy is block",
       entry: {
+        sessionId: "sess-heartbeat-slack-direct-blocked",
         updatedAt: 1,
+        lastChannel: "slack",
         lastTo: "user:U123",
         lastThreadId: "1739142736.000100",
       },
@@ -500,16 +518,21 @@ describe("resolveSessionDeliveryTarget", () => {
     {
       name: "uses session chatType hints when target parsing cannot classify a direct chat",
       entry: {
+        sessionId: "sess-heartbeat-imessage-direct",
         updatedAt: 1,
+        lastChannel: "imessage",
         lastTo: "chat-guid-unknown-shape",
         chatType: "direct",
       },
+      expectedChannel: "imessage",
       expectedTo: "chat-guid-unknown-shape",
     },
     {
       name: "blocks session chatType direct hints when directPolicy is block",
       entry: {
+        sessionId: "sess-heartbeat-imessage-direct-blocked",
         updatedAt: 1,
+        lastChannel: "imessage",
         lastTo: "chat-guid-unknown-shape",
         chatType: "direct",
       },
@@ -540,7 +563,9 @@ describe("resolveSessionDeliveryTarget", () => {
     const resolved = resolveHeartbeatDeliveryTarget({
       cfg,
       entry: {
+        sessionId: "sess-heartbeat-discord-dm",
         updatedAt: 1,
+        lastChannel: "discord",
         lastTo: "user:12345",
       },
       heartbeat: {
@@ -548,6 +573,7 @@ describe("resolveSessionDeliveryTarget", () => {
       },
     });
 
+    expect(resolved.channel).toBe("discord");
     expect(resolved.to).toBe("user:12345");
   });
 
@@ -556,7 +582,9 @@ describe("resolveSessionDeliveryTarget", () => {
     const resolved = resolveHeartbeatDeliveryTarget({
       cfg,
       entry: {
+        sessionId: "sess-heartbeat-discord-channel",
         updatedAt: 1,
+        lastChannel: "discord",
         lastTo: "channel:999",
       },
       heartbeat: {
@@ -564,6 +592,7 @@ describe("resolveSessionDeliveryTarget", () => {
       },
     });
 
+    expect(resolved.channel).toBe("discord");
     expect(resolved.to).toBe("channel:999");
   });
 
@@ -608,6 +637,7 @@ describe("resolveSessionDeliveryTarget", () => {
       entry: {
         sessionId: "sess-heartbeat-turn-source",
         updatedAt: 1,
+        lastChannel: "slack",
         lastTo: "U_WRONG",
       },
       heartbeat: {
@@ -651,10 +681,12 @@ describe("resolveSessionDeliveryTarget", () => {
 describe("resolveSessionDeliveryTarget — cross-channel reply guard (#24152)", () => {
   it("uses turnSourceChannel over session lastChannel when provided", () => {
     // Simulate: WhatsApp message originated the turn, but a Slack message
+    // arrived concurrently and updated lastChannel to "slack"
     const resolved = resolveSessionDeliveryTarget({
       entry: {
         sessionId: "sess-shared",
         updatedAt: 1,
+        lastChannel: "slack", // <- concurrently overwritten
         lastTo: "U0AEMECNCBV", // <- Slack user (wrong target)
       },
       requestedChannel: "last",
@@ -686,6 +718,7 @@ describe("resolveSessionDeliveryTarget — cross-channel reply guard (#24152)", 
       entry: {
         sessionId: "sess-explicit",
         updatedAt: 1,
+        lastChannel: "slack",
         lastTo: "U12345",
       },
       requestedChannel: "telegram",
@@ -703,6 +736,7 @@ describe("resolveSessionDeliveryTarget — cross-channel reply guard (#24152)", 
       entry: {
         sessionId: "sess-meta",
         updatedAt: 1,
+        lastChannel: "slack",
         lastTo: "U_WRONG",
         lastAccountId: "wrong-account",
       },
@@ -724,6 +758,7 @@ describe("resolveSessionDeliveryTarget — cross-channel reply guard (#24152)", 
       entry: {
         sessionId: "sess-no-fallback",
         updatedAt: 1,
+        lastChannel: "slack",
         lastTo: "U_WRONG",
         lastAccountId: "wrong-account",
         lastThreadId: "1739142736.000100",
@@ -768,6 +803,7 @@ describe("resolveSessionDeliveryTarget — cross-channel reply guard (#24152)", 
       entry: {
         sessionId: "sess-cross-channel-no-thread",
         updatedAt: 1,
+        lastChannel: "slack",
         lastTo: "U_SLACK",
         lastThreadId: "1739142736.000100",
       },
@@ -824,6 +860,7 @@ describe("resolveSessionDeliveryTarget — cross-channel reply guard (#24152)", 
       entry: {
         sessionId: "sess-explicit-to",
         updatedAt: 1,
+        lastChannel: "slack",
         lastTo: "U_WRONG",
       },
       requestedChannel: "last",
@@ -840,6 +877,7 @@ describe("resolveSessionDeliveryTarget — cross-channel reply guard (#24152)", 
       entry: {
         sessionId: "sess-mismatch-turn",
         updatedAt: 1,
+        lastChannel: "slack",
         lastTo: "U_WRONG",
       },
       requestedChannel: "telegram",

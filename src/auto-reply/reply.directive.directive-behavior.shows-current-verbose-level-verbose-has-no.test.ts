@@ -188,6 +188,7 @@ describe("directive behavior", () => {
       expect(loadSessionStore(storePath)["agent:main:main"]?.fastMode).toBe(true);
 
       const statusText = await runCommand(home, "/status");
+      const optionsLine = statusText?.split("\n").find((line) => line.trim().startsWith("⚙️"));
       expect(optionsLine).toContain("Fast: on");
 
       const offText = await runCommand(home, "/fast off");
@@ -230,6 +231,7 @@ describe("directive behavior", () => {
 
       await runElevatedCommand(home, "/elevated on");
       const onStatusText = replyText(await runElevatedCommand(home, "/status"));
+      const optionsLine = onStatusText?.split("\n").find((line) => line.trim().startsWith("⚙️"));
       expect(optionsLine).toBeTruthy();
       expect(optionsLine).toContain("elevated");
 
@@ -374,6 +376,7 @@ describe("directive behavior", () => {
       expect(runEmbeddedPiAgentMock).not.toHaveBeenCalled();
     });
   });
+  it("strips inline elevated directives from the user text (does not persist session override)", async () => {
     await withTempHome(async (home) => {
       runEmbeddedPiAgentMock.mockResolvedValue({
         payloads: [{ text: "ok" }],

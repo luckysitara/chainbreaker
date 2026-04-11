@@ -186,9 +186,7 @@ export async function runNonInteractiveLocalSetup(params: {
                 "Fix: rerun without `--install-daemon` for one-shot setup, or enable a working user-systemd session and retry.",
                 "If your auth profile uses env-backed refs, keep those env vars set in the shell that runs `chainbreaker gateway run` or `chainbreaker agent --local`.",
               ]
-            : [
-                `Run \`${formatCliCommand("chainbreaker gateway status --deep")}\` for more detail.`,
-              ],
+            : [`Run \`${formatCliCommand("chainbreaker gateway status --deep")}\` for more detail.`],
       });
       runtime.exit(1);
       return;
@@ -206,6 +204,7 @@ export async function runNonInteractiveLocalSetup(params: {
     const probe = await waitForGatewayReachable({
       url: links.wsUrl,
       token: gatewayResult.gatewayToken,
+      deadlineMs: opts.installDaemon
         ? INSTALL_DAEMON_HEALTH_DEADLINE_MS
         : ATTACH_EXISTING_GATEWAY_HEALTH_DEADLINE_MS,
     });

@@ -166,6 +166,7 @@ async function connectClient(params: { url: string; token: string }) {
 }
 
 describeLive("gateway live (cli backend)", () => {
+  it("runs the agent pipeline against the local CLI backend", async () => {
     const preservedEnv = new Set(
       parseJsonStringArray(
         "CHAINBREAKER_LIVE_CLI_BACKEND_PRESERVE_ENV",
@@ -216,8 +217,7 @@ describeLive("gateway live (cli backend)", () => {
           ? { command: "codex", args: DEFAULT_CODEX_ARGS }
           : null;
 
-    const cliCommand =
-      process.env.CHAINBREAKER_LIVE_CLI_BACKEND_COMMAND ?? providerDefaults?.command;
+    const cliCommand = process.env.CHAINBREAKER_LIVE_CLI_BACKEND_COMMAND ?? providerDefaults?.command;
     if (!cliCommand) {
       throw new Error(
         `CHAINBREAKER_LIVE_CLI_BACKEND_COMMAND is required for provider "${providerId}".`,
@@ -229,9 +229,7 @@ describeLive("gateway live (cli backend)", () => {
         process.env.CHAINBREAKER_LIVE_CLI_BACKEND_ARGS,
       ) ?? providerDefaults?.args;
     if (!baseCliArgs || baseCliArgs.length === 0) {
-      throw new Error(
-        `CHAINBREAKER_LIVE_CLI_BACKEND_ARGS is required for provider "${providerId}".`,
-      );
+      throw new Error(`CHAINBREAKER_LIVE_CLI_BACKEND_ARGS is required for provider "${providerId}".`);
     }
     const cliClearEnv =
       parseJsonStringArray(

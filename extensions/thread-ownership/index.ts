@@ -54,6 +54,7 @@ export default definePluginEntry({
     const forwarderUrl = (
       pluginCfg.forwarderUrl ??
       process.env.SLACK_FORWARDER_URL ??
+      "http://slack-forwarder:8750"
     ).replace(/\/$/, "");
 
     const abTestChannels = new Set(
@@ -66,6 +67,7 @@ export default definePluginEntry({
     const botUserId = process.env.SLACK_BOT_USER_ID ?? "";
 
     api.on("message_received", async (event, ctx) => {
+      if (ctx.channelId !== "slack") return;
 
       const text = event.content ?? "";
       const threadTs = (event.metadata?.threadTs as string) ?? "";
@@ -82,6 +84,7 @@ export default definePluginEntry({
     });
 
     api.on("message_sending", async (event, ctx) => {
+      if (ctx.channelId !== "slack") return;
 
       const threadTs = (event.metadata?.threadTs as string) ?? "";
       const channelId = (event.metadata?.channelId as string) ?? event.to;

@@ -50,6 +50,7 @@ describe("resolveCompactionInstructions", () => {
       expect(result).toBe("runtime value");
     });
 
+    it("treats tab/newline-only event as absent -- runtime wins", () => {
       const result = resolveCompactionInstructions("\t\n\r", "runtime value");
       expect(result).toBe("runtime value");
     });
@@ -183,6 +184,7 @@ describe("resolveCompactionInstructions", () => {
 });
 
 describe("composeSplitTurnInstructions", () => {
+  it("joins turn prefix, separator, and resolved instructions with double newlines", () => {
     const result = composeSplitTurnInstructions("Turn prefix here", "Resolved instructions here");
     expect(result).toBe(
       "Turn prefix here\n\nAdditional requirements:\n\nResolved instructions here",
@@ -206,6 +208,7 @@ describe("composeSplitTurnInstructions", () => {
     expect(result).toContain("Additional requirements:");
   });
 
+  it("KNOWN_EDGE: empty turnPrefix produces leading blank line", () => {
     const result = composeSplitTurnInstructions("", "instructions");
     expect(result).toBe("\n\nAdditional requirements:\n\ninstructions");
     expect(result.startsWith("\n")).toBe(true);
@@ -224,6 +227,7 @@ describe("composeSplitTurnInstructions", () => {
     expect(count).toBe(2);
   });
 
+  it("preserves multiline content in both inputs", () => {
     const prefix = "Line 1\nLine 2";
     const instructions = "Rule A\nRule B\nRule C";
     const result = composeSplitTurnInstructions(prefix, instructions);

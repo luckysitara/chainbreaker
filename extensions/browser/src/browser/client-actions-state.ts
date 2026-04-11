@@ -154,10 +154,14 @@ export async function browserStorageClear(
   });
 }
 
+export async function browserSetOffline(
   baseUrl: string | undefined,
+  opts: { offline: boolean; targetId?: string; profile?: string },
 ): Promise<BrowserActionTargetOk> {
   return await postProfileJson<BrowserActionTargetOk>(baseUrl, {
+    path: "/set/offline",
     profile: opts.profile,
+    body: { targetId: opts.targetId, offline: opts.offline },
   });
 }
 

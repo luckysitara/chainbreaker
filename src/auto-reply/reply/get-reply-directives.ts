@@ -13,10 +13,14 @@ import type { ElevatedLevel, ReasoningLevel, ThinkLevel, VerboseLevel } from "..
 import type { GetReplyOptions, ReplyPayload } from "../types.js";
 import { resolveBlockStreamingChunking } from "./block-streaming.js";
 import { buildCommandContext } from "./commands-context.js";
+import { type InlineDirectives, parseInlineDirectives } from "./directive-handling.parse.js";
+import { applyInlineDirectiveOverrides } from "./get-reply-directives-apply.js";
+import { clearExecInlineDirectives, clearInlineDirectives } from "./get-reply-directives-utils.js";
 import { defaultGroupActivation, resolveGroupRequireMention } from "./groups.js";
 import { CURRENT_MESSAGE_MARKER, stripMentions, stripStructuralPrefixes } from "./mentions.js";
 import { createModelSelectionState, resolveContextTokens } from "./model-selection.js";
 import { formatElevatedUnavailableMessage, resolveElevatedPermissions } from "./reply-elevated.js";
+import { stripInlineStatus } from "./reply-inline.js";
 import type { TypingController } from "./typing.js";
 
 type AgentDefaults = NonNullable<ChainbreakerConfig["agents"]>["defaults"];
@@ -42,6 +46,7 @@ export type ReplyDirectiveContinuation = {
   command: ReturnType<typeof buildCommandContext>;
   allowTextCommands: boolean;
   skillCommands?: SkillCommandSpec[];
+  directives: InlineDirectives;
   cleanedBody: string;
   messageProviderKey: string;
   elevatedEnabled: boolean;
@@ -58,6 +63,7 @@ export type ReplyDirectiveContinuation = {
   blockReplyChunking?: {
     minChars: number;
     maxChars: number;
+    breakPreference: "paragraph" | "newline" | "sentence";
     flushOnParagraph?: boolean;
   };
   resolvedBlockStreamingBreak: "text_end" | "message_end";
@@ -65,14 +71,18 @@ export type ReplyDirectiveContinuation = {
   model: string;
   modelState: Awaited<ReturnType<typeof createModelSelectionState>>;
   contextTokens: number;
+  inlineStatusRequested: boolean;
   directiveAck?: ReplyPayload;
+  perMessageQueueMode?: InlineDirectives["queueMode"];
   perMessageQueueOptions?: {
     debounceMs?: number;
     cap?: number;
+    dropPolicy?: InlineDirectives["dropPolicy"];
   };
 };
 
 function resolveExecOverrides(params: {
+  directives: InlineDirectives;
   sessionEntry?: SessionEntry;
   agentEntry?: AgentEntry;
 }): ExecOverrides | undefined {
@@ -114,6 +124,7 @@ export async function resolveReplyDirectives(params: {
   sessionStore: Record<string, SessionEntry>;
   sessionKey: string;
   storePath?: string;
+  sessionScope: Parameters<typeof applyInlineDirectiveOverrides>[0]["sessionScope"];
   groupResolution: Parameters<typeof resolveGroupRequireMention>[0]["groupResolution"];
   isGroup: boolean;
   triggerBodyNormalized: string;
@@ -225,10 +236,13 @@ export async function resolveReplyDirectives(params: {
     (alias) => !reservedCommands.has(alias.toLowerCase()),
   );
   const allowStatusDirective = allowTextCommands && command.isAuthorizedSender;
+  let parsedDirectives = parseInlineDirectives(commandText, {
     modelAliases: configuredAliases,
     allowStatusDirective,
   });
+  const hasInlineStatus =
     parsedDirectives.hasStatusDirective && parsedDirectives.cleaned.trim().length > 0;
+  if (hasInlineStatus) {
     parsedDirectives = {
       ...parsedDirectives,
       hasStatusDirective: false,
@@ -246,8 +260,10 @@ export async function resolveReplyDirectives(params: {
   }
   if (isGroup && ctx.WasMentioned !== true && parsedDirectives.hasExecDirective) {
     if (parsedDirectives.execSecurity !== "deny") {
+      parsedDirectives = clearExecInlineDirectives(parsedDirectives);
     }
   }
+  const hasInlineDirective =
     parsedDirectives.hasThinkDirective ||
     parsedDirectives.hasVerboseDirective ||
     parsedDirectives.hasFastDirective ||
@@ -256,20 +272,27 @@ export async function resolveReplyDirectives(params: {
     parsedDirectives.hasExecDirective ||
     parsedDirectives.hasModelDirective ||
     parsedDirectives.hasQueueDirective;
+  if (hasInlineDirective) {
     const stripped = stripStructuralPrefixes(parsedDirectives.cleaned);
     const noMentions = isGroup ? stripMentions(stripped, ctx, cfg, agentId) : stripped;
     if (noMentions.trim().length > 0) {
+      const directiveOnlyCheck = parseInlineDirectives(noMentions, {
         modelAliases: configuredAliases,
       });
       if (directiveOnlyCheck.cleaned.trim().length > 0) {
+        const allowInlineStatus =
           parsedDirectives.hasStatusDirective && allowTextCommands && command.isAuthorizedSender;
+        parsedDirectives = allowInlineStatus
           ? {
+              ...clearInlineDirectives(parsedDirectives.cleaned),
               hasStatusDirective: true,
             }
+          : clearInlineDirectives(parsedDirectives.cleaned);
       }
     }
   }
   // Use command.isAuthorizedSender (resolved authorization) instead of raw commandAuthorized
+  // to ensure inline directives work when commands.allowFrom grants access (e.g., LINE).
   let directives = command.isAuthorizedSender
     ? parsedDirectives
     : {
@@ -289,6 +312,7 @@ export async function resolveReplyDirectives(params: {
       return parsedDirectives.cleaned;
     }
     if (!sessionCtx.CommandBody && !sessionCtx.RawBody) {
+      return parseInlineDirectives(existingBody, {
         modelAliases: configuredAliases,
         allowStatusDirective,
       }).cleaned;
@@ -296,6 +320,7 @@ export async function resolveReplyDirectives(params: {
 
     const markerIndex = existingBody.indexOf(CURRENT_MESSAGE_MARKER);
     if (markerIndex < 0) {
+      return parseInlineDirectives(existingBody, {
         modelAliases: configuredAliases,
         allowStatusDirective,
       }).cleaned;
@@ -303,6 +328,7 @@ export async function resolveReplyDirectives(params: {
 
     const head = existingBody.slice(0, markerIndex + CURRENT_MESSAGE_MARKER.length);
     const tail = existingBody.slice(markerIndex + CURRENT_MESSAGE_MARKER.length);
+    const cleanedTail = parseInlineDirectives(tail, {
       modelAliases: configuredAliases,
       allowStatusDirective,
     }).cleaned;
@@ -310,6 +336,7 @@ export async function resolveReplyDirectives(params: {
   })();
 
   if (allowStatusDirective) {
+    cleanedBody = stripInlineStatus(cleanedBody).cleaned;
   }
 
   sessionCtx.BodyForAgent = cleanedBody;
@@ -446,7 +473,9 @@ export async function resolveReplyDirectives(params: {
     ["status", "list"].includes(directives.rawModelDirective?.trim().toLowerCase() ?? "");
   const effectiveModelDirective = isModelListAlias ? undefined : directives.rawModelDirective;
 
+  const inlineStatusRequested = hasInlineStatus && allowTextCommands && command.isAuthorizedSender;
 
+  const applyResult = await applyInlineDirectiveOverrides({
     ctx,
     cfg,
     agentId,
@@ -517,6 +546,7 @@ export async function resolveReplyDirectives(params: {
       model,
       modelState,
       contextTokens,
+      inlineStatusRequested,
       directiveAck,
       perMessageQueueMode,
       perMessageQueueOptions,

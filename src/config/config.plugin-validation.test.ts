@@ -131,9 +131,7 @@ describe("config plugin validation", () => {
     });
 
   beforeAll(async () => {
-    fixtureRoot = await fs.mkdtemp(
-      path.join(os.tmpdir(), "chainbreaker-config-plugin-validation-"),
-    );
+    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "chainbreaker-config-plugin-validation-"));
     await chmodSafeDir(fixtureRoot);
     suiteHome = path.join(fixtureRoot, "home");
     await mkdirSafe(suiteHome);
@@ -543,6 +541,7 @@ describe("config plugin validation", () => {
           },
         },
       },
+      plugins: { enabled: false, entries: { discord: { enabled: true } } },
     });
     expect(res.ok).toBe(true);
   });

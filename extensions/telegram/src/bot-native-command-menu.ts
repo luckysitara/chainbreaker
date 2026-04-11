@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import type { Bot } from "grammy";
 import {
   normalizeTelegramCommandName,
   TELEGRAM_COMMAND_NAME_PATTERN,
@@ -9,7 +10,6 @@ import {
 import { logVerbose } from "chainbreaker/plugin-sdk/runtime-env";
 import type { RuntimeEnv } from "chainbreaker/plugin-sdk/runtime-env";
 import { resolveStateDir } from "chainbreaker/plugin-sdk/state-paths";
-import type { Bot } from "grammy";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 
 export const TELEGRAM_MAX_COMMANDS = 100;

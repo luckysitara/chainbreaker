@@ -144,6 +144,7 @@ describe("formatUpdateOneLiner", () => {
     const update = buildUpdate({
       installKind: "package",
       packageManager: "npm",
+      registry: { latestVersion: null, error: "offline" },
       deps: {
         manager: "npm",
         status: "missing",

@@ -84,6 +84,7 @@ describe("gateway silent scope-upgrade reconnect", () => {
     }
   });
 
+  test("does not let backend reconnect bypass the paired scope baseline", async () => {
     const started = await startServerWithClient("secret");
     const paired = await issueOperatorToken({
       name: "backend-scope-upgrade-reconnect-poc",

@@ -23,11 +23,15 @@ const resolveFeishuSessionConversation = loadSessionConversationSurface("feishu"
 export function createSessionConversationTestRegistry() {
   return createTestRegistry([
     {
+      pluginId: "discord",
       source: "test",
       plugin: {
+        id: "discord",
         meta: {
+          id: "discord",
           label: "Discord",
           selectionLabel: "Discord",
+          docsPath: "/channels/discord",
           blurb: "Discord test stub.",
         },
         capabilities: { chatTypes: ["direct", "channel", "thread"] },
@@ -41,11 +45,15 @@ export function createSessionConversationTestRegistry() {
       },
     },
     {
+      pluginId: "slack",
       source: "test",
       plugin: {
+        id: "slack",
         meta: {
+          id: "slack",
           label: "Slack",
           selectionLabel: "Slack",
+          docsPath: "/channels/slack",
           blurb: "Slack test stub.",
         },
         capabilities: { chatTypes: ["direct", "channel", "thread"] },
@@ -59,11 +67,15 @@ export function createSessionConversationTestRegistry() {
       },
     },
     {
+      pluginId: "matrix",
       source: "test",
       plugin: {
+        id: "matrix",
         meta: {
+          id: "matrix",
           label: "Matrix",
           selectionLabel: "Matrix",
+          docsPath: "/channels/matrix",
           blurb: "Matrix test stub.",
         },
         capabilities: { chatTypes: ["direct", "channel", "thread"] },

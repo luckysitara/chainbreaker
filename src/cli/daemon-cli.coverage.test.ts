@@ -136,6 +136,7 @@ async function runDaemonCommand(args: string[]) {
 }
 
 function parseFirstJsonRuntimeLine<T>() {
+  const jsonLine = runtimeLogs.find((line) => line.trim().startsWith("{"));
   return JSON.parse(jsonLine ?? "{}") as T;
 }
 
@@ -263,6 +264,8 @@ describe("daemon-cli coverage", () => {
 
     expect(serviceRestart).toHaveBeenCalledTimes(1);
     expect(serviceStop).toHaveBeenCalledTimes(1);
+    const jsonLines = runtimeLogs.filter((line) => line.trim().startsWith("{"));
+    const parsed = jsonLines.map((line) => JSON.parse(line) as { action?: string; ok?: boolean });
     expect(parsed.some((entry) => entry.action === "start" && entry.ok === true)).toBe(true);
     expect(parsed.some((entry) => entry.action === "stop" && entry.ok === true)).toBe(true);
   });

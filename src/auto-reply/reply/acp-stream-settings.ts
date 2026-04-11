@@ -25,6 +25,7 @@ export const ACP_TAG_VISIBILITY_DEFAULTS: Record<AcpSessionUpdateTag, boolean> =
 };
 
 export type AcpDeliveryMode = "live" | "final_only";
+export type AcpHiddenBoundarySeparator = "none" | "space" | "newline" | "paragraph";
 
 export type AcpProjectionSettings = {
   deliveryMode: AcpDeliveryMode;
@@ -50,6 +51,7 @@ function resolveAcpHiddenBoundarySeparator(
   value: unknown,
   fallback: AcpHiddenBoundarySeparator,
 ): AcpHiddenBoundarySeparator {
+  if (value === "none" || value === "space" || value === "newline" || value === "paragraph") {
     return value;
   }
   return fallback;
@@ -128,6 +130,7 @@ export function resolveAcpStreamingConfig(params: {
       coalescing: {
         ...resolved.coalescing,
         minChars: 1,
+        // ACP delta streams already carry spacing/newlines; preserve exact text.
         joiner: "",
       },
     };

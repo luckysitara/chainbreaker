@@ -55,11 +55,13 @@ describe("actionHasTarget", () => {
     {
       action: "pin",
       params: { messageId: "msg_123" },
+      ctx: { channel: "slack" },
       expected: false,
     },
     {
       action: "channel-info",
       params: { chatId: "oc_123" },
+      ctx: { channel: "discord" },
       expected: false,
     },
     { action: "edit", params: { messageId: "   " }, expected: false },

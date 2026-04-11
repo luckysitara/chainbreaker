@@ -81,6 +81,7 @@ describe("directive behavior exec agent defaults", () => {
     });
   });
 
+  it("prefers standalone inline exec directives over per-agent exec defaults on the next live run", async () => {
     await withTempHome(async (home) => {
       runEmbeddedPiAgentMock.mockResolvedValue(makeEmbeddedTextResult("done"));
 

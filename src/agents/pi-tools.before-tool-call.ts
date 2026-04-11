@@ -54,8 +54,11 @@ function mergeParamsWithApprovalOverrides(
   return originalParams;
 }
 
+function isAbortSignalCancellation(err: unknown, signal?: AbortSignal): boolean {
+  if (!signal?.aborted) {
     return false;
   }
+  if (err === signal.reason) {
     return true;
   }
   if (err instanceof Error && err.name === "AbortError") {
@@ -118,6 +121,7 @@ export async function runBeforeToolCallHook(args: {
   params: unknown;
   toolCallId?: string;
   ctx?: HookContext;
+  signal?: AbortSignal;
 }): Promise<HookOutcome> {
   const toolName = normalizeToolName(args.toolName || "tool");
   const params = args.params;
@@ -279,15 +283,21 @@ export async function runBeforeToolCallHook(args: {
             { id },
           );
           let waitResult: { id?: string; decision?: string | null } | undefined;
+          if (args.signal) {
             let onAbort: (() => void) | undefined;
             const abortPromise = new Promise<never>((_, reject) => {
+              if (args.signal!.aborted) {
+                reject(args.signal!.reason);
                 return;
               }
+              onAbort = () => reject(args.signal!.reason);
+              args.signal!.addEventListener("abort", onAbort, { once: true });
             });
             try {
               waitResult = await Promise.race([waitPromise, abortPromise]);
             } finally {
               if (onAbort) {
+                args.signal.removeEventListener("abort", onAbort);
               }
             }
           } else {
@@ -324,6 +334,7 @@ export async function runBeforeToolCallHook(args: {
         return { blocked: true, reason: "Approval timed out" };
       } catch (err) {
         safeOnResolution(PluginApprovalResolutions.CANCELLED);
+        if (isAbortSignalCancellation(err, args.signal)) {
           log.warn(`plugin approval wait cancelled by run abort: ${String(err)}`);
           return {
             blocked: true,
@@ -363,11 +374,13 @@ export function wrapToolWithBeforeToolCallHook(
   const toolName = tool.name || "tool";
   const wrappedTool: AnyAgentTool = {
     ...tool,
+    execute: async (toolCallId, params, signal, onUpdate) => {
       const outcome = await runBeforeToolCallHook({
         toolName,
         params,
         toolCallId,
         ctx,
+        signal,
       });
       if (outcome.blocked) {
         throw new Error(outcome.reason);
@@ -384,6 +397,7 @@ export function wrapToolWithBeforeToolCallHook(
       }
       const normalizedToolName = normalizeToolName(toolName || "tool");
       try {
+        const result = await execute(toolCallId, outcome.params, signal, onUpdate);
         await recordLoopOutcome({
           ctx,
           toolName: normalizedToolName,

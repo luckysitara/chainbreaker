@@ -44,6 +44,7 @@ const PROVIDER_ALIAS_TO_OPENROUTER: Record<string, string> = {
   moonshotai: "moonshotai",
   "openai-codex": "openai",
   xai: "x-ai",
+  zai: "z-ai",
 };
 const WRAPPER_PROVIDERS = new Set([
   "cloudflare-ai-gateway",
@@ -331,6 +332,7 @@ async function fetchOpenRouterPricingCatalog(
 ): Promise<Map<string, OpenRouterPricingEntry>> {
   const response = await fetchImpl(OPENROUTER_MODELS_URL, {
     headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!response.ok) {
     throw new Error(`OpenRouter /models failed: HTTP ${response.status}`);

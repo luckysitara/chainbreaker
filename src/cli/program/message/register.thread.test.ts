@@ -63,6 +63,7 @@ describe("registerMessageThreadCommands", () => {
         "thread",
         "create",
         "--channel",
+        "discord",
         "-t",
         "channel:123",
         "--thread-name",
@@ -76,10 +77,13 @@ describe("registerMessageThreadCommands", () => {
     expect(runMessageAction).toHaveBeenCalledWith(
       "thread-create",
       expect.objectContaining({
+        channel: "discord",
         target: "channel:123",
         threadName: "Build Updates",
         message: "hello",
       }),
     );
+    const discordCall = runMessageAction.mock.calls.at(0);
+    expect(discordCall?.[1]).not.toHaveProperty("name");
   });
 });

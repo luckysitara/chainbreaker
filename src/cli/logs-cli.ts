@@ -1,8 +1,10 @@
 import { setTimeout as delay } from "node:timers/promises";
 import type { Command } from "commander";
 import { buildGatewayConnectionDetails } from "../gateway/call.js";
+import { parseLogLine } from "../logging/parse-log-line.js";
 import { formatTimestamp, isValidTimeZone } from "../logging/timestamps.js";
 import { formatDocsLink } from "../terminal/links.js";
+import { clearActiveProgressLine } from "../terminal/progress-line.js";
 import { createSafeStreamWriter } from "../terminal/stream-writer.js";
 import { colorize, isRich, theme } from "../terminal/theme.js";
 import { formatCliCommand } from "./command-format.js";
@@ -12,6 +14,7 @@ type LogsTailPayload = {
   file?: string;
   cursor?: number;
   size?: number;
+  lines?: string[];
   truncated?: boolean;
   reset?: boolean;
 };
@@ -190,9 +193,11 @@ export function registerLogsCli(program: Command) {
   const logs = program
     .command("logs")
     .description("Tail gateway file logs via RPC")
+    .option("--limit <n>", "Max lines to return", "200")
     .option("--max-bytes <n>", "Max bytes to read", "250000")
     .option("--follow", "Follow log output", false)
     .option("--interval <ms>", "Polling interval in ms", "1000")
+    .option("--json", "Emit JSON log lines", false)
     .option("--plain", "Plain text output (no ANSI styling)", false)
     .option("--no-color", "Disable ANSI colors")
     .option("--local-time", "Display timestamps in local timezone", false)
@@ -226,6 +231,7 @@ export function registerLogsCli(program: Command) {
         process.exit(1);
         return;
       }
+      const lines = Array.isArray(payload.lines) ? payload.lines : [];
       if (jsonMode) {
         if (first) {
           if (
@@ -239,11 +245,14 @@ export function registerLogsCli(program: Command) {
             return;
           }
         }
+        for (const line of lines) {
+          const parsed = parseLogLine(line);
           if (parsed) {
             if (!emitJsonLine({ type: "log", ...parsed })) {
               return;
             }
           } else {
+            if (!emitJsonLine({ type: "raw", raw: line })) {
               return;
             }
           }
@@ -275,8 +284,10 @@ export function registerLogsCli(program: Command) {
             return;
           }
         }
+        for (const line of lines) {
           if (
             !logLine(
+              formatLogLine(line, {
                 pretty,
                 rich,
                 localTime,

@@ -100,6 +100,7 @@ describe("spawnSubagentDirect seam flow", () => {
       },
       {
         agentSessionKey: "agent:main:main",
+        agentChannel: "discord",
         agentAccountId: "acct-1",
         agentTo: "user-1",
         workspaceDir: "/tmp/requester-workspace",
@@ -124,6 +125,7 @@ describe("spawnSubagentDirect seam flow", () => {
         requesterSessionKey: "agent:main:main",
         requesterDisplayKey: "agent:main:main",
         requesterOrigin: {
+          channel: "discord",
           accountId: "acct-1",
           to: "user-1",
           threadId: undefined,

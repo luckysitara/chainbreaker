@@ -13,6 +13,7 @@ const VIEWER_LIMITER_MAX_KEYS = 2_048;
 const VIEWER_CONTENT_SECURITY_POLICY = [
   "default-src 'none'",
   "script-src 'self'",
+  "style-src 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self' data:",
   "connect-src 'none'",

@@ -109,6 +109,7 @@ export async function runOpenAIOAuthTlsPreflight(options?: {
     await fetchImpl(OPENAI_AUTH_PROBE_URL, {
       method: "GET",
       redirect: "manual",
+      signal: AbortSignal.timeout(timeoutMs),
     });
     return { ok: true };
   } catch (error) {
@@ -133,6 +134,7 @@ export function formatOpenAIOAuthTlsPreflightFix(
     ].join("\n");
   }
   const certBundlePath = resolveCertBundlePath();
+  const lines = [
     "OpenAI OAuth prerequisites check failed: Node/OpenSSL cannot validate TLS certificates.",
     `Cause: ${result.code ? `${result.code} (${result.message})` : result.message}`,
     "",
@@ -141,7 +143,10 @@ export function formatOpenAIOAuthTlsPreflightFix(
     `- ${formatCliCommand("brew postinstall openssl@3")}`,
   ];
   if (certBundlePath) {
+    lines.push(`- Verify cert bundle exists: ${certBundlePath}`);
   }
+  lines.push("- Retry the OAuth login flow.");
+  return lines.join("\n");
 }
 
 export async function noteOpenAIOAuthTlsPrerequisites(params: {

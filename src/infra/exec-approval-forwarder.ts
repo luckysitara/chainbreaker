@@ -183,37 +183,57 @@ function shouldSkipForwardingFallback(params: {
   );
 }
 
+function formatApprovalCommand(command: string): { inline: boolean; text: string } {
   if (!command.includes("\n") && !command.includes("`")) {
+    return { inline: true, text: `\`${command}\`` };
   }
 
   let fence = "```";
   while (command.includes(fence)) {
     fence += "`";
   }
+  return { inline: false, text: `${fence}\n${command}\n${fence}` };
 }
 
 function buildRequestMessage(request: ExecApprovalRequest, nowMs: number) {
+  const lines: string[] = ["🔒 Exec approval required", `ID: ${request.id}`];
   const command = formatApprovalCommand(
     resolveExecApprovalCommandDisplay(request.request).commandText,
   );
+  if (command.inline) {
+    lines.push(`Command: ${command.text}`);
   } else {
+    lines.push("Command:");
+    lines.push(command.text);
   }
   if (request.request.cwd) {
+    lines.push(`CWD: ${request.request.cwd}`);
   }
   if (request.request.nodeId) {
+    lines.push(`Node: ${request.request.nodeId}`);
   }
   if (Array.isArray(request.request.envKeys) && request.request.envKeys.length > 0) {
+    lines.push(`Env overrides: ${request.request.envKeys.join(", ")}`);
   }
   if (request.request.host) {
+    lines.push(`Host: ${request.request.host}`);
   }
   if (request.request.agentId) {
+    lines.push(`Agent: ${request.request.agentId}`);
   }
   if (request.request.security) {
+    lines.push(`Security: ${request.request.security}`);
   }
   if (request.request.ask) {
+    lines.push(`Ask: ${request.request.ask}`);
   }
+  lines.push(`Expires in: ${formatExecApprovalExpiresIn(request.expiresAtMs, nowMs)}`);
+  lines.push("Mode: foreground (interactive approvals available in this chat).");
+  lines.push(
     "Background mode note: non-interactive runs cannot wait for chat approvals; use pre-approved policy (allow-always or ask=off).",
   );
+  lines.push("Reply with: /approve <id> allow-once|allow-always|deny");
+  return lines.join("\n");
 }
 
 const decisionLabel = approvalDecisionLabel;

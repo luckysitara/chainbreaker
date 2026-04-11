@@ -94,11 +94,13 @@ describe("tailscale helpers", () => {
 
   it.each([
     {
+      name: "ensureGoInstalled exits when missing and user declines install",
       fn: ensureGoInstalled,
       missingError: new Error("no go"),
       errorMessage: "Go is required to build tailscaled from source. Aborting.",
     },
     {
+      name: "ensureTailscaledInstalled exits when missing and user declines install",
       fn: ensureTailscaledInstalled,
       missingError: new Error("missing"),
       errorMessage: "tailscaled is required for user-space funnel. Aborting.",

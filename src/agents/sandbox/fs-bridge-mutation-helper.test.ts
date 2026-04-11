@@ -40,16 +40,12 @@ function runWritePlan(args: string[], input?: string, env?: NodeJS.ProcessEnv) {
     mkdir: args[4] === "1",
   });
 
-  return spawnSync(
-    "/bin/sh",
-    ["-c", plan.script, "chainbreaker-sandbox-fs", ...(plan.args ?? [])],
-    {
-      input,
-      encoding: "utf8",
-      stdio: ["pipe", "pipe", "pipe"],
-      env,
-    },
-  );
+  return spawnSync("/bin/sh", ["-c", plan.script, "chainbreaker-sandbox-fs", ...(plan.args ?? [])], {
+    input,
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "pipe"],
+    env,
+  });
 }
 
 const hasAbsolutePythonCandidate = SANDBOX_PINNED_MUTATION_PYTHON_CANDIDATES.some((candidate) =>

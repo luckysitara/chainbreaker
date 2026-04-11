@@ -105,9 +105,7 @@ describe("acpx plugin config parsing", () => {
       workspaceDir: "/home/user/repos/chainbreaker",
     });
 
-    expect(resolved.command).toBe(
-      path.resolve("/home/user/repos/chainbreaker", "../acpx/dist/cli.js"),
-    );
+    expect(resolved.command).toBe(path.resolve("/home/user/repos/chainbreaker", "../acpx/dist/cli.js"));
     expect(resolved.expectedVersion).toBeUndefined();
     expect(resolved.allowPluginLocalInstall).toBe(false);
     expect(resolved.stripProviderAuthEnvVars).toBe(false);

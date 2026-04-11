@@ -6,6 +6,7 @@ const log = createSubsystemLogger("chutes-models");
 /** Chutes.ai OpenAI-compatible API base URL. */
 export const CHUTES_BASE_URL = "https://llm.chutes.ai/v1";
 
+export const CHUTES_DEFAULT_MODEL_ID = "zai-org/GLM-4.7-TEE";
 export const CHUTES_DEFAULT_MODEL_REF = `chutes/${CHUTES_DEFAULT_MODEL_ID}`;
 
 /** Default cost for Chutes models (actual cost varies by model and compute). */
@@ -89,6 +90,8 @@ export const CHUTES_MODEL_CATALOG: ModelDefinitionConfig[] = [
     cost: { input: 0.28, output: 0.42, cacheRead: 0, cacheWrite: 0 },
   },
   {
+    id: "zai-org/GLM-4.7-TEE",
+    name: "zai-org/GLM-4.7-TEE",
     reasoning: true,
     input: ["text"],
     contextWindow: 202752,
@@ -141,6 +144,8 @@ export const CHUTES_MODEL_CATALOG: ModelDefinitionConfig[] = [
     cost: { input: 0.45, output: 2.15, cacheRead: 0, cacheWrite: 0 },
   },
   {
+    id: "zai-org/GLM-5-TEE",
+    name: "zai-org/GLM-5-TEE",
     reasoning: true,
     input: ["text"],
     contextWindow: 202752,
@@ -247,6 +252,8 @@ export const CHUTES_MODEL_CATALOG: ModelDefinitionConfig[] = [
     cost: { input: 0.07, output: 0.3, cacheRead: 0, cacheWrite: 0 },
   },
   {
+    id: "zai-org/GLM-4.7-FP8",
+    name: "zai-org/GLM-4.7-FP8",
     reasoning: true,
     input: ["text"],
     contextWindow: 202752,
@@ -254,6 +261,8 @@ export const CHUTES_MODEL_CATALOG: ModelDefinitionConfig[] = [
     cost: { input: 0.3, output: 1.2, cacheRead: 0, cacheWrite: 0 },
   },
   {
+    id: "zai-org/GLM-4.6-TEE",
+    name: "zai-org/GLM-4.6-TEE",
     reasoning: true,
     input: ["text"],
     contextWindow: 202752,
@@ -297,6 +306,8 @@ export const CHUTES_MODEL_CATALOG: ModelDefinitionConfig[] = [
     cost: { input: 0.1, output: 0.8, cacheRead: 0, cacheWrite: 0 },
   },
   {
+    id: "zai-org/GLM-4.6-FP8",
+    name: "zai-org/GLM-4.6-FP8",
     reasoning: true,
     input: ["text"],
     contextWindow: 202752,
@@ -331,6 +342,8 @@ export const CHUTES_MODEL_CATALOG: ModelDefinitionConfig[] = [
     cost: { input: 0.22, output: 0.6, cacheRead: 0, cacheWrite: 0 },
   },
   {
+    id: "zai-org/GLM-4.6V",
+    name: "zai-org/GLM-4.6V",
     reasoning: true,
     input: ["text", "image"],
     contextWindow: 131072,
@@ -546,6 +559,7 @@ export async function discoverChutesModels(accessToken?: string): Promise<ModelD
 
   try {
     let response = await fetch(`${CHUTES_BASE_URL}/models`, {
+      signal: AbortSignal.timeout(10_000),
       headers,
     });
 
@@ -555,6 +569,7 @@ export async function discoverChutesModels(accessToken?: string): Promise<ModelD
       // be retried with a refreshed credential after the TTL expires.
       effectiveKey = "";
       response = await fetch(`${CHUTES_BASE_URL}/models`, {
+        signal: AbortSignal.timeout(10_000),
       });
     }
 

@@ -3,6 +3,8 @@ import { formatCliCommand } from "../command-format.js";
 import { printDaemonStatus } from "./status.print.js";
 
 const runtime = vi.hoisted(() => ({
+  log: vi.fn<(line: string) => void>(),
+  error: vi.fn<(line: string) => void>(),
 }));
 
 vi.mock("../../runtime.js", () => ({

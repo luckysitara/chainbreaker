@@ -51,6 +51,7 @@ function createEnabledBundleConfig(pluginIds: string[]): ChainbreakerConfig {
   };
 }
 
+async function expectInlineBundleMcpServer(params: {
   loadedServer: unknown;
   pluginRoot: string;
   commandRelativePath: string;
@@ -69,6 +70,7 @@ function createEnabledBundleConfig(pluginIds: string[]): ChainbreakerConfig {
   expect(loadedArgs).toHaveLength(params.argRelativePaths.length);
   expect(typeof loadedEnv.PLUGIN_ROOT).toBe("string");
   if (typeof loadedCommand !== "string" || typeof loadedCwd !== "string") {
+    throw new Error("expected inline bundled MCP server to expose command and cwd");
   }
   expect(normalizePathForAssertion(path.relative(loadedCwd, loadedCommand))).toBe(
     normalizePathForAssertion(params.commandRelativePath),
@@ -124,12 +126,16 @@ describe("loadEnabledBundleMcpConfig", () => {
     );
   });
 
+  it("merges inline bundle MCP servers and skips disabled bundles", async () => {
     await withBundleHomeEnv(
       tempHarness,
+      "chainbreaker-bundle-inline",
       async ({ homeDir, workspaceDir }) => {
         await writeClaudeBundleManifest({
           homeDir,
+          pluginId: "inline-enabled",
           manifest: {
+            name: "inline-enabled",
             mcpServers: {
               enabledProbe: {
                 command: "node",
@@ -140,7 +146,9 @@ describe("loadEnabledBundleMcpConfig", () => {
         });
         await writeClaudeBundleManifest({
           homeDir,
+          pluginId: "inline-disabled",
           manifest: {
+            name: "inline-disabled",
             mcpServers: {
               disabledProbe: {
                 command: "node",
@@ -155,6 +163,8 @@ describe("loadEnabledBundleMcpConfig", () => {
           cfg: {
             plugins: {
               entries: {
+                ...createEnabledPluginEntries(["inline-enabled"]),
+                "inline-disabled": { enabled: false },
               },
             },
           },
@@ -166,13 +176,18 @@ describe("loadEnabledBundleMcpConfig", () => {
     );
   });
 
+  it("resolves inline Claude MCP paths from the plugin root and expands CLAUDE_PLUGIN_ROOT", async () => {
     await withBundleHomeEnv(
       tempHarness,
+      "chainbreaker-bundle-inline-placeholder",
       async ({ homeDir, workspaceDir }) => {
         const pluginRoot = await writeClaudeBundleManifest({
           homeDir,
+          pluginId: "inline-claude",
           manifest: {
+            name: "inline-claude",
             mcpServers: {
+              inlineProbe: {
                 command: "${CLAUDE_PLUGIN_ROOT}/bin/server.sh",
                 args: ["${CLAUDE_PLUGIN_ROOT}/servers/probe.mjs", "./local-probe.mjs"],
                 cwd: "${CLAUDE_PLUGIN_ROOT}",
@@ -186,9 +201,12 @@ describe("loadEnabledBundleMcpConfig", () => {
 
         const loaded = loadEnabledBundleMcpConfig({
           workspaceDir,
+          cfg: createEnabledBundleConfig(["inline-claude"]),
         });
+        const loadedServer = loaded.config.mcpServers.inlineProbe;
 
         expectNoDiagnostics(loaded.diagnostics);
+        await expectInlineBundleMcpServer({
           loadedServer,
           pluginRoot,
           commandRelativePath: path.join("bin", "server.sh"),

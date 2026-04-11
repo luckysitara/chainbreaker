@@ -181,7 +181,9 @@ describe("stageSandboxMedia", () => {
       {
         childProcessMocks.spawn.mockClear();
         const { ctx, sessionCtx } = createSandboxMediaContexts("/etc/passwd");
+        ctx.Provider = "imessage";
         ctx.MediaRemoteHost = "user@gateway-host";
+        sessionCtx.Provider = "imessage";
         sessionCtx.MediaRemoteHost = "user@gateway-host";
 
         await stageSandboxMedia({

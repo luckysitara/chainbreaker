@@ -194,6 +194,7 @@ describe("extractToolResultMediaPaths", () => {
     }
   });
 
+  it("does not match mid-line MEDIA: in documentation text", () => {
     const result = {
       content: [
         {
@@ -217,6 +218,7 @@ describe("extractToolResultMediaPaths", () => {
     expect(extractToolResultMediaPaths(result)).toEqual([]);
   });
 
+  it("still extracts MEDIA: at line start after other text lines", () => {
     const result = {
       content: [
         {
@@ -228,12 +230,14 @@ describe("extractToolResultMediaPaths", () => {
     expect(extractToolResultMediaPaths(result)).toEqual(["/tmp/screenshot.png"]);
   });
 
+  it("extracts indented MEDIA: line", () => {
     const result = {
       content: [{ type: "text", text: "  MEDIA:/tmp/indented.png" }],
     };
     expect(extractToolResultMediaPaths(result)).toEqual(["/tmp/indented.png"]);
   });
 
+  it("extracts valid MEDIA: line while ignoring <media:audio> on another line", () => {
     const result = {
       content: [
         {
@@ -245,6 +249,7 @@ describe("extractToolResultMediaPaths", () => {
     expect(extractToolResultMediaPaths(result)).toEqual(["/tmp/tts-output.opus"]);
   });
 
+  it("extracts multiple MEDIA: lines from a single text block", () => {
     const result = {
       content: [
         {

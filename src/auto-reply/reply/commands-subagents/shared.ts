@@ -337,6 +337,7 @@ export function resolveDiscordChannelIdForFocus(
     typeof params.ctx.To === "string" ? params.ctx.To.trim() : "",
   ].filter(Boolean);
   for (const candidate of toCandidates) {
+    const target = parseExplicitTargetForChannel("discord", candidate);
     if (target?.chatType === "channel" && target.to) {
       return target.to;
     }
@@ -435,13 +436,16 @@ export function extractMessageText(message: ChatMessage): { role: string; text: 
 }
 
 export function formatLogLines(messages: ChatMessage[]) {
+  const lines: string[] = [];
   for (const msg of messages) {
     const extracted = extractMessageText(msg);
     if (!extracted) {
       continue;
     }
     const label = extracted.role === "assistant" ? "Assistant" : "User";
+    lines.push(`${label}: ${extracted.text}`);
   }
+  return lines;
 }
 
 export type SessionStoreCache = Map<string, Record<string, SessionEntry>>;

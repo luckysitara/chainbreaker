@@ -276,6 +276,7 @@ describe("sandbox/tool-policy", () => {
       toolName: "browser",
     });
 
+    const sessionLine = message?.split("\n").find((line) => line.startsWith("Session: "));
     expect(sessionLine).toBeDefined();
     expect(sessionLine).not.toContain(sessionKey);
     expect(sessionLine).toContain("\\n");

@@ -31,6 +31,7 @@ export type RuntimeThreadBindingLifecycleRecord =
 
 export type PluginRuntimeChannel = {
   text: {
+    chunkByNewline: typeof import("../../auto-reply/chunk.js").chunkByNewline;
     chunkMarkdownText: typeof import("../../auto-reply/chunk.js").chunkMarkdownText;
     chunkMarkdownTextWithMode: typeof import("../../auto-reply/chunk.js").chunkMarkdownTextWithMode;
     chunkText: typeof import("../../auto-reply/chunk.js").chunkText;

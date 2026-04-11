@@ -171,6 +171,7 @@ function openshellEnv(rootDir: string): NodeJS.ProcessEnv {
   };
 }
 
+function trimTrailingNewline(value: string): string {
   return value.replace(/\r?\n$/, "");
 }
 
@@ -222,6 +223,7 @@ HTTPServer(("0.0.0.0", 8000), Handler).serve_forever()
     ],
     timeoutMs: 60_000,
   });
+  const containerId = trimTrailingNewline(startResult.stdout.trim());
   if (!containerId) {
     throw new Error("failed to start docker-backed host policy server");
   }
@@ -453,6 +455,7 @@ describe("openshell sandbox backend e2e", () => {
           command: "command -v curl",
           timeoutMs: 60_000,
         });
+        expect(trimTrailingNewline(curlPathResult.stdout.trim())).toMatch(/^\/.+\/curl$/);
 
         const sandbox = createSandboxTestContext({
           overrides: {
@@ -486,6 +489,7 @@ describe("openshell sandbox backend e2e", () => {
           timeoutMs: 60_000,
         });
         expect(verifyResult.code).toBe(0);
+        expect(trimTrailingNewline(verifyResult.stdout)).toContain("Host ");
 
         const blockedGetResult = await runBackendExec({
           backend,

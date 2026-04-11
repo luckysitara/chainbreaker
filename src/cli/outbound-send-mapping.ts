@@ -9,11 +9,19 @@ export type CliOutboundSendSource = { [channelId: string]: unknown };
 const LEGACY_SOURCE_TO_CHANNEL = {
   sendMessageWhatsApp: "whatsapp",
   sendMessageTelegram: "telegram",
+  sendMessageDiscord: "discord",
+  sendMessageSlack: "slack",
+  sendMessageSignal: "signal",
+  sendMessageIMessage: "imessage",
 } as const;
 
 const CHANNEL_TO_LEGACY_DEP_KEY = {
   whatsapp: "sendWhatsApp",
   telegram: "sendTelegram",
+  discord: "sendDiscord",
+  slack: "sendSlack",
+  signal: "sendSignal",
+  imessage: "sendIMessage",
 } as const;
 
 /**

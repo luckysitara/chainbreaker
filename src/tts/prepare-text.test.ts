@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { stripMarkdown } from "../shared/text/strip-markdown.js";
 
 /**
+ * Tests that stripMarkdown (used in the TTS pipeline via maybeApplyTtsToPayload)
  * produces clean text suitable for speech synthesis.
  *
+ * The TTS pipeline calls stripMarkdown() before sending text to TTS engines
  * (OpenAI, ElevenLabs, Edge) so that formatting symbols are not read aloud
  * (e.g. "hashtag hashtag hashtag" for ### headers).
  */
@@ -28,6 +30,7 @@ describe("TTS text preparation – stripMarkdown", () => {
     );
   });
 
+  it("strips inline code markers before TTS", () => {
     expect(stripMarkdown("Use `consistent hashing` for distribution")).toBe(
       "Use consistent hashing for distribution",
     );

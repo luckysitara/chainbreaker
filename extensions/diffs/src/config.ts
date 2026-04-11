@@ -23,6 +23,7 @@ type DiffsPluginConfig = {
   defaults?: {
     fontFamily?: string;
     fontSize?: number;
+    lineSpacing?: number;
     layout?: DiffLayout;
     showLineNumbers?: boolean;
     diffIndicators?: DiffIndicators;
@@ -70,6 +71,7 @@ const DEFAULT_IMAGE_QUALITY_PROFILES = {
 export const DEFAULT_DIFFS_TOOL_DEFAULTS: DiffToolDefaults = {
   fontFamily: "Fira Code",
   fontSize: 15,
+  lineSpacing: 1.6,
   layout: "unified",
   showLineNumbers: true,
   diffIndicators: "bars",
@@ -96,9 +98,11 @@ const DiffsPluginJsonSchemaSource = z.strictObject({
     .strictObject({
       fontFamily: z.string().default(DEFAULT_DIFFS_TOOL_DEFAULTS.fontFamily).optional(),
       fontSize: z.number().min(10).max(24).default(DEFAULT_DIFFS_TOOL_DEFAULTS.fontSize).optional(),
+      lineSpacing: z
         .number()
         .min(1)
         .max(3)
+        .default(DEFAULT_DIFFS_TOOL_DEFAULTS.lineSpacing)
         .optional(),
       layout: z.enum(DIFF_LAYOUTS).default(DEFAULT_DIFFS_TOOL_DEFAULTS.layout).optional(),
       showLineNumbers: z.boolean().default(DEFAULT_DIFFS_TOOL_DEFAULTS.showLineNumbers).optional(),
@@ -221,6 +225,7 @@ export function resolveDiffsPluginDefaults(config: unknown): DiffToolDefaults {
   return {
     fontFamily: normalizeFontFamily(defaults.fontFamily),
     fontSize: normalizeFontSize(defaults.fontSize),
+    lineSpacing: normalizeLineSpacing(defaults.lineSpacing),
     layout: normalizeLayout(defaults.layout),
     showLineNumbers: defaults.showLineNumbers !== false,
     diffIndicators: normalizeDiffIndicators(defaults.diffIndicators),
@@ -254,6 +259,7 @@ export function toPresentationDefaults(defaults: DiffToolDefaults): DiffPresenta
   const {
     fontFamily,
     fontSize,
+    lineSpacing,
     layout,
     showLineNumbers,
     diffIndicators,
@@ -264,6 +270,7 @@ export function toPresentationDefaults(defaults: DiffToolDefaults): DiffPresenta
   return {
     fontFamily,
     fontSize,
+    lineSpacing,
     layout,
     showLineNumbers,
     diffIndicators,
@@ -286,7 +293,11 @@ function normalizeFontSize(fontSize?: number): number {
   return Math.min(Math.max(rounded, 10), 24);
 }
 
+function normalizeLineSpacing(lineSpacing?: number): number {
+  if (lineSpacing === undefined || !Number.isFinite(lineSpacing)) {
+    return DEFAULT_DIFFS_TOOL_DEFAULTS.lineSpacing;
   }
+  return Math.min(Math.max(lineSpacing, 1), 3);
 }
 
 function normalizeLayout(layout?: DiffLayout): DiffLayout {

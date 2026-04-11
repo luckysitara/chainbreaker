@@ -56,6 +56,7 @@ describe("models set + fallbacks", () => {
 
     await modelsSetCommand("z.ai/glm-4.7", runtime);
 
+    expectWrittenPrimaryModel("zai/glm-4.7");
   });
 
   it("normalizes z-ai provider in models fallbacks add", async () => {
@@ -68,6 +69,8 @@ describe("models set + fallbacks", () => {
     const written = getWrittenConfig();
     expect(written.agents).toEqual({
       defaults: {
+        model: { fallbacks: ["zai/glm-4.7"] },
+        models: { "zai/glm-4.7": {} },
       },
     });
   });
@@ -97,6 +100,7 @@ describe("models set + fallbacks", () => {
 
     await modelsSetCommand("Z.AI/glm-4.7", runtime);
 
+    expectWrittenPrimaryModel("zai/glm-4.7");
   });
 
   it("keeps canonical OpenRouter native ids in models set", async () => {

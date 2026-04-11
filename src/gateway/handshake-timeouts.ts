@@ -17,8 +17,7 @@ export function resolveConnectChallengeTimeoutMs(timeoutMs?: number | null): num
 
 export function getPreauthHandshakeTimeoutMsFromEnv(env: NodeJS.ProcessEnv = process.env): number {
   const configuredTimeout =
-    env.CHAINBREAKER_HANDSHAKE_TIMEOUT_MS ||
-    (env.VITEST && env.CHAINBREAKER_TEST_HANDSHAKE_TIMEOUT_MS);
+    env.CHAINBREAKER_HANDSHAKE_TIMEOUT_MS || (env.VITEST && env.CHAINBREAKER_TEST_HANDSHAKE_TIMEOUT_MS);
   if (configuredTimeout) {
     const parsed = Number(configuredTimeout);
     if (Number.isFinite(parsed) && parsed > 0) {

@@ -45,6 +45,7 @@ describe("sessions_spawn: cron isolated session note suppression", () => {
   it("does not suppress ACCEPTED_NOTE for non-canonical cron-like keys", async () => {
     setupSessionsSpawnGatewayMock({});
     const tool = await getSessionsSpawnTool({
+      agentSessionKey: "agent:main:slack:cron:job:run:uuid",
     });
     const result = await tool.execute("call-cron-like-noncanonical", {
       task: "test task",

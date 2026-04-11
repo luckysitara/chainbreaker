@@ -98,6 +98,7 @@ async function ensureMinimaxApiKeyInternal(params: {
   return await ensureApiKeyFromEnvOrPrompt({
     config: params.config ?? {},
     env: params.env,
+    provider: "minimax",
     envLabel: "MINIMAX_API_KEY",
     promptMessage: "Enter key",
     normalize: (value) => value.trim(),
@@ -242,6 +243,7 @@ describe("ensureApiKeyFromEnvOrPrompt", () => {
     expect(text).not.toHaveBeenCalled();
   });
 
+  it("falls back to prompt when env is declined", async () => {
     const { result, setCredential, text } = await runEnsureMinimaxApiKeyFlow({
       confirmResult: false,
       textResult: "  prompted-key  ",
@@ -256,6 +258,7 @@ describe("ensureApiKeyFromEnvOrPrompt", () => {
     );
   });
 
+  it("uses explicit inline env ref when secret-input-mode=ref selects existing env key", async () => {
     setMinimaxEnv({ apiKey: "env-key" });
 
     const { confirm, text, setCredential } = createPromptAndCredentialSpies({
@@ -324,6 +327,7 @@ describe("ensureApiKeyFromEnvOrPrompt", () => {
     const select = vi.fn(async () => selectValues.shift() ?? "env") as WizardPrompter["select"];
     const text = vi
       .fn<WizardPrompter["text"]>()
+      .mockResolvedValueOnce("/providers/minimax/apiKey")
       .mockResolvedValueOnce("MINIMAX_API_KEY");
     const note = vi.fn(async () => undefined);
     const setCredential = vi.fn(async () => undefined);
@@ -355,6 +359,7 @@ describe("ensureApiKeyFromEnvOrPrompt", () => {
   });
 
   it("never includes resolved env secret values in reference validation notes", async () => {
+    setMinimaxEnv({ apiKey: "sk-minimax-redacted-value" });
 
     const select = vi.fn(async () => "env") as WizardPrompter["select"];
     const text = vi.fn<WizardPrompter["text"]>().mockResolvedValue("MINIMAX_API_KEY");
@@ -369,8 +374,10 @@ describe("ensureApiKeyFromEnvOrPrompt", () => {
       setCredential,
     });
 
+    expect(result).toBe("sk-minimax-redacted-value");
     const noteMessages = note.mock.calls.map((call) => String(call.at(0) ?? "")).join("\n");
     expect(noteMessages).toContain("Validated environment variable MINIMAX_API_KEY.");
+    expect(noteMessages).not.toContain("sk-minimax-redacted-value");
   });
 });
 
@@ -413,6 +420,8 @@ describe("ensureApiKeyFromOptionEnvOrPrompt", () => {
     const result = await ensureWithOptionEnvOrPrompt({
       token: "opts-key",
       tokenProvider: "other-provider",
+      expectedProviders: ["minimax"],
+      provider: "minimax",
       envLabel: "MINIMAX_API_KEY",
       confirm,
       note,

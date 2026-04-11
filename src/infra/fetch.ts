@@ -6,6 +6,7 @@ type FetchWithPreconnect = typeof fetch & {
 
 type RequestInitWithDuplex = RequestInit & { duplex?: "half" };
 
+const wrapFetchWithAbortSignalMarker = Symbol.for("chainbreaker.fetch.abort-signal-wrapped");
 
 type FetchWithAbortSignalMarker = typeof fetch & {
   [wrapFetchWithAbortSignalMarker]?: true;
@@ -39,33 +40,42 @@ export function wrapFetchWithAbortSignal(fetchImpl: typeof fetch): typeof fetch 
 
   const wrapped = ((input: RequestInfo | URL, init?: RequestInit) => {
     const patchedInit = withDuplex(init, input);
+    const signal = patchedInit?.signal;
+    if (!signal) {
       return fetchImpl(input, patchedInit);
     }
+    if (typeof AbortSignal !== "undefined" && signal instanceof AbortSignal) {
       return fetchImpl(input, patchedInit);
     }
     if (typeof AbortController === "undefined") {
       return fetchImpl(input, patchedInit);
     }
+    if (typeof signal.addEventListener !== "function") {
       return fetchImpl(input, patchedInit);
     }
     const controller = new AbortController();
     const onAbort = bindAbortRelay(controller);
     let listenerAttached = false;
+    if (signal.aborted) {
       controller.abort();
     } else {
+      signal.addEventListener("abort", onAbort, { once: true });
       listenerAttached = true;
     }
     const cleanup = () => {
+      if (!listenerAttached || typeof signal.removeEventListener !== "function") {
         return;
       }
       listenerAttached = false;
       try {
+        signal.removeEventListener("abort", onAbort);
       } catch {
         // Foreign/custom AbortSignal implementations may throw here.
         // Never let cleanup mask the original fetch result/error.
       }
     };
     try {
+      const response = fetchImpl(input, { ...patchedInit, signal: controller.signal });
       return response.finally(cleanup);
     } catch (error) {
       cleanup();

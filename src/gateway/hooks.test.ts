@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import type { ChainbreakerConfig } from "../config/config.js";
 import { setActivePluginRegistry } from "../plugins/runtime.js";
 import { createChannelTestPluginBase, createTestRegistry } from "../test-utils/channel-plugins.js";
+import { createIMessageTestPlugin } from "../test-utils/imessage-test-plugin.js";
 import {
   extractHookToken,
   isHookAgentAllowed,
@@ -128,6 +129,7 @@ describe("gateway hooks helpers", () => {
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "imessage",
           source: "test",
           plugin: createIMessageTestPlugin(),
         },
@@ -136,6 +138,7 @@ describe("gateway hooks helpers", () => {
     const imsg = normalizeAgentPayload({ message: "yo", channel: "imsg" });
     expect(imsg.ok).toBe(true);
     if (imsg.ok) {
+      expect(imsg.value.channel).toBe("imessage");
     }
 
     setActivePluginRegistry(
@@ -297,15 +300,19 @@ describe("gateway hooks helpers", () => {
   test("normalizeHookDispatchSessionKey preserves target agent scope", () => {
     expect(
       normalizeHookDispatchSessionKey({
+        sessionKey: "agent:hooks:slack:channel:c123",
         targetAgentId: "hooks",
       }),
+    ).toBe("agent:hooks:slack:channel:c123");
   });
 
   test("normalizeHookDispatchSessionKey rebinds non-target agent scoped keys to the target agent", () => {
     expect(
       normalizeHookDispatchSessionKey({
+        sessionKey: "agent:main:slack:channel:c123",
         targetAgentId: "hooks",
       }),
+    ).toBe("agent:hooks:slack:channel:c123");
   });
 
   test("resolveHooksConfig validates defaultSessionKey and generated fallback against prefixes", () => {

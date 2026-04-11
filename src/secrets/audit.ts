@@ -182,6 +182,9 @@ function collectEnvPlaintext(params: { envPath: string; collector: AuditCollecto
   params.collector.filesScanned.add(params.envPath);
   const knownKeys = new Set(listKnownSecretEnvVarNames());
   const raw = fs.readFileSync(params.envPath, "utf8");
+  const lines = raw.split(/\r?\n/);
+  for (const line of lines) {
+    const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
     if (!match) {
       continue;
     }

@@ -68,6 +68,7 @@ function getToolResultText(msg: AgentMessage): string {
 function makeGuardableAgent(
   transformContext?: (
     messages: AgentMessage[],
+    signal: AbortSignal,
   ) => AgentMessage[] | Promise<AgentMessage[]>,
 ) {
   return { transformContext };
@@ -82,12 +83,14 @@ function makeTwoToolResultOverflowContext(): AgentMessage[] {
 }
 
 async function applyGuardToContext(
+  agent: { transformContext?: (messages: AgentMessage[], signal: AbortSignal) => unknown },
   contextForNextCall: AgentMessage[],
 ) {
   installToolResultContextGuard({
     agent,
     contextWindowTokens: 1_000,
   });
+  return await agent.transformContext?.(contextForNextCall, new AbortController().signal);
 }
 
 function expectCompactedToolResultsWithoutContextNotice(
@@ -127,6 +130,7 @@ describe("installToolResultContextGuard", () => {
       makeToolResult("call_3", "c".repeat(800)),
     ];
 
+    await agent.transformContext?.(contextForNextCall, new AbortController().signal);
 
     const first = getToolResultText(contextForNextCall[1]);
     const second = getToolResultText(contextForNextCall[2]);
@@ -148,6 +152,7 @@ describe("installToolResultContextGuard", () => {
     const contextForNextCall: AgentMessage[] = [makeUser("stress")];
     for (let i = 1; i <= 4; i++) {
       contextForNextCall.push(makeToolResult(`call_${i}`, String(i).repeat(95_000)));
+      await agent.transformContext?.(contextForNextCall, new AbortController().signal);
     }
 
     const toolResultTexts = contextForNextCall
@@ -169,6 +174,7 @@ describe("installToolResultContextGuard", () => {
 
     const contextForNextCall = [makeToolResult("call_big", "z".repeat(5_000))];
 
+    await agent.transformContext?.(contextForNextCall, new AbortController().signal);
 
     const newResultText = getToolResultText(contextForNextCall[0]);
     expect(newResultText.length).toBeLessThan(5_000);
@@ -189,6 +195,7 @@ describe("installToolResultContextGuard", () => {
       makeToolResult("call_new", "y".repeat(1_000)),
     ];
 
+    await agent.transformContext?.(contextForNextCall, new AbortController().signal);
     expectCompactedToolResultsWithoutContextNotice(contextForNextCall, 1, 2);
   });
 
@@ -223,6 +230,7 @@ describe("installToolResultContextGuard", () => {
       makeLegacyToolResult("call_new", "y".repeat(1_000)),
     ];
 
+    await agent.transformContext?.(contextForNextCall, new AbortController().signal);
 
     const oldResultText = (contextForNextCall[1] as { content?: unknown }).content;
     const newResultText = (contextForNextCall[2] as { content?: unknown }).content;
@@ -245,6 +253,7 @@ describe("installToolResultContextGuard", () => {
       makeToolResultWithDetails("call_new", "y".repeat(900), "d".repeat(8_000)),
     ];
 
+    await agent.transformContext?.(contextForNextCall, new AbortController().signal);
 
     const oldResult = contextForNextCall[1] as {
       details?: unknown;
@@ -275,6 +284,7 @@ describe("installToolResultContextGuard", () => {
     const contextForNextCall = [makeUser("u".repeat(3_700)), makeToolResult("call_1", "small")];
 
     await expect(
+      agent.transformContext?.(contextForNextCall, new AbortController().signal),
     ).rejects.toThrow(PREEMPTIVE_CONTEXT_OVERFLOW_MESSAGE);
   });
 
@@ -290,6 +300,7 @@ describe("installToolResultContextGuard", () => {
     const contextForNextCall = [makeUser("u".repeat(1_000)), makeToolResult("call_1", "small")];
 
     await expect(
+      agent.transformContext?.(contextForNextCall, new AbortController().signal),
     ).resolves.not.toThrow();
   });
 
@@ -310,6 +321,7 @@ describe("installToolResultContextGuard", () => {
     ];
 
     await expect(
+      agent.transformContext?.(contextForNextCall, new AbortController().signal),
     ).rejects.toThrow(PREEMPTIVE_CONTEXT_OVERFLOW_MESSAGE);
 
     // Tool result should have been compacted before the overflow check.

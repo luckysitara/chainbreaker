@@ -49,6 +49,7 @@ export function analyzeCommandSecretAssignmentsFromSnapshot(params: {
       refValue: target.refValue,
       defaults,
     });
+    const inlineCandidateRef = explicitRef ? coerceSecretRef(target.value, defaults) : null;
     if (!ref) {
       continue;
     }
@@ -79,8 +80,10 @@ export function analyzeCommandSecretAssignmentsFromSnapshot(params: {
     });
 
     const hasCompetingSiblingRef =
+      target.entry.secretShape === "sibling_ref" && explicitRef && inlineCandidateRef; // pragma: allowlist secret
     if (hasCompetingSiblingRef) {
       diagnostics.push(
+        `${target.path}: both inline and sibling ref were present; sibling ref took precedence.`,
       );
     }
   }

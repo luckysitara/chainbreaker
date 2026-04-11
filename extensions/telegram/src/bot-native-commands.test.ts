@@ -176,7 +176,9 @@ describe("registerTelegramNativeCommands", () => {
     await handler?.(createPrivateCommandContext());
 
     const replyMarkup = sendMessage.mock.calls[0]?.[2]?.reply_markup as
+      | { inline_keyboard?: Array<Array<{ callback_data?: string }>> }
       | undefined;
+    const callbackData = replyMarkup?.inline_keyboard
       ?.flat()
       .map((button) => button.callback_data)
       .filter(Boolean);

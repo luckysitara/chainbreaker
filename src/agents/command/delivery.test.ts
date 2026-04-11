@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { slackOutbound } from "../../../test/channel-outbounds.js";
 import type { CliDeps } from "../../cli/outbound-send-deps.js";
 import type { ChainbreakerConfig } from "../../config/config.js";
 import { setActivePluginRegistry } from "../../plugins/runtime.js";
@@ -10,11 +11,16 @@ type NormalizeParams = Parameters<typeof normalizeAgentCommandReplyPayloads>[0];
 type RunResult = NormalizeParams["result"];
 
 const emptyRegistry = createTestRegistry([]);
+const slackRegistry = createTestRegistry([
   {
+    pluginId: "slack",
     source: "test",
     plugin: createOutboundTestPlugin({
+      id: "slack",
+      outbound: slackOutbound,
       messaging: {
         enableInteractiveReplies: ({ cfg }) =>
+          (cfg.channels?.slack as { capabilities?: { interactiveReplies?: boolean } } | undefined)
             ?.capabilities?.interactiveReplies === true,
       },
     }),
@@ -33,6 +39,7 @@ function createResult(overrides: Partial<RunResult> = {}): RunResult {
 
 describe("normalizeAgentCommandReplyPayloads", () => {
   beforeEach(() => {
+    setActivePluginRegistry(slackRegistry);
   });
 
   afterEach(() => {
@@ -43,12 +50,15 @@ describe("normalizeAgentCommandReplyPayloads", () => {
     const normalized = normalizeAgentCommandReplyPayloads({
       cfg: {
         channels: {
+          slack: {
             capabilities: { interactiveReplies: true },
           },
         },
       } as ChainbreakerConfig,
       opts: { message: "test" } as AgentCommandOpts,
       outboundSession: undefined,
+      deliveryChannel: "slack",
+      payloads: [{ text: "Choose [[slack_buttons: Retry:retry]]" }],
       result: createResult(),
     });
 
@@ -80,6 +90,7 @@ describe("normalizeAgentCommandReplyPayloads", () => {
       } as ChainbreakerConfig,
       opts: { message: "test" } as AgentCommandOpts,
       outboundSession: undefined,
+      deliveryChannel: "slack",
       payloads: [{ text: "Ready." }],
       result: createResult({
         meta: {
@@ -108,6 +119,7 @@ describe("normalizeAgentCommandReplyPayloads", () => {
     const delivered = await deliverAgentCommandResult({
       cfg: {
         channels: {
+          slack: {
             capabilities: { interactiveReplies: true },
           },
         },
@@ -116,6 +128,7 @@ describe("normalizeAgentCommandReplyPayloads", () => {
       runtime: runtime as never,
       opts: {
         message: "test",
+        channel: "slack",
       } as AgentCommandOpts,
       outboundSession: undefined,
       sessionEntry: undefined,
@@ -139,6 +152,7 @@ describe("normalizeAgentCommandReplyPayloads", () => {
       runtime: runtime as never,
       opts: {
         message: "test",
+        channel: "line",
       } as AgentCommandOpts,
       outboundSession: undefined,
       sessionEntry: undefined,

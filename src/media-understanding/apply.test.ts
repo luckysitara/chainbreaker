@@ -654,6 +654,7 @@ describe("applyMediaUnderstanding", () => {
   it("auto-detects sherpa for audio when binary and model files are available", async () => {
     const binDir = await createTempMediaDir();
     const modelDir = await createTempMediaDir();
+    await createMockExecutable(binDir, "sherpa-onnx-offline");
     await fs.writeFile(path.join(modelDir, "tokens.txt"), "a");
     await fs.writeFile(path.join(modelDir, "encoder.onnx"), "a");
     await fs.writeFile(path.join(modelDir, "decoder.onnx"), "a");
@@ -674,6 +675,7 @@ describe("applyMediaUnderstanding", () => {
 
     expect(ctx.Transcript).toBe("sherpa ok");
     expect(mockedRunExec).toHaveBeenCalledWith(
+      "sherpa-onnx-offline",
       expect.any(Array),
       expect.any(Object),
     );

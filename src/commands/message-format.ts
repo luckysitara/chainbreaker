@@ -320,6 +320,7 @@ export function formatMessageCliText(result: MessageActionRunResult): string[] {
       const poll = result.pollResult;
       const pollId = (poll.result as { pollId?: string } | undefined)?.pollId;
       const msgId = poll.result?.messageId ?? null;
+      const lines = [
         ok(
           formatGatewaySummary({
             action: "Poll sent",
@@ -329,7 +330,9 @@ export function formatMessageCliText(result: MessageActionRunResult): string[] {
         ),
       ];
       if (pollId) {
+        lines.push(ok(`Poll id: ${pollId}`));
       }
+      return lines;
     }
 
     const label = resolveChannelLabel(result.channel);
@@ -339,35 +342,53 @@ export function formatMessageCliText(result: MessageActionRunResult): string[] {
 
   // channel actions (non-send/poll)
   const payload = result.payload;
+  const lines: string[] = [];
 
   if (result.action === "react") {
     const added = (payload as { added?: unknown }).added;
     const removed = (payload as { removed?: unknown }).removed;
     if (typeof added === "string" && added.trim()) {
+      lines.push(ok(`✅ Reaction added: ${added.trim()}`));
+      return lines;
     }
     if (typeof removed === "string" && removed.trim()) {
+      lines.push(ok(`✅ Reaction removed: ${removed.trim()}`));
+      return lines;
     }
     if (Array.isArray(removed)) {
       const list = removed
         .map((x) => String(x).trim())
         .filter(Boolean)
         .join(", ");
+      lines.push(ok(`✅ Reactions removed${list ? `: ${list}` : ""}`));
+      return lines;
     }
+    lines.push(ok("✅ Reaction updated."));
+    return lines;
   }
 
   const reactionsTable = renderReactions(payload, opts);
   if (reactionsTable && result.action === "reactions") {
+    lines.push(heading("Reactions"));
+    lines.push(reactionsTable[0] ?? "");
+    return lines;
   }
 
   if (result.action === "read") {
     const messagesTable = renderMessagesFromPayload(payload, opts);
     if (messagesTable) {
+      lines.push(heading("Messages"));
+      lines.push(messagesTable[0] ?? "");
+      return lines;
     }
   }
 
   if (result.action === "list-pins") {
     const pinsTable = renderPinsFromPayload(payload, opts);
     if (pinsTable) {
+      lines.push(heading("Pinned messages"));
+      lines.push(pinsTable[0] ?? "");
+      return lines;
     }
   }
 
@@ -375,11 +396,20 @@ export function formatMessageCliText(result: MessageActionRunResult): string[] {
     const results = (payload as { results?: unknown }).results;
     const list = extractDiscordSearchResultsMessages(results);
     if (list) {
+      lines.push(heading("Search results"));
+      lines.push(renderMessageList(list, opts, "No results.")[0] ?? "");
+      return lines;
     }
   }
 
   // Generic success + compact details table.
+  lines.push(ok(`✅ ${result.action} via ${resolveChannelLabel(result.channel)}.`));
   const summary = renderObjectSummary(payload, opts);
   if (summary.length) {
+    lines.push("");
+    lines.push(...summary);
+    lines.push("");
+    lines.push(muted("Tip: use --json for full output."));
   }
+  return lines;
 }

@@ -293,15 +293,22 @@ export const handleWhoamiCommand: CommandHandler = async (params, allowTextComma
   }
   const senderId = params.ctx.SenderId ?? "";
   const senderUsername = params.ctx.SenderUsername ?? "";
+  const lines = ["🧭 Identity", `Channel: ${params.command.channel}`];
   if (senderId) {
+    lines.push(`User id: ${senderId}`);
   }
   if (senderUsername) {
     const handle = senderUsername.startsWith("@") ? senderUsername : `@${senderUsername}`;
+    lines.push(`Username: ${handle}`);
   }
   if (params.ctx.ChatType === "group" && params.ctx.From) {
+    lines.push(`Chat: ${params.ctx.From}`);
   }
   if (params.ctx.MessageThreadId != null) {
+    lines.push(`Thread: ${params.ctx.MessageThreadId}`);
   }
   if (senderId) {
+    lines.push(`AllowFrom: ${senderId}`);
   }
+  return { shouldContinue: false, reply: { text: lines.join("\n") } };
 };

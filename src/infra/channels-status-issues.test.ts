@@ -24,18 +24,26 @@ describe("collectChannelStatusIssues", () => {
 
   it("skips plugins without collectors and concatenates collector output in plugin order", () => {
     const collectTelegramIssues = vi.fn(() => [{ code: "telegram.down" }]);
+    const collectSlackIssues = vi.fn(() => [{ code: "slack.warn" }, { code: "slack.auth" }]);
     const telegramAccounts = [{ id: "tg-1" }];
+    const slackAccounts = [{ id: "sl-1" }];
     listChannelPluginsMock.mockReturnValueOnce([
+      { id: "discord" },
       { id: "telegram", status: { collectStatusIssues: collectTelegramIssues } },
+      { id: "slack", status: { collectStatusIssues: collectSlackIssues } },
     ]);
 
     expect(
       collectChannelStatusIssues({
         channelAccounts: {
+          discord: [{ id: "dc-1" }],
           telegram: telegramAccounts,
+          slack: slackAccounts,
         },
       }),
+    ).toEqual([{ code: "telegram.down" }, { code: "slack.warn" }, { code: "slack.auth" }]);
 
     expect(collectTelegramIssues).toHaveBeenCalledWith(telegramAccounts);
+    expect(collectSlackIssues).toHaveBeenCalledWith(slackAccounts);
   });
 });

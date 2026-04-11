@@ -55,6 +55,7 @@ describe("group policy warning builders", () => {
 
     expect(
       collect({
+        cfg: { channels: { slack: {} } } as ChainbreakerConfig,
         accountId: "acct-1",
       }),
     ).toEqual(["configured"]);
@@ -98,7 +99,9 @@ describe("group policy warning builders", () => {
     expect(
       collect({
         account: { accountId: "acct-1" },
+        cfg: { channels: { slack: {} } } as ChainbreakerConfig,
       }),
+    ).toEqual(["acct-1", "slack"]);
   });
 
   it("builds conditional warning collectors", () => {

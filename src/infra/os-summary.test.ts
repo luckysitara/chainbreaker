@@ -85,6 +85,7 @@ describe("resolveOsSummary", () => {
         pid: 1,
         output: [],
         status: 0,
+        signal: null,
       });
     }
     expect(resolveOsSummary()).toEqual(expected);

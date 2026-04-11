@@ -62,6 +62,8 @@ vi.mock("./models-config.providers.js", async () => {
         },
       };
       if (env?.MINIMAX_API_KEY) {
+        providers["minimax"] = {
+          ...createImplicitProvider("https://minimax.example/v1"),
           apiKey: "MINIMAX_API_KEY",
         };
       }
@@ -93,6 +95,7 @@ type ParsedProviderConfig = {
 async function runEnvProviderCase(params: {
   envVar: "MINIMAX_API_KEY" | "SYNTHETIC_API_KEY";
   envValue: string;
+  providerKey: "minimax" | "synthetic";
   expectedApiKeyRef: string;
 }) {
   const previousValue = process.env[params.envVar];
@@ -158,6 +161,7 @@ describe("models-config", () => {
         expect(result.wrote).toBe(true);
         expect(Object.keys(parsed.providers).length).toBeGreaterThan(0);
         expect(parsed.providers["openai"]).toBeUndefined();
+        expect(parsed.providers["minimax"]).toBeUndefined();
         expect(parsed.providers["synthetic"]).toBeUndefined();
       });
     });
@@ -190,9 +194,12 @@ describe("models-config", () => {
     });
   });
 
+  it("adds minimax provider when MINIMAX_API_KEY is set", async () => {
     await withTempHome(async () => {
       await runEnvProviderCase({
         envVar: "MINIMAX_API_KEY",
+        envValue: "sk-minimax-test",
+        providerKey: "minimax",
         expectedApiKeyRef: "MINIMAX_API_KEY", // pragma: allowlist secret
       });
     });

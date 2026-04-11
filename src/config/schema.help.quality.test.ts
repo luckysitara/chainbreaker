@@ -449,6 +449,7 @@ const ENUM_EXPECTATIONS: Record<string, string[]> = {
   ],
   "logging.consoleStyle": ['"pretty"', '"compact"', '"json"'],
   "logging.redactSensitive": ['"off"', '"tools"'],
+  "cli.banner.taglineMode": ['"random"', '"default"', '"off"'],
   "update.channel": ['"stable"', '"beta"', '"dev"'],
   "agents.defaults.compaction.mode": ['"default"', '"safeguard"'],
   "agents.defaults.compaction.identifierPolicy": ['"strict"', '"off"', '"custom"'],
@@ -481,6 +482,7 @@ const TOOLS_HOOKS_TARGET_KEYS = [
   "tools.alsoAllow",
   "tools.byProvider",
   "tools.exec.approvalRunningNoticeMs",
+  "tools.exec.strictInlineEval",
   "tools.links.enabled",
   "tools.links.maxLinks",
   "tools.links.models",
@@ -662,6 +664,7 @@ describe("config help copy quality", () => {
     const rules = FIELD_HELP["session.sendPolicy.rules"];
     expect(rules.includes("{ action:")).toBe(true);
     expect(rules.includes('"deny"')).toBe(true);
+    expect(rules.includes('"discord"')).toBe(true);
 
     const keyPrefix = FIELD_HELP["session.sendPolicy.rules[].match.keyPrefix"];
     expect(/normalized/i.test(keyPrefix)).toBe(true);
@@ -708,6 +711,7 @@ describe("config help copy quality", () => {
   it("documents approvals filters and target semantics", () => {
     const sessionFilter = FIELD_HELP["approvals.exec.sessionFilter"];
     expect(/substring|regex/i.test(sessionFilter)).toBe(true);
+    expect(sessionFilter.includes("discord:")).toBe(true);
     expect(sessionFilter.includes("^agent:ops:")).toBe(true);
 
     const agentFilter = FIELD_HELP["approvals.exec.agentFilter"];

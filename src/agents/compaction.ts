@@ -46,6 +46,7 @@ type GenerateSummaryCompat = {
     model: NonNullable<ExtensionContext["model"]>,
     reserveTokens: number,
     apiKey: string,
+    signal?: AbortSignal,
     customInstructions?: string,
     previousSummary?: string,
   ): Promise<string>;
@@ -55,6 +56,7 @@ type GenerateSummaryCompat = {
     reserveTokens: number,
     apiKey: string,
     headers: Record<string, string> | undefined,
+    signal?: AbortSignal,
     customInstructions?: string,
     previousSummary?: string,
   ): Promise<string>;
@@ -238,6 +240,7 @@ async function summarizeChunks(params: {
   model: NonNullable<ExtensionContext["model"]>;
   apiKey: string;
   headers?: Record<string, string>;
+  signal: AbortSignal;
   reserveTokens: number;
   maxChunkTokens: number;
   customInstructions?: string;
@@ -265,6 +268,7 @@ async function summarizeChunks(params: {
           params.reserveTokens,
           params.apiKey,
           params.headers,
+          params.signal,
           effectiveInstructions,
           summary,
         ),
@@ -288,6 +292,7 @@ function generateSummary(
   reserveTokens: number,
   apiKey: string,
   headers: Record<string, string> | undefined,
+  signal: AbortSignal,
   customInstructions?: string,
   previousSummary?: string,
 ): Promise<string> {
@@ -298,6 +303,7 @@ function generateSummary(
       reserveTokens,
       apiKey,
       headers,
+      signal,
       customInstructions,
       previousSummary,
     );
@@ -307,6 +313,7 @@ function generateSummary(
     model,
     reserveTokens,
     apiKey,
+    signal,
     customInstructions,
     previousSummary,
   );
@@ -321,6 +328,7 @@ export async function summarizeWithFallback(params: {
   model: NonNullable<ExtensionContext["model"]>;
   apiKey: string;
   headers?: Record<string, string>;
+  signal: AbortSignal;
   reserveTokens: number;
   maxChunkTokens: number;
   contextWindow: number;
@@ -390,6 +398,7 @@ export async function summarizeInStages(params: {
   model: NonNullable<ExtensionContext["model"]>;
   apiKey: string;
   headers?: Record<string, string>;
+  signal: AbortSignal;
   reserveTokens: number;
   maxChunkTokens: number;
   contextWindow: number;

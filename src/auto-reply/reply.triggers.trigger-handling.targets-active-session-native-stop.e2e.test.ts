@@ -5,6 +5,7 @@ import { loadSessionStore, resolveSessionKey } from "../config/sessions.js";
 import { registerGroupIntroPromptCases } from "./reply.triggers.group-intro-prompts.cases.js";
 import { registerTriggerHandlingUsageSummaryCases } from "./reply.triggers.trigger-handling.filters-usage-summary-current-model-provider.cases.js";
 import {
+  expectInlineCommandHandledAndStripped,
   getAbortEmbeddedPiRunMock,
   getCompactEmbeddedPiSessionMock,
   getRunEmbeddedPiAgentMock,
@@ -170,6 +171,7 @@ function mockEmbeddedOk() {
   return mockRunEmbeddedPiAgentOk("ok");
 }
 
+async function runInlineUnauthorizedCommand(params: { home: string; command: "/status" }) {
   const cfg = makeUnauthorizedWhatsAppCfg(params.home);
   const res = await getReplyFromConfig(
     {
@@ -541,9 +543,11 @@ describe("trigger handling", () => {
     });
   });
 
+  it("handles bare session reset, inline commands, and unauthorized inline status", async () => {
     await withTempHome(async (home) => {
       await runGreetingPromptForBareNewOrReset({ home, body: "/new", getReplyFromConfig });
       await expectResetBlockedForNonOwner({ home });
+      await expectInlineCommandHandledAndStripped({
         home,
         getReplyFromConfig,
         body: "please /whoami now",
@@ -551,11 +555,15 @@ describe("trigger handling", () => {
         blockReplyContains: "Identity",
         requestOverrides: { SenderId: "12345" },
       });
+      const inlineRunEmbeddedPiAgentMock = mockEmbeddedOk();
+      const res = await runInlineUnauthorizedCommand({
         home,
         command: "/status",
       });
       const text = Array.isArray(res) ? res[0]?.text : res?.text;
       expect(text).toBe("ok");
+      expect(inlineRunEmbeddedPiAgentMock).toHaveBeenCalled();
+      const prompt = inlineRunEmbeddedPiAgentMock.mock.calls.at(-1)?.[0]?.prompt ?? "";
       expect(prompt).toContain("/status");
     });
   });

@@ -13,6 +13,8 @@ describe("provider usage fetch shared helpers", () => {
   });
 
   it("builds a provider error snapshot", () => {
+    expect(buildUsageErrorSnapshot("zai", "API error")).toEqual({
+      provider: "zai",
       displayName: "z.ai",
       windows: [],
       error: "API error",
@@ -31,6 +33,7 @@ describe("provider usage fetch shared helpers", () => {
     const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
     const fetchFnMock = vi.fn(
       async (_input: URL | RequestInfo, init?: RequestInit) =>
+        new Response(JSON.stringify({ aborted: init?.signal?.aborted ?? false }), { status: 200 }),
     );
     const fetchFn = withFetchPreconnect(fetchFnMock);
 
@@ -49,6 +52,7 @@ describe("provider usage fetch shared helpers", () => {
       expect.objectContaining({
         method: "POST",
         headers: { authorization: "Bearer test" },
+        signal: expect.any(AbortSignal),
       }),
     );
     await expect(response.json()).resolves.toEqual({ aborted: false });
@@ -60,6 +64,7 @@ describe("provider usage fetch shared helpers", () => {
     const fetchFnMock = vi.fn(
       (_input: URL | RequestInfo, init?: RequestInit) =>
         new Promise<Response>((_, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(new Error("aborted by timeout")), {
             once: true,
           });
         }),

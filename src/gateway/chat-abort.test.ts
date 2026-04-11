@@ -75,6 +75,7 @@ describe("abortChatRunById", () => {
     const result = abortChatRunById(ops, { runId, sessionKey, stopReason: "user" });
 
     expect(result).toEqual({ aborted: true });
+    expect(entry.controller.signal.aborted).toBe(true);
     expect(ops.chatAbortControllers.has(runId)).toBe(false);
     expect(ops.chatRunBuffers.has(runId)).toBe(false);
     expect(ops.chatDeltaSentAt.has(runId)).toBe(false);
@@ -124,6 +125,7 @@ describe("abortChatRunById", () => {
     const ops = createOps({ runId, entry, buffer: "streamed text" });
 
     // Simulate synchronous cleanup triggered by AbortController listeners.
+    entry.controller.signal.addEventListener("abort", () => {
       ops.chatRunBuffers.delete(runId);
     });
 

@@ -211,6 +211,7 @@ describe("tui command handlers", () => {
     expect(addSystem).toHaveBeenNthCalledWith(2, "reset failed: Error: boom");
   });
 
+  it("reports disconnected status and skips gateway send when offline", async () => {
     const { handleCommand, sendChat, addUser, addSystem, setActivityStatus } = createHarness({
       isConnected: false,
     });

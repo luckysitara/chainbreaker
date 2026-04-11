@@ -3,9 +3,7 @@ import type { ChainbreakerConfig } from "../config/types.js";
 
 export function createStatusScanSharedMocks(configPathLabel: string) {
   return {
-    resolveConfigPath: vi.fn(
-      () => `/tmp/chainbreaker-${configPathLabel}-missing-${process.pid}.json`,
-    ),
+    resolveConfigPath: vi.fn(() => `/tmp/chainbreaker-${configPathLabel}-missing-${process.pid}.json`),
     hasPotentialConfiguredChannels: vi.fn(),
     readBestEffortConfig: vi.fn(),
     resolveCommandSecretRefsViaGateway: vi.fn(),

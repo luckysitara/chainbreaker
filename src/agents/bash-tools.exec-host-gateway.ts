@@ -13,6 +13,9 @@ import {
   resolveAllowAlwaysPatterns,
 } from "../infra/exec-approvals.js";
 import {
+  describeInterpreterInlineEval,
+  detectInterpreterInlineEvalArgv,
+} from "../infra/exec-inline-eval.js";
 import { detectCommandObfuscation } from "../infra/exec-obfuscation-detect.js";
 import type { SafeBinProfile } from "../infra/exec-safe-bin-policy.js";
 import { logInfo } from "../logger.js";
@@ -32,6 +35,7 @@ import {
   resolveApprovalDecisionOrUndefined,
   resolveExecHostApprovalContext,
   sendExecApprovalFollowupResult,
+  shouldResolveExecApprovalUnavailableInline,
 } from "./bash-tools.exec-host-shared.js";
 import {
   DEFAULT_NOTIFY_TAIL_CHARS,
@@ -53,6 +57,7 @@ export type ProcessGatewayAllowlistParams = {
   ask: ExecAsk;
   safeBins: Set<string>;
   safeBinProfiles: Readonly<Record<string, SafeBinProfile>>;
+  strictInlineEval?: boolean;
   trigger?: string;
   agentId?: string;
   sessionKey?: string;
@@ -104,12 +109,18 @@ export async function processGatewayAllowlist(
     allowlist: approvals.allowlist,
     commandText: params.command,
   });
+  const inlineEvalHit =
+    params.strictInlineEval === true
       ? (allowlistEval.segments
           .map((segment) =>
+            detectInterpreterInlineEvalArgv(segment.resolution?.effectiveArgv ?? segment.argv),
           )
           .find((entry) => entry !== null) ?? null)
       : null;
+  if (inlineEvalHit) {
     params.warnings.push(
+      `Warning: strict inline-eval mode requires explicit approval for ${describeInterpreterInlineEval(
+        inlineEvalHit,
       )}.`,
     );
   }
@@ -150,6 +161,7 @@ export async function processGatewayAllowlist(
   );
   const requiresHeredocApproval =
     hostSecurity === "allowlist" && analysisOk && allowlistSatisfied && hasHeredocSegment;
+  const requiresInlineEvalApproval = inlineEvalHit !== null;
   const requiresAllowlistPlanApproval =
     hostSecurity === "allowlist" &&
     analysisOk &&
@@ -166,6 +178,7 @@ export async function processGatewayAllowlist(
     }) ||
     requiresAllowlistPlanApproval ||
     requiresHeredocApproval ||
+    requiresInlineEvalApproval ||
     obfuscation.detected;
   if (requiresHeredocApproval) {
     params.warnings.push(
@@ -219,6 +232,7 @@ export async function processGatewayAllowlist(
       register: registerGatewayApproval,
     });
     if (
+      shouldResolveExecApprovalUnavailableInline({
         trigger: params.trigger,
         unavailableReason,
         preResolvedDecision,
@@ -304,11 +318,13 @@ export async function processGatewayAllowlist(
         approvedByAsk = true;
       } else if (decision === "allow-always") {
         approvedByAsk = true;
+        if (!requiresInlineEvalApproval) {
           const patterns = resolveAllowAlwaysPatterns({
             segments: allowlistEval.segments,
             cwd: params.workdir,
             env: params.env,
             platform: process.platform,
+            strictInlineEval: params.strictInlineEval === true,
           });
           for (const pattern of patterns) {
             if (pattern) {

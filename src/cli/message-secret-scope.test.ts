@@ -9,6 +9,7 @@ describe("resolveMessageSecretScope", () => {
         accountId: "Ops",
       }),
     ).toEqual({
+      channel: "signal",
       accountId: "ops",
     });
   });
@@ -16,22 +17,27 @@ describe("resolveMessageSecretScope", () => {
   it("infers channel from a prefixed target", () => {
     expect(
       resolveMessageSecretScope({
+        target: "signal:12345",
       }),
     ).toEqual({
+      channel: "signal",
     });
   });
 
   it("infers a shared channel from target arrays", () => {
     expect(
       resolveMessageSecretScope({
+        targets: ["signal:one", "signal:two"],
       }),
     ).toEqual({
+      channel: "signal",
     });
   });
 
   it("does not infer a channel when target arrays mix channels", () => {
     expect(
       resolveMessageSecretScope({
+        targets: ["signal:one", "imessage:two"],
       }),
     ).toEqual({});
   });
@@ -43,6 +49,7 @@ describe("resolveMessageSecretScope", () => {
         fallbackAccountId: "Chat",
       }),
     ).toEqual({
+      channel: "signal",
       accountId: "chat",
     });
   });

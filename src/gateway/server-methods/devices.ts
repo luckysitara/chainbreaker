@@ -41,7 +41,7 @@ function logDeviceTokenRotationDenied(params: {
   log: { warn: (message: string) => void };
   deviceId: string;
   role: string;
-  reason: RotateDeviceTokenDenyReason | "caller-missing-scope"  ;
+  reason: RotateDeviceTokenDenyReason | "caller-missing-scope" | "unknown-device-or-role";
   scope?: string | null;
 }) {
   const suffix = params.scope ? ` scope=${params.scope}` : "";

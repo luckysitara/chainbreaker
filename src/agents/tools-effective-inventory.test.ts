@@ -156,6 +156,7 @@ describe("resolveEffectiveToolInventory", () => {
     });
   });
 
+  it("falls back to a sanitized summary for multi-line raw descriptions", async () => {
     const { resolveEffectiveToolInventory } = await loadHarness({
       tools: [
         {

@@ -49,9 +49,7 @@ describe("handleTelegramAction", () => {
     emoji: "✅",
   } as const;
 
-  function reactionConfig(
-    reactionLevel: "minimal" | "extensive" | "off" | "ack",
-  ): ChainbreakerConfig {
+  function reactionConfig(reactionLevel: "minimal" | "extensive" | "off" | "ack"): ChainbreakerConfig {
     return {
       channels: { telegram: { botToken: "tok", reactionLevel } },
     } as ChainbreakerConfig;
@@ -68,8 +66,10 @@ describe("handleTelegramAction", () => {
     } as ChainbreakerConfig;
   }
 
+  async function sendInlineButtonsMessage(params: {
     to: string;
     buttons: Array<Array<{ text: string; callback_data: string; style?: string }>>;
+    inlineButtons: "dm" | "group" | "all";
   }) {
     await handleTelegramAction(
       {
@@ -78,6 +78,7 @@ describe("handleTelegramAction", () => {
         content: "Choose",
         buttons: params.buttons,
       },
+      telegramConfig({ capabilities: { inlineButtons: params.inlineButtons } }),
     );
   }
 
@@ -720,6 +721,7 @@ describe("handleTelegramAction", () => {
     ).rejects.toThrow(/Telegram bot token missing/);
   });
 
+  it("allows inline buttons by default (allowlist)", async () => {
     const cfg = {
       channels: { telegram: { botToken: "tok" } },
     } as ChainbreakerConfig;
@@ -739,11 +741,16 @@ describe("handleTelegramAction", () => {
     {
       name: "scope is off",
       to: "@testchannel",
+      inlineButtons: "off" as const,
+      expectedMessage: /inline buttons are disabled/i,
     },
     {
       name: "scope is dm and target is group",
       to: "-100123456",
+      inlineButtons: "dm" as const,
+      expectedMessage: /inline buttons are limited to DMs/i,
     },
+  ])("blocks inline buttons when $name", async ({ to, inlineButtons, expectedMessage }) => {
     await expect(
       handleTelegramAction(
         {
@@ -752,24 +759,34 @@ describe("handleTelegramAction", () => {
           content: "Choose",
           buttons: [[{ text: "Ok", callback_data: "cmd:ok" }]],
         },
+        telegramConfig({ capabilities: { inlineButtons } }),
       ),
     ).rejects.toThrow(expectedMessage);
   });
 
+  it("allows inline buttons in DMs with tg: prefixed targets", async () => {
+    await sendInlineButtonsMessage({
       to: "tg:5232990709",
       buttons: [[{ text: "Ok", callback_data: "cmd:ok" }]],
+      inlineButtons: "dm",
     });
     expect(sendMessageTelegram).toHaveBeenCalled();
   });
 
+  it("allows inline buttons in groups with topic targets", async () => {
+    await sendInlineButtonsMessage({
       to: "telegram:group:-1001234567890:topic:456",
       buttons: [[{ text: "Ok", callback_data: "cmd:ok" }]],
+      inlineButtons: "group",
     });
     expect(sendMessageTelegram).toHaveBeenCalled();
   });
 
+  it("sends messages with inline keyboard buttons when enabled", async () => {
+    await sendInlineButtonsMessage({
       to: "@testchannel",
       buttons: [[{ text: "  Option A ", callback_data: " cmd:a " }]],
+      inlineButtons: "all",
     });
     expect(sendMessageTelegram).toHaveBeenCalledWith(
       "@testchannel",
@@ -781,7 +798,9 @@ describe("handleTelegramAction", () => {
   });
 
   it("forwards optional button style", async () => {
+    await sendInlineButtonsMessage({
       to: "@testchannel",
+      inlineButtons: "all",
       buttons: [
         [
           {

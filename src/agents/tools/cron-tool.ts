@@ -126,14 +126,19 @@ async function buildReminderContextLines(params: {
     if (recent.length === 0) {
       return [];
     }
+    const lines: string[] = [];
     let total = 0;
     for (const entry of recent) {
       const label = entry.role === "user" ? "User" : "Assistant";
       const text = truncateText(entry.text, REMINDER_CONTEXT_PER_MESSAGE_MAX);
+      const line = `- ${label}: ${text}`;
+      total += line.length;
       if (total > REMINDER_CONTEXT_TOTAL_MAX) {
         break;
       }
+      lines.push(line);
     }
+    return lines;
   } catch {
     return [];
   }
@@ -339,6 +344,7 @@ Use jobId as the canonical identifier; id is accepted for compatibility. Use con
               }
             }
             // Only use the synthetic job if at least one meaningful field is present
+            // (schedule, payload, message, or text are the minimum signals that the
             // LLM intended to create a job).
             if (
               found &&

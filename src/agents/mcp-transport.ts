@@ -23,6 +23,8 @@ function attachStderrLogging(serverName: string, transport: StdioClientTransport
     if (!message) {
       return;
     }
+    for (const line of message.split(/\r?\n/)) {
+      const trimmed = line.trim();
       if (trimmed) {
         logDebug(`bundle-mcp:${serverName}: ${trimmed}`);
       }

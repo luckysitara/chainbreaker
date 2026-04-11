@@ -23,9 +23,7 @@ import { sortFlowContributionsByLabel } from "./types.js";
 export type SearchProvider = NonNullable<
   NonNullable<NonNullable<NonNullable<ChainbreakerConfig["tools"]>["web"]>["search"]>["provider"]
 >;
-type SearchConfig = NonNullable<
-  NonNullable<NonNullable<ChainbreakerConfig["tools"]>["web"]>["search"]
->;
+type SearchConfig = NonNullable<NonNullable<NonNullable<ChainbreakerConfig["tools"]>["web"]>["search"]>;
 type MutableSearchConfig = SearchConfig & Record<string, unknown>;
 
 export type SearchProviderSetupOption = FlowOption & {
@@ -272,10 +270,7 @@ export function applySearchProviderSelection(
   return applySearchProviderSelectionConfig(nextBase, providerEntry);
 }
 
-function preserveDisabledState(
-  original: ChainbreakerConfig,
-  result: ChainbreakerConfig,
-): ChainbreakerConfig {
+function preserveDisabledState(original: ChainbreakerConfig, result: ChainbreakerConfig): ChainbreakerConfig {
   if (original.tools?.web?.search?.enabled !== false) {
     return result;
   }
@@ -381,6 +376,7 @@ export async function runSearchSetupFlow(
 
   await prompter.note(
     [
+      "Web search lets your agent look things up online.",
       "Choose a provider. Some providers need an API key, and some work key-free.",
       "Docs: https://docs.chainbreaker.ai/tools/web",
     ].join("\n"),

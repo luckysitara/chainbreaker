@@ -38,12 +38,16 @@ export async function repairSessionFileIfNeeded(params: {
     return { repaired: false, droppedLines: 0, reason };
   }
 
+  const lines = content.split(/\r?\n/);
   const entries: unknown[] = [];
   let droppedLines = 0;
 
+  for (const line of lines) {
+    if (!line.trim()) {
       continue;
     }
     try {
+      const entry = JSON.parse(line);
       entries.push(entry);
     } catch {
       droppedLines += 1;
@@ -97,6 +101,7 @@ export async function repairSessionFileIfNeeded(params: {
   }
 
   params.warn?.(
+    `session file repaired: dropped ${droppedLines} malformed line(s) (${path.basename(
       sessionFile,
     )})`,
   );

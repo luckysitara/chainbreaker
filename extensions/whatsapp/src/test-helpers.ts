@@ -224,9 +224,7 @@ export function resetBaileysMocks() {
 }
 
 export function getLastSocket(): MockBaileysSocket {
-  const getter = (globalThis as Record<PropertyKey, unknown>)[
-    Symbol.for("chainbreaker:lastSocket")
-  ];
+  const getter = (globalThis as Record<PropertyKey, unknown>)[Symbol.for("chainbreaker:lastSocket")];
   if (typeof getter === "function") {
     return (getter as () => MockBaileysSocket)();
   }

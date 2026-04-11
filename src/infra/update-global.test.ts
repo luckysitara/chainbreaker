@@ -22,6 +22,7 @@ import {
   type CommandRunner,
 } from "./update-global.js";
 
+const MATRIX_HELPER_API = bundledDistPluginFile("matrix", "helper-api.js");
 
 describe("update global helpers", () => {
   let envSnapshot: ReturnType<typeof captureEnv> | undefined;
@@ -99,9 +100,7 @@ describe("update global helpers", () => {
     expect(canResolveRegistryVersionForPackageTarget("latest")).toBe(true);
     expect(canResolveRegistryVersionForPackageTarget("2026.3.22")).toBe(true);
     expect(canResolveRegistryVersionForPackageTarget("main")).toBe(false);
-    expect(canResolveRegistryVersionForPackageTarget("github:chainbreaker/chainbreaker#main")).toBe(
-      false,
-    );
+    expect(canResolveRegistryVersionForPackageTarget("github:chainbreaker/chainbreaker#main")).toBe(false);
   });
 
   it("detects install managers from resolved roots and on-disk presence", async () => {

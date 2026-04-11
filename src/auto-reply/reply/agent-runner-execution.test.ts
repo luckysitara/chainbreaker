@@ -124,6 +124,11 @@ function createMockTypingSignaler(): TypingSignaler {
     shouldStartOnMessageStart: true,
     shouldStartOnText: true,
     shouldStartOnReasoning: false,
+    signalRunStart: vi.fn(async () => {}),
+    signalMessageStart: vi.fn(async () => {}),
+    signalTextDelta: vi.fn(async () => {}),
+    signalReasoningDelta: vi.fn(async () => {}),
+    signalToolStart: vi.fn(async () => {}),
   };
 }
 
@@ -195,6 +200,7 @@ describe("runAgentTurnWithFallback", () => {
         onToolResult,
       } satisfies GetReplyOptions,
       typingSignals,
+      blockReplyPipeline: null,
       blockStreamingEnabled: false,
       resolvedBlockStreamingBreak: "message_end",
       applyReplyToMode: (payload) => payload,
@@ -212,6 +218,7 @@ describe("runAgentTurnWithFallback", () => {
     await Promise.all(pendingToolTasks);
 
     expect(result.kind).toBe("success");
+    expect(typingSignals.signalTextDelta).not.toHaveBeenCalled();
     expect(onToolResult).toHaveBeenCalledTimes(1);
     expect(onToolResult.mock.calls[0]?.[0]).toMatchObject({
       mediaUrls: ["/tmp/generated.png"],
@@ -246,6 +253,7 @@ describe("runAgentTurnWithFallback", () => {
       } as unknown as TemplateContext,
       opts: {},
       typingSignals: createMockTypingSignaler(),
+      blockReplyPipeline: null,
       blockStreamingEnabled: false,
       resolvedBlockStreamingBreak: "message_end",
       applyReplyToMode: (payload) => payload,
@@ -311,6 +319,7 @@ describe("runAgentTurnWithFallback", () => {
       } as unknown as TemplateContext,
       opts: {},
       typingSignals: createMockTypingSignaler(),
+      blockReplyPipeline: null,
       blockStreamingEnabled: false,
       resolvedBlockStreamingBreak: "message_end",
       applyReplyToMode: (payload) => payload,
@@ -365,6 +374,7 @@ describe("runAgentTurnWithFallback", () => {
       } as unknown as TemplateContext,
       opts: {},
       typingSignals: createMockTypingSignaler(),
+      blockReplyPipeline: null,
       blockStreamingEnabled: false,
       resolvedBlockStreamingBreak: "message_end",
       applyReplyToMode: (payload) => payload,
@@ -449,6 +459,7 @@ describe("runAgentTurnWithFallback", () => {
       } as unknown as TemplateContext,
       opts: {},
       typingSignals: createMockTypingSignaler(),
+      blockReplyPipeline: null,
       blockStreamingEnabled: false,
       resolvedBlockStreamingBreak: "message_end",
       applyReplyToMode: (payload) => payload,

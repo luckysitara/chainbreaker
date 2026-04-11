@@ -77,6 +77,7 @@ export function buildOpenAIImageGenerationProvider(): ImageGenerationProvider {
           n: req.count ?? 1,
           size: req.size ?? DEFAULT_SIZE,
         }),
+        signal: controller.signal,
       }).finally(() => {
         clearTimeout(timeout);
       });

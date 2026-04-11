@@ -64,6 +64,8 @@ describe("sessions-list-tool", () => {
               kind: "direct",
               sessionId: "sess-dashboard-child",
               deliveryContext: {
+                channel: "discord",
+                to: "discord:child",
                 accountId: "acct-1",
                 threadId: "thread-1",
               },
@@ -99,6 +101,8 @@ describe("sessions-list-tool", () => {
     };
 
     expect(details.sessions?.[0]?.deliveryContext).toEqual({
+      channel: "discord",
+      to: "discord:child",
       accountId: "acct-1",
       threadId: "thread-1",
     });

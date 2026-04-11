@@ -199,6 +199,7 @@ describe("bootstrap prompt warnings", () => {
     });
     expect(first.warningShown).toBe(true);
     expect(first.signature).toBeTruthy();
+    expect(first.lines.join("\n")).toContain("AGENTS.md");
 
     const second = buildBootstrapPromptWarning({
       analysis,
@@ -206,6 +207,7 @@ describe("bootstrap prompt warnings", () => {
       seenSignatures: first.warningSignaturesSeen,
     });
     expect(second.warningShown).toBe(false);
+    expect(second.lines).toEqual([]);
   });
 
   it("dedupes once mode across non-consecutive repeated signatures", () => {
@@ -256,6 +258,7 @@ describe("bootstrap prompt warnings", () => {
     expect(secondA.warningShown).toBe(false);
   });
 
+  it("includes overflow line when more files are truncated than shown", () => {
     const analysis = analyzeBootstrapBudget({
       files: [
         {
@@ -286,11 +289,14 @@ describe("bootstrap prompt warnings", () => {
       bootstrapMaxChars: 20,
       bootstrapTotalMaxChars: 10,
     });
+    const lines = formatBootstrapTruncationWarningLines({
       analysis,
       maxFiles: 2,
     });
+    expect(lines).toContain("+1 more truncated file(s).");
   });
 
+  it("disambiguates duplicate file names in warning lines", () => {
     const analysis = analyzeBootstrapBudget({
       files: [
         {
@@ -313,8 +319,11 @@ describe("bootstrap prompt warnings", () => {
       bootstrapMaxChars: 120,
       bootstrapTotalMaxChars: 300,
     });
+    const lines = formatBootstrapTruncationWarningLines({
       analysis,
     });
+    expect(lines.join("\n")).toContain("AGENTS.md (/tmp/a/AGENTS.md)");
+    expect(lines.join("\n")).toContain("AGENTS.md (/tmp/b/AGENTS.md)");
   });
 
   it("respects off/always warning modes", () => {
@@ -340,6 +349,7 @@ describe("bootstrap prompt warnings", () => {
       previousSignature: signature,
     });
     expect(off.warningShown).toBe(false);
+    expect(off.lines).toEqual([]);
 
     const always = buildBootstrapPromptWarning({
       analysis,
@@ -348,6 +358,7 @@ describe("bootstrap prompt warnings", () => {
       previousSignature: signature,
     });
     expect(always.warningShown).toBe(true);
+    expect(always.lines.length).toBeGreaterThan(0);
   });
 
   it("uses file path in signature to avoid collisions for duplicate names", () => {
@@ -424,8 +435,10 @@ describe("bootstrap prompt warnings", () => {
       contextFiles,
     });
     const optimizedTurns = [stableSystemPrompt, stableSystemPrompt, stableSystemPrompt];
+    const injectLegacyWarning = (prompt: string, lines: string[]) => {
       const warningBlock = [
         "⚠ Bootstrap truncation warning:",
+        ...lines.map((line) => `- ${line}`),
         "",
       ].join("\n");
       return prompt.replace("## AGENTS.md", `${warningBlock}## AGENTS.md`);

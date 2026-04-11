@@ -120,17 +120,16 @@ function resolveMentionPatterns(cfg: ChainbreakerConfig | undefined, agentId?: s
 
 function resolveFallbackProviderMentionStripRegexes(providerId?: string | null): RegExp[] {
   switch (providerId?.trim().toLowerCase()) {
+    case "discord":
       return [/<@!?\d+>/gi];
+    case "slack":
       return [/<@[^>\s]+>/gi];
     default:
       return [];
   }
 }
 
-export function buildMentionRegexes(
-  cfg: ChainbreakerConfig | undefined,
-  agentId?: string,
-): RegExp[] {
+export function buildMentionRegexes(cfg: ChainbreakerConfig | undefined, agentId?: string): RegExp[] {
   const patterns = normalizeMentionPatterns(resolveMentionPatterns(cfg, agentId));
   return compileMentionPatternsCached({
     patterns,

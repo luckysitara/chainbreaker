@@ -299,6 +299,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
           banner: {
             type: "object",
             properties: {
+              taglineMode: {
                 anyOf: [
                   {
                     type: "string",
@@ -881,6 +882,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
                   },
                   {
                     type: "string",
+                    const: "newline",
                   },
                   {
                     type: "string",
@@ -1257,6 +1259,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
                               },
                               {
                                 type: "string",
+                                const: "zai",
                               },
                               {
                                 type: "string",
@@ -2626,6 +2629,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
                       },
                       {
                         type: "string",
+                        const: "newline",
                       },
                       {
                         type: "string",
@@ -4737,6 +4741,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
                             type: "string",
                           },
                         },
+                        strictInlineEval: {
                           type: "boolean",
                         },
                         safeBinTrustedDirs: {
@@ -5400,6 +5405,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
                   model: {
                     type: "string",
                   },
+                  inlineCitations: {
                     type: "boolean",
                   },
                   maxTurns: {
@@ -6882,6 +6888,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
                   type: "string",
                 },
               },
+              strictInlineEval: {
                 type: "boolean",
               },
               safeBinTrustedDirs: {
@@ -7416,6 +7423,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
                       },
                     ],
                   },
+                  discord: {
                     anyOf: [
                       {
                         type: "string",
@@ -7479,6 +7487,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
                       },
                     ],
                   },
+                  slack: {
                     anyOf: [
                       {
                         type: "string",
@@ -7542,6 +7551,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
                       },
                     ],
                   },
+                  signal: {
                     anyOf: [
                       {
                         type: "string",
@@ -7573,6 +7583,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
                       },
                     ],
                   },
+                  imessage: {
                     anyOf: [
                       {
                         type: "string",
@@ -11205,12 +11216,14 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
       label: "CLI",
       group: "CLI",
       order: 26,
+      help: "CLI presentation controls for local command output behavior such as banner and tagline style. Use this section to keep startup output aligned with operator preference without changing runtime behavior.",
       tags: ["advanced"],
     },
     diagnostics: {
       label: "Diagnostics",
       group: "Diagnostics",
       order: 27,
+      help: "Diagnostics controls for targeted tracing, telemetry export, and cache inspection during debugging. Keep baseline diagnostics minimal in production and enable deeper signals only when investigating issues.",
       tags: ["observability"],
     },
     logging: {
@@ -11349,6 +11362,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
       label: "Discovery",
       group: "Discovery",
       order: 210,
+      help: "Service discovery settings for local mDNS advertisement and optional wide-area presence signaling. Keep discovery scoped to expected networks to avoid leaking service metadata.",
       tags: ["advanced"],
     },
     presence: {
@@ -11430,6 +11444,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "diagnostics.otel": {
       label: "OpenTelemetry",
+      help: "OpenTelemetry export settings for traces, metrics, and logs emitted by gateway components. Use this when integrating with centralized observability backends and distributed tracing pipelines.",
       tags: ["observability"],
     },
     "diagnostics.cacheTrace": {
@@ -11454,6 +11469,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "logging.consoleStyle": {
       label: "Console Log Style",
+      help: 'Console output format style: "pretty", "compact", or "json" based on operator and ingestion needs. Use json for machine parsing pipelines and pretty/compact for human-first terminal workflows.',
       tags: ["observability"],
     },
     "logging.redactSensitive": {
@@ -11468,8 +11484,12 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "cli.banner": {
       label: "CLI Banner",
+      help: "CLI startup banner controls for title/version line and tagline style behavior. Keep banner enabled for fast version/context checks, then tune tagline mode to your preferred noise level.",
       tags: ["advanced"],
     },
+    "cli.banner.taglineMode": {
+      label: "CLI Banner Tagline Mode",
+      help: 'Controls tagline style in the CLI startup banner: "random" (default) picks from the rotating tagline pool, "default" always shows the neutral default tagline, and "off" hides tagline text while keeping the banner version line.',
       tags: ["advanced"],
     },
     "update.channel": {
@@ -11519,6 +11539,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "diagnostics.otel.enabled": {
       label: "OpenTelemetry Enabled",
+      help: "Enables OpenTelemetry export pipeline for traces, metrics, and logs based on configured endpoint/protocol settings. Keep disabled unless your collector endpoint and auth are fully configured.",
       tags: ["observability"],
     },
     "diagnostics.otel.endpoint": {
@@ -11543,14 +11564,17 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "diagnostics.otel.traces": {
       label: "OpenTelemetry Traces Enabled",
+      help: "Enable trace signal export to the configured OpenTelemetry collector endpoint. Keep enabled when latency/debug tracing is needed, and disable if you only want metrics/logs.",
       tags: ["observability"],
     },
     "diagnostics.otel.metrics": {
       label: "OpenTelemetry Metrics Enabled",
+      help: "Enable metrics signal export to the configured OpenTelemetry collector endpoint. Keep enabled for runtime health dashboards, and disable only if metric volume must be minimized.",
       tags: ["observability"],
     },
     "diagnostics.otel.logs": {
       label: "OpenTelemetry Logs Enabled",
+      help: "Enable log signal export through OpenTelemetry in addition to local logging sinks. Use this when centralized log correlation is required across services and agents.",
       tags: ["observability"],
     },
     "diagnostics.otel.sampleRate": {
@@ -11650,6 +11674,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "agents.defaults": {
       label: "Agent Defaults",
+      help: "Shared default settings inherited by agents unless overridden per entry in agents.list. Use defaults to enforce consistent baseline behavior and reduce duplicated per-agent configuration.",
       tags: ["advanced"],
     },
     "agents.list": {
@@ -11704,6 +11729,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "gateway.auth.rateLimit": {
       label: "Gateway Auth Rate Limit",
+      help: "Login/auth attempt throttling controls to reduce credential brute-force risk at the gateway boundary. Keep enabled in exposed environments and tune thresholds to your traffic baseline.",
       tags: ["network", "performance"],
     },
     "gateway.auth.trustedProxy": {
@@ -11955,6 +11981,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "browser.profiles.*.color": {
       label: "Browser Profile Accent Color",
+      help: "Per-profile accent color for visual differentiation in dashboards and browser-related UI hints. Use distinct colors for high-signal operator recognition of active profiles.",
       tags: ["storage"],
     },
     "tools.allow": {
@@ -12104,6 +12131,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "tools.media.video.timeoutSeconds": {
       label: "Video Understanding Timeout (sec)",
+      help: "Timeout in seconds for each video understanding request before cancellation. Use conservative values in interactive channels and longer values for offline or batch-heavy processing.",
       tags: ["performance", "media", "tools"],
     },
     "tools.media.video.attachments": {
@@ -12148,6 +12176,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "tools.profile": {
       label: "Tool Profile",
+      help: "Global tool profile name used to select a predefined tool policy baseline before applying allow/deny overrides. Use this for consistent environment posture across agents and keep profile names stable.",
       tags: ["storage", "tools"],
     },
     "tools.alsoAllow": {
@@ -12157,6 +12186,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "agents.list[].tools.profile": {
       label: "Agent Tool Profile",
+      help: "Per-agent override for tool profile selection when one agent needs a different capability baseline. Use this sparingly so policy differences across agents stay intentional and reviewable.",
       tags: ["storage"],
     },
     "agents.list[].tools.alsoAllow": {
@@ -12334,6 +12364,9 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
       help: "Allow stdin-only safe binaries to run without explicit allowlist entries.",
       tags: ["tools"],
     },
+    "tools.exec.strictInlineEval": {
+      label: "Require Inline-Eval Approval",
+      help: "Require explicit approval for interpreter inline-eval forms such as `python -c`, `node -e`, `ruby -e`, or `osascript -e`. Prevents silent allowlist reuse and downgrades allow-always to ask-each-time for those forms.",
       tags: ["tools"],
     },
     "tools.exec.safeBinTrustedDirs": {
@@ -12363,6 +12396,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "approvals.exec.mode": {
       label: "Approval Forwarding Mode",
+      help: 'Controls where approval prompts are sent: "session" uses origin chat, "targets" uses configured targets, and "both" sends to both paths. Use "session" as baseline and expand only when operational workflow requires redundancy.',
       tags: ["advanced"],
     },
     "approvals.exec.agentFilter": {
@@ -12372,6 +12406,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "approvals.exec.sessionFilter": {
       label: "Approval Session Filter",
+      help: 'Optional session-key filters matched as substring or regex-style patterns, for example `["discord:", "^agent:ops:"]`. Use narrow patterns so only intended approval contexts are forwarded to shared destinations.',
       tags: ["storage"],
     },
     "approvals.exec.targets": {
@@ -12381,6 +12416,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "approvals.exec.targets[].channel": {
       label: "Approval Target Channel",
+      help: "Channel/provider ID used for forwarded approval delivery, such as discord, slack, or a plugin channel id. Use valid channel IDs only so approvals do not silently fail due to unknown routes.",
       tags: ["advanced"],
     },
     "approvals.exec.targets[].to": {
@@ -12420,6 +12456,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "approvals.plugin.sessionFilter": {
       label: "Plugin Approval Session Filter",
+      help: 'Optional session-key filters matched as substring or regex-style patterns, for example `["discord:", "^agent:ops:"]`. Use narrow patterns so only intended approval contexts are forwarded.',
       tags: ["storage"],
     },
     "approvals.plugin.targets": {
@@ -12429,6 +12466,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "approvals.plugin.targets[].channel": {
       label: "Plugin Approval Target Channel",
+      help: "Channel/provider ID used for forwarded plugin approval delivery, such as discord, slack, or a plugin channel id.",
       tags: ["advanced"],
     },
     "approvals.plugin.targets[].to": {
@@ -12643,6 +12681,9 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
       help: 'Model to use for X search (default: "grok-4-1-fast-non-reasoning").',
       tags: ["models", "tools"],
     },
+    "tools.web.x_search.inlineCitations": {
+      label: "X Search Inline Citations",
+      help: "Keep inline citations from xAI in x_search responses when available (default: false).",
       tags: ["tools"],
     },
     "tools.web.x_search.maxTurns": {
@@ -12826,6 +12867,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     media: {
       label: "Media",
+      help: "Top-level media behavior shared across providers and tools that handle inbound files. Keep defaults unless you need stable filenames for external processing pipelines or longer-lived inbound media retention.",
       tags: ["advanced"],
     },
     "media.preserveFilenames": {
@@ -12870,6 +12912,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "bindings[].match.channel": {
       label: "Binding Channel",
+      help: "Channel/provider identifier this binding applies to, such as `telegram`, `discord`, or a plugin channel ID. Use the configured channel key exactly so binding evaluation works reliably.",
       tags: ["advanced"],
     },
     "bindings[].match.accountId": {
@@ -12964,6 +13007,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "agents.defaults.repoRoot": {
       label: "Repo Root",
+      help: "Optional repository root shown in the system prompt runtime line (overrides auto-detect).",
       tags: ["advanced"],
     },
     "agents.defaults.bootstrapMaxChars": {
@@ -13234,6 +13278,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "agents.defaults.memorySearch.query.hybrid.temporalDecay.enabled": {
       label: "Memory Search Temporal Decay",
+      help: "Applies recency decay so newer memory can outrank older memory when scores are close. Enable when timeliness matters; keep off for timeless reference knowledge.",
       tags: ["advanced"],
     },
     "agents.defaults.memorySearch.query.hybrid.temporalDecay.halfLifeDays": {
@@ -13258,10 +13303,12 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "memory.backend": {
       label: "Memory Backend",
+      help: 'Selects the global memory engine: "builtin" uses Chainbreaker memory internals, while "qmd" uses the QMD sidecar pipeline. Keep "builtin" unless you intentionally operate QMD.',
       tags: ["storage"],
     },
     "memory.citations": {
       label: "Memory Citations Mode",
+      help: 'Controls citation visibility in replies: "auto" shows citations when useful, "on" always shows them, and "off" hides them. Keep "auto" for a balanced signal-to-noise default.',
       tags: ["storage"],
     },
     "memory.qmd.command": {
@@ -13351,6 +13398,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "memory.qmd.update.onBoot": {
       label: "QMD Update on Startup",
+      help: "Runs an initial QMD update once during gateway startup (default: true). Keep enabled so recall starts from a fresh baseline; disable only when startup speed is more important than immediate freshness.",
       tags: ["storage"],
     },
     "memory.qmd.update.waitForBootSync": {
@@ -13475,6 +13523,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "acp.stream.repeatSuppression": {
       label: "ACP Stream Repeat Suppression",
+      help: "When true (default), suppress repeated ACP status/tool projection lines in a turn while keeping raw ACP events unchanged.",
       tags: ["advanced"],
     },
     "acp.stream.deliveryMode": {
@@ -13484,6 +13533,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "acp.stream.hiddenBoundarySeparator": {
       label: "ACP Stream Hidden Boundary Separator",
+      help: "Separator inserted before next visible assistant text when hidden ACP tool lifecycle events occurred (none|space|newline|paragraph). Default: paragraph.",
       tags: ["advanced"],
     },
     "acp.stream.maxOutputChars": {
@@ -13493,6 +13543,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "acp.stream.maxSessionUpdateChars": {
       label: "ACP Stream Max Session Update Chars",
+      help: "Maximum characters for projected ACP session/update lines (tool/status updates).",
       tags: ["performance", "storage"],
     },
     "acp.stream.tagVisibility": {
@@ -13718,6 +13769,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "agents.defaults.compaction.mode": {
       label: "Compaction Mode",
+      help: 'Compaction strategy mode: "default" uses baseline behavior, while "safeguard" applies stricter guardrails to preserve recent context. Keep "default" unless you observe aggressive history loss near limit boundaries.',
       tags: ["advanced"],
     },
     "agents.defaults.compaction.reserveTokens": {
@@ -14133,6 +14185,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "session.sendPolicy.rules": {
       label: "Session Send Policy Rules",
+      help: 'Ordered allow/deny rules evaluated before the default action, for example `{ action: "deny", match: { channel: "discord" } }`. Put most specific rules first so broad rules do not shadow exceptions.',
       tags: ["access", "storage"],
     },
     "session.sendPolicy.rules[].action": {
@@ -14147,6 +14200,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "session.sendPolicy.rules[].match.channel": {
       label: "Session Send Rule Channel",
+      help: "Matches rule application to a specific channel/provider id (for example discord, telegram, slack). Use this when one channel should permit or deny delivery independently of others.",
       tags: ["access", "storage"],
     },
     "session.sendPolicy.rules[].match.chatType": {
@@ -14292,6 +14346,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "cron.runLog": {
       label: "Cron Run Log Pruning",
+      help: "Pruning controls for per-job cron run history files under `cron/runs/<jobId>.jsonl`, including size and line retention.",
       tags: ["automation"],
     },
     "cron.runLog.maxBytes": {
@@ -14301,10 +14356,12 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "cron.runLog.keepLines": {
       label: "Cron Run Log Keep Lines",
+      help: "How many trailing run-log lines to retain when a file exceeds maxBytes (default `2000`). Increase for longer forensic history or lower for smaller disks.",
       tags: ["automation"],
     },
     "hooks.enabled": {
       label: "Hooks Enabled",
+      help: "Enables the hooks endpoint and mapping execution pipeline for inbound webhook requests. Keep disabled unless you are actively routing external events into the gateway.",
       tags: ["advanced"],
     },
     "hooks.path": {
@@ -14426,6 +14483,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "hooks.mappings[].channel": {
       label: "Hook Mapping Delivery Channel",
+      help: 'Delivery channel override for mapping outputs (for example "last", "telegram", "discord", "slack", "signal", "imessage", or "msteams"). Keep channel overrides explicit to avoid accidental cross-channel sends.',
       tags: ["advanced"],
     },
     "hooks.mappings[].to": {
@@ -14496,6 +14554,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "hooks.gmail.hookUrl": {
       label: "Gmail Hook Callback URL",
+      help: "Public callback URL Gmail or intermediaries invoke to deliver notifications into this hook pipeline. Keep this URL protected with token validation and restricted network exposure.",
       tags: ["advanced"],
     },
     "hooks.gmail.includeBody": {
@@ -14665,10 +14724,12 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "discovery.wideArea": {
       label: "Wide-area Discovery",
+      help: "Wide-area discovery configuration group for exposing discovery signals beyond local-link scopes. Enable only in deployments that intentionally aggregate gateway presence across sites.",
       tags: ["network"],
     },
     "discovery.wideArea.enabled": {
       label: "Wide-area Discovery Enabled",
+      help: "Enables wide-area discovery signaling when your environment needs non-local gateway discovery. Keep disabled unless cross-network discovery is operationally required.",
       tags: ["network"],
     },
     "discovery.wideArea.domain": {
@@ -14773,6 +14834,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "messages.queue.byChannel": {
       label: "Queue Mode by Channel",
+      help: "Per-channel queue mode overrides keyed by provider id (for example telegram, discord, slack). Use this when one channel’s traffic pattern needs different queue behavior than global defaults.",
       tags: ["advanced"],
     },
     "messages.queue.debounceMs": {
@@ -14915,6 +14977,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA = {
     },
     "channels.defaults": {
       label: "Channel Defaults",
+      help: "Default channel behavior applied across providers when provider-specific settings are not set. Use this to enforce consistent baseline policy before per-provider tuning.",
       tags: ["network", "channels"],
     },
     "channels.defaults.groupPolicy": {

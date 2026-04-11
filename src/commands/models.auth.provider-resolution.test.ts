@@ -15,6 +15,7 @@ describe("resolveRequestedLoginProviderOrThrow", () => {
   it("returns null and resolves provider by id/alias", () => {
     const providers = [
       makeProvider({ id: "google-gemini-cli", aliases: ["gemini-cli"] }),
+      makeProvider({ id: "minimax-portal" }),
     ];
     const scenarios = [
       { requested: undefined, expectedId: null },
@@ -31,11 +32,13 @@ describe("resolveRequestedLoginProviderOrThrow", () => {
   it("throws when requested provider is not loaded", () => {
     const loadedProviders = [
       makeProvider({ id: "google-gemini-cli" }),
+      makeProvider({ id: "minimax-portal" }),
     ];
 
     expect(() =>
       resolveRequestedLoginProviderOrThrow(loadedProviders, "google-antigravity"),
     ).toThrowError(
+      'Unknown provider "google-antigravity". Loaded providers: google-gemini-cli, minimax-portal. Verify plugins via `chainbreaker plugins list --json`.',
     );
   });
 });

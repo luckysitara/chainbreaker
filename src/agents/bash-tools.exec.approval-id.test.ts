@@ -670,12 +670,15 @@ describe("exec approvals", () => {
       host: "gateway",
       ask: "always",
       approvalRunningNoticeMs: 0,
+      sessionKey: "agent:main:discord:channel:123",
       elevated: { enabled: true, allowed: true, defaultLevel: "ask" },
+      messageProvider: "discord",
       currentChannelId: "123",
       accountId: "default",
       currentThreadTs: "456",
     });
 
+    const result = await tool.execute("call-gw-followup-discord", {
       command: "echo ok",
       workdir: process.cwd(),
       gatewayUrl: undefined,
@@ -686,8 +689,10 @@ describe("exec approvals", () => {
     await expect.poll(() => agentCalls.length, { timeout: 3_000, interval: 20 }).toBe(1);
     expect(agentCalls[0]).toEqual(
       expect.objectContaining({
+        sessionKey: "agent:main:discord:channel:123",
         deliver: true,
         bestEffortDeliver: true,
+        channel: "discord",
         to: "123",
         accountId: "default",
         threadId: "456",
@@ -703,6 +708,7 @@ describe("exec approvals", () => {
 
   it("auto-continues the same Discord session after approval resolves without a second user turn", async () => {
     const agentCalls: Array<Record<string, unknown>> = [];
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "chainbreaker-exec-followup-discord-"));
     const markerPath = path.join(tempDir, "marker.txt");
     let resolveDecision: ((value: { decision: string }) => void) | undefined;
     const decisionPromise = new Promise<{ decision: string }>((resolve) => {
@@ -727,12 +733,15 @@ describe("exec approvals", () => {
       host: "gateway",
       ask: "always",
       approvalRunningNoticeMs: 0,
+      sessionKey: "agent:main:discord:channel:123",
       elevated: { enabled: true, allowed: true, defaultLevel: "ask" },
+      messageProvider: "discord",
       currentChannelId: "123",
       accountId: "default",
       currentThreadTs: "456",
     });
 
+    const result = await tool.execute("call-gw-followup-discord-delayed", {
       command: "node -e \"require('node:fs').writeFileSync('marker.txt','ok')\"",
       workdir: tempDir,
       gatewayUrl: undefined,
@@ -760,8 +769,10 @@ describe("exec approvals", () => {
     await expect.poll(() => agentCalls.length, { timeout: 3_000, interval: 20 }).toBe(1);
     expect(agentCalls[0]).toEqual(
       expect.objectContaining({
+        sessionKey: "agent:main:discord:channel:123",
         deliver: true,
         bestEffortDeliver: true,
+        channel: "discord",
         to: "123",
         accountId: "default",
         threadId: "456",
@@ -1076,6 +1087,7 @@ describe("exec approvals", () => {
   it("fails fast when approval registration fails", async () => {
     vi.mocked(callGatewayTool).mockImplementation(async (method) => {
       if (method === "exec.approval.request") {
+        throw new Error("gateway offline");
       }
       return { ok: true };
     });
@@ -1092,6 +1104,7 @@ describe("exec approvals", () => {
     );
   });
 
+  it("resolves cron no-route approvals inline when askFallback permits trusted automation", async () => {
     await writeExecApprovalsConfig({
       version: 1,
       defaults: { security: "full", ask: "always", askFallback: "full" },
@@ -1107,6 +1120,7 @@ describe("exec approvals", () => {
       approvalRunningNoticeMs: 0,
     });
 
+    const result = await tool.execute("call-cron-inline-approval", {
       command: "echo cron-ok",
     });
 
@@ -1125,6 +1139,7 @@ describe("exec approvals", () => {
     ).toBe(false);
   });
 
+  it("forwards inline cron approval state to node system.run", async () => {
     await writeExecApprovalsConfig({
       version: 1,
       defaults: { security: "full", ask: "always", askFallback: "full" },
@@ -1161,6 +1176,7 @@ describe("exec approvals", () => {
       approvalRunningNoticeMs: 0,
     });
 
+    const result = await tool.execute("call-cron-inline-node-approval", {
       command: "echo cron-node-ok",
     });
 
@@ -1196,8 +1212,10 @@ describe("exec approvals", () => {
     ).rejects.toThrow("Cron runs cannot wait for interactive exec approval");
   });
 
+  it("shows a local /approve prompt when discord exec approvals are disabled", async () => {
     await writeChainbreakerConfig({
       channels: {
+        discord: {
           enabled: true,
           execApprovals: { enabled: false },
         },
@@ -1210,6 +1228,7 @@ describe("exec approvals", () => {
       host: "gateway",
       ask: "always",
       approvalRunningNoticeMs: 0,
+      messageProvider: "discord",
       accountId: "default",
       currentChannelId: "1234567890",
     });
@@ -1232,6 +1251,7 @@ describe("exec approvals", () => {
             enabled: true,
             execApprovals: { enabled: false },
           },
+          discord: {
             enabled: true,
             execApprovals: { enabled: true, approvers: ["123"], target: "dm" },
           },

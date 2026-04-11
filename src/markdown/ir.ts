@@ -148,10 +148,12 @@ function createTextToken(base: MarkdownToken, content: string): MarkdownToken {
 function applySpoilerTokens(tokens: MarkdownToken[]): void {
   for (const token of tokens) {
     if (token.children && token.children.length > 0) {
+      token.children = injectSpoilersIntoInline(token.children);
     }
   }
 }
 
+function injectSpoilersIntoInline(tokens: MarkdownToken[]): MarkdownToken[] {
   let totalDelims = 0;
   for (const token of tokens) {
     if (token.type !== "text") {
@@ -282,6 +284,7 @@ function appendListPrefix(state: RenderState) {
   state.text += `${indent}${prefix}`;
 }
 
+function renderInlineCode(state: RenderState, content: string) {
   if (!content) {
     return;
   }
@@ -577,6 +580,7 @@ function renderTableAsCode(state: RenderState) {
 function renderTokens(tokens: MarkdownToken[], state: RenderState): void {
   for (const token of tokens) {
     switch (token.type) {
+      case "inline":
         if (token.children) {
           renderTokens(token.children, state);
         }
@@ -602,6 +606,8 @@ function renderTokens(tokens: MarkdownToken[], state: RenderState): void {
       case "s_close":
         closeStyle(state, "strikethrough");
         break;
+      case "code_inline":
+        renderInlineCode(state, token.content ?? "");
         break;
       case "spoiler_open":
         if (state.enableSpoilers) {
@@ -653,6 +659,7 @@ function renderTokens(tokens: MarkdownToken[], state: RenderState): void {
         closeStyle(state, "blockquote");
         break;
       case "bullet_list_open":
+        // Add newline before nested list starts (so nested items appear on new line)
         if (state.env.listStack.length > 0) {
           state.text += "\n";
         }
@@ -665,6 +672,7 @@ function renderTokens(tokens: MarkdownToken[], state: RenderState): void {
         }
         break;
       case "ordered_list_open": {
+        // Add newline before nested list starts (so nested items appear on new line)
         if (state.env.listStack.length > 0) {
           state.text += "\n";
         }
@@ -682,6 +690,7 @@ function renderTokens(tokens: MarkdownToken[], state: RenderState): void {
         appendListPrefix(state);
         break;
       case "list_item_close":
+        // Avoid double newlines (nested list's last item already added newline)
         if (!state.text.endsWith("\n")) {
           state.text += "\n";
         }
@@ -691,6 +700,7 @@ function renderTokens(tokens: MarkdownToken[], state: RenderState): void {
         renderCodeBlock(state, token.content ?? "");
         break;
       case "html_block":
+      case "html_inline":
         appendText(state, token.content ?? "");
         break;
 

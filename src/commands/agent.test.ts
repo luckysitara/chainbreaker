@@ -219,11 +219,7 @@ function readSessionStore<T>(storePath: string): Record<string, T> {
 }
 
 async function withCrossAgentResumeFixture(
-  run: (params: {
-    sessionId: string;
-    sessionKey: string;
-    cfg: ChainbreakerConfig;
-  }) => Promise<void>,
+  run: (params: { sessionId: string; sessionKey: string; cfg: ChainbreakerConfig }) => Promise<void>,
 ): Promise<void> {
   await withTempHome(async (home) => {
     const storePattern = path.join(home, "sessions", "{agentId}", "sessions.json");
@@ -601,6 +597,7 @@ describe("agentCommand", () => {
         main: {
           sessionId: "origin-provider-reset",
           updatedAt: Date.now() - 30 * 60_000,
+          origin: { provider: "discord" },
         },
       });
       const cfg = mockConfig(home, store);
@@ -608,6 +605,7 @@ describe("agentCommand", () => {
         ...cfg.session,
         reset: { mode: "idle", idleMinutes: 10 },
         resetByChannel: {
+          discord: { mode: "idle", idleMinutes: 120 },
         },
       };
 
@@ -1209,8 +1207,10 @@ describe("agentCommand", () => {
 
   it("uses reply channel as the message channel context", async () => {
     const callArgs = await runEmbeddedWithTempConfig({
+      args: { message: "hi", agentId: "ops", replyChannel: "slack" },
       agentsList: [{ id: "ops" }],
     });
+    expect(callArgs?.messageChannel).toBe("slack");
   });
 
   it("prefers runContext for embedded routing", async () => {
@@ -1219,8 +1219,10 @@ describe("agentCommand", () => {
         message: "hi",
         to: "+1555",
         channel: "whatsapp",
+        runContext: { messageChannel: "slack", accountId: "acct-2" },
       },
     });
+    expect(callArgs?.messageChannel).toBe("slack");
     expect(callArgs?.agentAccountId).toBe("acct-2");
   });
 

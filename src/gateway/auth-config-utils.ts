@@ -2,10 +2,7 @@ import type { GatewayAuthConfig, ChainbreakerConfig } from "../config/config.js"
 import { resolveSecretInputRef } from "../config/types.secrets.js";
 import { resolveRequiredConfiguredSecretRefInputString } from "./resolve-configured-secret-input-string.js";
 
-export function withGatewayAuthPassword(
-  cfg: ChainbreakerConfig,
-  password: string,
-): ChainbreakerConfig {
+export function withGatewayAuthPassword(cfg: ChainbreakerConfig, password: string): ChainbreakerConfig {
   return {
     ...cfg,
     gateway: {

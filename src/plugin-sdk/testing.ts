@@ -7,11 +7,8 @@ import { expect, it } from "vitest";
 
 export { removeAckReactionAfterReply, shouldAckReaction } from "../channels/ack-reactions.js";
 export {
-  createSlackOutboundPayloadHarness,
-  expectChannelInboundContextContract,
-  primeChannelOutboundSendMock,
+  testOutboundPayloadContract,
 } from "../channels/plugins/contracts/suites.js";
-export { buildDispatchInboundCaptureMock } from "../channels/plugins/contracts/inbound-testkit.js";
 export {
   createCliRuntimeCapture,
   firstWrittenJsonArg,
@@ -35,11 +32,6 @@ export { resolveProviderPluginChoice } from "../plugins/provider-auth-choice.run
 export type { PluginRuntime } from "../plugins/runtime/types.js";
 export type { RuntimeEnv } from "../runtime.js";
 export type { MockFn } from "../test-utils/vitest-mock-fn.js";
-export {
-  createAuthCaptureJsonFetch,
-  createRequestCaptureJsonFetch,
-  installPinnedHostnameTestHooks,
-} from "../media-understanding/audio.test-helpers.ts";
 export { isLiveTestEnabled } from "../agents/live-test-helpers.js";
 export { createSandboxTestContext } from "../agents/sandbox/test-fixtures.js";
 export { writeSkill } from "../agents/skills.e2e-test-helpers.js";
@@ -84,6 +76,7 @@ type ResolveTargetFn = (params: {
   allowFrom: string[];
 }) => ResolveTargetResult;
 
+/** Install a shared test matrix for target-resolution error handling. */
 export function installCommonResolveTargetErrorCases(params: {
   resolveTarget: ResolveTargetFn;
   implicitAllowFrom: string[];

@@ -222,7 +222,9 @@ export function registerVoiceCallCli(params: {
 
   root
     .command("tail")
+    .description("Tail voice-call JSONL logs (prints new lines; useful during provider tests)")
     .option("--file <path>", "Path to calls.jsonl", resolveDefaultStorePath(config))
+    .option("--since <n>", "Print last N lines first", "25")
     .option("--poll <ms>", "Poll interval in ms", "250")
     .action(async (options: { file: string; since?: string; poll?: string }) => {
       const file = options.file;
@@ -235,6 +237,9 @@ export function registerVoiceCallCli(params: {
       }
 
       const initial = fs.readFileSync(file, "utf8");
+      const lines = initial.split("\n").filter(Boolean);
+      for (const line of lines.slice(Math.max(0, lines.length - since))) {
+        writeStdoutLine(line);
       }
 
       let offset = Buffer.byteLength(initial, "utf8");
@@ -252,6 +257,8 @@ export function registerVoiceCallCli(params: {
               fs.readSync(fd, buf, 0, buf.length, offset);
               offset = stat.size;
               const text = buf.toString("utf8");
+              for (const line of text.split("\n").filter(Boolean)) {
+                writeStdoutLine(line);
               }
             } finally {
               fs.closeSync(fd);
@@ -278,11 +285,14 @@ export function registerVoiceCallCli(params: {
       }
 
       const content = fs.readFileSync(file, "utf8");
+      const lines = content.split("\n").filter(Boolean).slice(-last);
 
       const turnLatencyMs: number[] = [];
       const listenWaitMs: number[] = [];
 
+      for (const line of lines) {
         try {
+          const parsed = JSON.parse(line) as {
             metadata?: { lastTurnLatencyMs?: unknown; lastTurnListenWaitMs?: unknown };
           };
           const latency = parsed.metadata?.lastTurnLatencyMs;
@@ -294,10 +304,12 @@ export function registerVoiceCallCli(params: {
             listenWaitMs.push(listenWait);
           }
         } catch {
+          // ignore malformed JSON lines
         }
       }
 
       writeStdoutJson({
+        recordsScanned: lines.length,
         turnLatency: summarizeSeries(turnLatencyMs),
         listenWait: summarizeSeries(listenWaitMs),
       });

@@ -43,8 +43,11 @@ async function withTempDir<T>(run: (dir: string) => Promise<T>): Promise<T> {
   }
 }
 
+function createExitedProcess(code: number | null, signal: string | null = null) {
   return {
+    on: (event: string, cb: (code: number | null, signal: string | null) => void) => {
       if (event === "exit") {
+        queueMicrotask(() => cb(code, signal));
       }
       return undefined;
     },
@@ -384,8 +387,7 @@ describe("run-node script", () => {
           [EXTENSION_MANIFEST]: '{"id":"demo","configSchema":{"type":"object"}}\n',
           [EXTENSION_PACKAGE]: '{"name":"demo","chainbreaker":{"extensions":["./index.ts"]}}\n',
           [ROOT_TSDOWN]: "export default {};\n",
-          [DIST_EXTENSION_PACKAGE]:
-            '{"name":"demo","chainbreaker":{"extensions":["./stale.js"]}}\n',
+          [DIST_EXTENSION_PACKAGE]: '{"name":"demo","chainbreaker":{"extensions":["./stale.js"]}}\n',
         },
         oldPaths: [EXTENSION_MANIFEST, ROOT_TSCONFIG, ROOT_PACKAGE, ROOT_TSDOWN],
         buildPaths: [DIST_ENTRY, BUILD_STAMP, DIST_EXTENSION_PACKAGE],

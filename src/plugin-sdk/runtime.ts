@@ -16,6 +16,7 @@ export {
   warn,
 } from "../globals.js";
 export * from "../logging.js";
+export { waitForAbortSignal } from "../infra/abort-signal.js";
 export { registerUnhandledRejectionHandler } from "../infra/unhandled-rejections.js";
 
 /** Minimal logger contract accepted by runtime-adapter helpers. */

@@ -4,6 +4,7 @@ export const TOGETHER_BASE_URL = "https://api.together.xyz/v1";
 
 export const TOGETHER_MODEL_CATALOG: ModelDefinitionConfig[] = [
   {
+    id: "zai-org/GLM-4.7",
     name: "GLM 4.7 Fp8",
     reasoning: false,
     input: ["text"],

@@ -1,8 +1,6 @@
 import type { ChainbreakerConfig } from "../../config/config.js";
 
-export function makeModelFallbackCfg(
-  overrides: Partial<ChainbreakerConfig> = {},
-): ChainbreakerConfig {
+export function makeModelFallbackCfg(overrides: Partial<ChainbreakerConfig> = {}): ChainbreakerConfig {
   return {
     agents: {
       defaults: {

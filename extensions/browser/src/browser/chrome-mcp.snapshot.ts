@@ -126,9 +126,11 @@ export function buildAiSnapshotFromChromeMcpSnapshot(params: {
   snapshot: string;
   truncated?: boolean;
   refs: RoleRefMap;
+  stats: { lines: number; chars: number; refs: number; interactive: number };
 } {
   const refs: RoleRefMap = {};
   const tracker = createDuplicateTracker();
+  const lines: string[] = [];
 
   const visit = (node: ChromeMcpSnapshotNode, depth: number) => {
     const role = normalizeRole(node);
@@ -142,17 +144,23 @@ export function buildAiSnapshotFromChromeMcpSnapshot(params: {
 
     const includeNode = shouldIncludeNode({ role, name, options: params.options });
     if (includeNode) {
+      let line = `${"  ".repeat(depth)}- ${role}`;
       if (name) {
+        line += ` "${escapeQuoted(name)}"`;
       }
       const ref = normalizeString(node.id);
       if (ref && shouldCreateRef(role, name)) {
         const nth = registerRef(tracker, ref, role, name);
         refs[ref] = nth === undefined ? { role, name } : { role, name, nth };
+        line += ` [ref=${ref}]`;
       }
       if (value) {
+        line += ` value="${escapeQuoted(value)}"`;
       }
       if (description) {
+        line += ` description="${escapeQuoted(description)}"`;
       }
+      lines.push(line);
     }
 
     for (const child of node.children ?? []) {
@@ -169,6 +177,7 @@ export function buildAiSnapshotFromChromeMcpSnapshot(params: {
     }
   }
 
+  let snapshot = lines.join("\n");
   let truncated = false;
   const maxChars =
     typeof params.maxChars === "number" && Number.isFinite(params.maxChars) && params.maxChars > 0

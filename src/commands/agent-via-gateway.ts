@@ -75,10 +75,14 @@ function formatPayloadForLog(payload: {
     mediaUrls: payload.mediaUrls,
     mediaUrl: typeof payload.mediaUrl === "string" ? payload.mediaUrl : undefined,
   });
+  const lines: string[] = [];
   if (parts.text) {
+    lines.push(parts.text.trimEnd());
   }
   for (const url of parts.mediaUrls) {
+    lines.push(`MEDIA:${url}`);
   }
+  return lines.join("\n").trimEnd();
 }
 
 export async function agentViaGatewayCommand(opts: AgentCliOpts, runtime: RuntimeEnv) {

@@ -57,9 +57,7 @@ describe("OpenAI-compatible models HTTP API (e2e)", () => {
     expect(json.data?.map((entry) => entry.id)).toContain("chainbreaker");
     expect(json.data?.map((entry) => entry.id)).toContain("chainbreaker/default");
     expect(
-      json.data?.every(
-        (entry) => typeof entry.id === "string" && entry.id?.startsWith("chainbreaker"),
-      ),
+      json.data?.every((entry) => typeof entry.id === "string" && entry.id?.startsWith("chainbreaker")),
     ).toBe(true);
   });
 

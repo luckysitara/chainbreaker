@@ -23,9 +23,11 @@ describe("subscribeEmbeddedPiSession", () => {
       blockReplyChunking: {
         minChars: 5,
         maxChars: 40,
+        breakPreference: "newline",
       },
     });
 
+    const fullText = "First line\nSecond line\nThird line\n";
 
     emitAssistantTextDelta({ emit, delta: fullText });
 

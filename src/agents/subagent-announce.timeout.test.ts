@@ -194,6 +194,7 @@ function setupParentSessionFallback(parentSessionKey: string): void {
   shouldIgnorePostCompletion = false;
   fallbackRequesterResolution = {
     requesterSessionKey: "agent:main:main",
+    requesterOrigin: { channel: "discord", to: "chan-main", accountId: "acct-main" },
   };
 }
 
@@ -243,6 +244,7 @@ describe("subagent announce timeout config", () => {
     setConfiguredAnnounceTimeout(90_000);
     await runAnnounceFlowForTest("run-config-timeout-send", {
       requesterOrigin: {
+        channel: "discord",
         to: "12345",
       },
       expectsCompletionMessage: true,
@@ -301,6 +303,7 @@ describe("subagent announce timeout config", () => {
     const didAnnounce = await runAnnounceFlowForTest("run-announce-type", {
       announceType: "cron job",
       expectsCompletionMessage: true,
+      requesterOrigin: { channel: "discord", to: "channel:cron" },
     });
 
     expect(didAnnounce).toBe(true);
@@ -318,6 +321,7 @@ describe("subagent announce timeout config", () => {
     await runAnnounceFlowForTest("run-cron-internal", {
       requesterSessionKey: cronSessionKey,
       requesterDisplayKey: cronSessionKey,
+      requesterOrigin: { channel: "discord", to: "channel:cron-results", accountId: "acct-1" },
     });
 
     const directAgentCall = findFinalDirectAgentCall();
@@ -357,6 +361,7 @@ describe("subagent announce timeout config", () => {
     const directAgentCall = findFinalDirectAgentCall();
     expect(directAgentCall?.params?.sessionKey).toBe("agent:main:main");
     expect(directAgentCall?.params?.deliver).toBe(true);
+    expect(directAgentCall?.params?.channel).toBe("discord");
     expect(directAgentCall?.params?.to).toBe("chan-main");
     expect(directAgentCall?.params?.accountId).toBe("acct-main");
   });

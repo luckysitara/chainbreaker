@@ -14,17 +14,21 @@ export function isAssistantMessage(msg: AgentMessage | undefined): msg is Assist
  * Minimax sometimes embeds tool calls as XML in text blocks instead of
  * proper structured tool calls. This removes:
  * - <invoke name="...">...</invoke> blocks
+ * - </minimax:tool_call> closing tags
  */
 export function stripMinimaxToolCallXml(text: string): string {
   if (!text) {
     return text;
   }
+  if (!/minimax:tool_call/i.test(text)) {
     return text;
   }
 
   // Remove <invoke ...>...</invoke> blocks (non-greedy to handle multiple).
   let cleaned = text.replace(/<invoke\b[^>]*>[\s\S]*?<\/invoke>/gi, "");
 
+  // Remove stray minimax tool tags.
+  cleaned = cleaned.replace(/<\/?minimax:tool_call>/gi, "");
 
   return cleaned;
 }
@@ -72,7 +76,9 @@ export function stripDowngradedToolCallText(text: string): string {
   const consumeJsonish = (
     input: string,
     start: number,
+    options?: { allowLeadingNewlines?: boolean },
   ): number | null => {
+    const { allowLeadingNewlines = false } = options ?? {};
     let index = start;
     while (index < input.length) {
       const ch = input[index];
@@ -80,6 +86,7 @@ export function stripDowngradedToolCallText(text: string): string {
         index += 1;
         continue;
       }
+      if (allowLeadingNewlines && (ch === "\n" || ch === "\r")) {
         index += 1;
         continue;
       }
@@ -183,6 +190,7 @@ export function stripDowngradedToolCallText(text: string): string {
         if (input[index] === " ") {
           index += 1;
         }
+        const end = consumeJsonish(input, index, { allowLeadingNewlines: true });
         if (end !== null) {
           index = end;
         }
@@ -269,8 +277,11 @@ export function formatReasoningMessage(text: string): string {
   }
   // Show reasoning in italics (cursive) for markdown-friendly surfaces (Discord, etc.).
   // Keep the plain "Reasoning:" prefix so existing parsing/detection keeps working.
+  // Note: Underscore markdown cannot span multiple lines on Telegram, so we wrap
+  // each non-empty line separately.
   const italicLines = trimmed
     .split("\n")
+    .map((line) => (line ? `_${line}_` : line))
     .join("\n");
   return `Reasoning:\n${italicLines}`;
 }

@@ -26,6 +26,7 @@ export { streamWithPayloadPatch } from "../agents/pi-embedded-runner/stream-payl
 export {
   createToolStreamWrapper,
   createZaiToolStreamWrapper,
+} from "../agents/pi-embedded-runner/zai-stream-wrappers.js";
 export {
   getOpenRouterModelCapabilities,
   loadOpenRouterModelCapabilities,

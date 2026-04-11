@@ -23,6 +23,7 @@ import { OpenAIWebSocketManager } from "./openai-ws-connection.js";
 // vi.hoisted() allows us to define values that are available to both the
 // factory AND the test body. We avoid importing EventEmitter here because
 // ESM imports aren't available yet in the hoisted zone — instead we
+// implement a minimal listener pattern inline.
 const { MockWebSocket } = vi.hoisted(() => {
   type AnyFn = (...args: unknown[]) => void;
 

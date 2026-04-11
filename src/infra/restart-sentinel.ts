@@ -113,13 +113,18 @@ export function formatRestartSentinelMessage(payload: RestartSentinelPayload): s
   if (message && !payload.stats) {
     return message;
   }
+  const lines: string[] = [summarizeRestartSentinel(payload)];
   if (message) {
+    lines.push(message);
   }
   const reason = payload.stats?.reason?.trim();
   if (reason && reason !== message) {
+    lines.push(`Reason: ${reason}`);
   }
   if (payload.doctorHint?.trim()) {
+    lines.push(payload.doctorHint.trim());
   }
+  return lines.join("\n");
 }
 
 export function summarizeRestartSentinel(payload: RestartSentinelPayload): string {

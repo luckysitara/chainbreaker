@@ -47,28 +47,38 @@ export function renderBeaconLines(beacon: GatewayBonjourBeacon, rich: boolean): 
   const title = colorize(rich, theme.accentBright, target.title);
   const domain = colorize(rich, theme.muted, target.domain);
 
+  const lines = [`- ${title} ${domain}`];
 
   if (beacon.tailnetDns) {
+    lines.push(`  ${colorize(rich, theme.info, "tailnet")}: ${beacon.tailnetDns}`);
   }
   if (beacon.lanHost) {
+    lines.push(`  ${colorize(rich, theme.info, "lan")}: ${beacon.lanHost}`);
   }
   if (beacon.host) {
+    lines.push(`  ${colorize(rich, theme.info, "host")}: ${beacon.host}`);
   }
 
   if (target.wsUrl) {
+    lines.push(
       `  ${colorize(rich, theme.muted, "ws")}: ${colorize(rich, theme.command, target.wsUrl)}`,
     );
   }
   if (beacon.role) {
+    lines.push(`  ${colorize(rich, theme.muted, "role")}: ${beacon.role}`);
   }
   if (beacon.transport) {
+    lines.push(`  ${colorize(rich, theme.muted, "transport")}: ${beacon.transport}`);
   }
   if (beacon.gatewayTls) {
     const fingerprint = beacon.gatewayTlsFingerprintSha256
       ? `sha256 ${beacon.gatewayTlsFingerprintSha256}`
       : "enabled";
+    lines.push(`  ${colorize(rich, theme.muted, "tls")}: ${fingerprint}`);
   }
   if (target.endpoint && target.sshPort) {
     const ssh = `ssh -N -L 18789:127.0.0.1:18789 <user>@${target.endpoint.host} -p ${target.sshPort}`;
+    lines.push(`  ${colorize(rich, theme.muted, "ssh")}: ${colorize(rich, theme.command, ssh)}`);
   }
+  return lines;
 }

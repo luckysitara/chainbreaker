@@ -83,6 +83,7 @@ function resolveStartupEntryPath(env: GatewayServiceEnv): string {
   return path.join(resolveWindowsStartupDir(env), `${sanitizeWindowsFilename(taskName)}.cmd`);
 }
 
+// `/TR` is parsed by schtasks itself, while the generated `gateway.cmd` line is parsed by cmd.exe.
 // Keep their quoting strategies separate so each parser gets the encoding it expects.
 function quoteSchtasksArg(value: string): string {
   if (!/[ \t"]/g.test(value)) {
@@ -116,22 +117,29 @@ export async function readScheduledTaskCommand(
     let commandLine = "";
     const environment: Record<string, string> = {};
     for (const rawLine of content.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line) {
         continue;
       }
+      const lower = line.toLowerCase();
+      if (line.startsWith("@echo")) {
         continue;
       }
       if (lower.startsWith("rem ")) {
         continue;
       }
       if (lower.startsWith("set ")) {
+        const assignment = parseCmdSetAssignment(line.slice(4));
         if (assignment) {
           environment[assignment.key] = assignment.value;
         }
         continue;
       }
       if (lower.startsWith("cd /d ")) {
+        workingDirectory = line.slice("cd /d ".length).trim().replace(/^"|"$/g, "");
         continue;
       }
+      commandLine = line;
       break;
     }
     if (!commandLine) {
@@ -233,11 +241,14 @@ function buildTaskScript({
   workingDirectory,
   environment,
 }: GatewayServiceRenderArgs): string {
+  const lines: string[] = ["@echo off"];
   const trimmedDescription = description?.trim();
   if (trimmedDescription) {
     assertNoCmdLineBreak(trimmedDescription, "Task description");
+    lines.push(`rem ${trimmedDescription}`);
   }
   if (workingDirectory) {
+    lines.push(`cd /d ${quoteCmdScriptArg(workingDirectory)}`);
   }
   if (environment) {
     for (const [key, value] of Object.entries(environment)) {
@@ -247,16 +258,23 @@ function buildTaskScript({
       if (key.toUpperCase() === "PATH") {
         continue;
       }
+      lines.push(renderCmdSetAssignment(key, value));
     }
   }
   const command = programArguments.map(quoteCmdScriptArg).join(" ");
+  lines.push(command);
+  return `${lines.join("\r\n")}\r\n`;
 }
 
 function buildStartupLauncherScript(params: { description?: string; scriptPath: string }): string {
+  const lines = ["@echo off"];
   const trimmedDescription = params.description?.trim();
   if (trimmedDescription) {
     assertNoCmdLineBreak(trimmedDescription, "Startup launcher description");
+    lines.push(`rem ${trimmedDescription}`);
   }
+  lines.push(`start "" /min cmd.exe /d /c ${quoteCmdScriptArg(params.scriptPath)}`);
+  return `${lines.join("\r\n")}\r\n`;
 }
 
 async function assertSchtasksAvailable() {
@@ -326,6 +344,9 @@ function parsePortFromProgramArguments(programArguments?: string[]): number | nu
     if (!arg) {
       continue;
     }
+    const inlineMatch = arg.match(/^--port=(\d+)$/);
+    if (inlineMatch) {
+      return parsePositivePort(inlineMatch[1]);
     }
     if (arg === "--port") {
       return parsePositivePort(programArguments[i + 1]);
@@ -403,6 +424,8 @@ function isProcessAlive(pid: number): boolean {
 }
 
 async function waitForProcessExit(pid: number, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
     if (!isProcessAlive(pid)) {
       return true;
     }
@@ -434,6 +457,8 @@ async function terminateGatewayProcessTree(pid: number, graceMs: number): Promis
 }
 
 async function waitForGatewayPortRelease(port: number, timeoutMs = 5_000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
     const diagnostics = await inspectPortUsage(port).catch(() => null);
     if (diagnostics?.status === "free") {
       return true;
@@ -610,6 +635,7 @@ async function activateScheduledTask(params: {
   }
 
   await execSchtasks(["/Run", "/TN", taskName]);
+  // Ensure we don't end up writing to a clack spinner line (wizards show progress without a newline).
   writeFormattedLines(
     params.stdout,
     [

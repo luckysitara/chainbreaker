@@ -3,7 +3,10 @@ import { createHash } from "node:crypto";
 const SCRIPT_ATTRIBUTE_NAME_RE = /\s([^\s=/>]+)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/g;
 
 /**
+ * Compute SHA-256 CSP hashes for inline `<script>` blocks in an HTML string.
+ * Only scripts without a `src` attribute are considered inline.
  */
+export function computeInlineScriptHashes(html: string): string[] {
   const hashes: string[] = [];
   const re = /<script(?:\s[^>]*)?>([^]*?)<\/script>/gi;
   let match: RegExpExecArray | null;
@@ -28,6 +31,8 @@ function hasScriptSrcAttribute(openTag: string): boolean {
   );
 }
 
+export function buildControlUiCspHeader(opts?: { inlineScriptHashes?: string[] }): string {
+  const hashes = opts?.inlineScriptHashes;
   const scriptSrc = hashes?.length
     ? `script-src 'self' ${hashes.map((h) => `'${h}'`).join(" ")}`
     : "script-src 'self'";
@@ -37,6 +42,7 @@ function hasScriptSrcAttribute(openTag: string): boolean {
     "object-src 'none'",
     "frame-ancestors 'none'",
     scriptSrc,
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: https:",
     "font-src 'self' https://fonts.gstatic.com",
     "connect-src 'self' ws: wss:",

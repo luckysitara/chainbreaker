@@ -126,10 +126,12 @@ async function readDockerLogLines(sandbox: DockerSetupSandbox) {
   return (await readDockerLog(sandbox)).split("\n").filter(Boolean);
 }
 
-  return (
-  );
+function isGatewayStartLine(line: string) {
+  return line.includes("compose") && line.includes(" up -d") && line.includes("chainbreaker-gateway");
 }
 
+function findGatewayStartLineIndex(lines: string[]) {
+  return lines.findIndex((line) => isGatewayStartLine(line));
 }
 
 async function runDockerSetupWithUnsetGatewayToken(
@@ -246,10 +248,14 @@ describe("scripts/docker/setup.sh", () => {
     const result = runDockerSetup(activeSandbox);
     expect(result.status).toBe(0);
 
+    const lines = await readDockerLogLines(activeSandbox);
+    const gatewayStartIdx = findGatewayStartLineIndex(lines);
     expect(gatewayStartIdx).toBeGreaterThanOrEqual(0);
 
-    expect(
-    ).toBe(false);
+    const prestartLines = lines.slice(0, gatewayStartIdx);
+    expect(prestartLines.some((line) => /\bcompose\b.*\brun\b.*\bchainbreaker-cli\b/.test(line))).toBe(
+      false,
+    );
   });
 
   it("forces BuildKit for local and sandbox docker builds", async () => {
@@ -262,8 +268,11 @@ describe("scripts/docker/setup.sh", () => {
     });
 
     expect(result.status).toBe(0);
+    const buildLines = (await readDockerLogLines(activeSandbox)).filter((line) =>
+      line.startsWith("build "),
     );
     expect(buildLines.length).toBeGreaterThanOrEqual(2);
+    expect(buildLines.every((line) => line.includes("DOCKER_BUILDKIT=1"))).toBe(true);
   });
 
   it("precreates config identity dir for CLI device auth writes", async () => {
@@ -427,6 +436,8 @@ describe("scripts/docker/setup.sh", () => {
       expect(result.stderr).toContain("Skipping gateway restart to avoid exposing Docker socket");
 
       const log = await readDockerLog(activeSandbox);
+      const gatewayStarts = (await readDockerLogLines(activeSandbox)).filter((line) =>
+        isGatewayStartLine(line),
       );
       expect(gatewayStarts).toHaveLength(2);
       expect(log).toContain(
@@ -435,6 +446,7 @@ describe("scripts/docker/setup.sh", () => {
       expect(log).toContain("config set agents.defaults.sandbox.mode off");
       const forceRecreateLine = log
         .split("\n")
+        .find((line) => line.includes("up -d --force-recreate chainbreaker-gateway"));
       expect(forceRecreateLine).toBeDefined();
       expect(forceRecreateLine).not.toContain("docker-compose.sandbox.yml");
       await expect(
@@ -443,6 +455,7 @@ describe("scripts/docker/setup.sh", () => {
     });
   });
 
+  it("rejects injected multiline CHAINBREAKER_EXTRA_MOUNTS values", async () => {
     const activeSandbox = requireSandbox(sandbox);
 
     const result = runDockerSetup(activeSandbox, {
@@ -530,9 +543,9 @@ describe("scripts/docker/setup.sh", () => {
 
   it("keeps docker-compose gateway token env defaults aligned across services", async () => {
     const compose = await readFile(join(repoRoot, "docker-compose.yml"), "utf8");
-    expect(
-      compose.match(/CHAINBREAKER_GATEWAY_TOKEN: \$\{CHAINBREAKER_GATEWAY_TOKEN:-\}/g),
-    ).toHaveLength(2);
+    expect(compose.match(/CHAINBREAKER_GATEWAY_TOKEN: \$\{CHAINBREAKER_GATEWAY_TOKEN:-\}/g)).toHaveLength(
+      2,
+    );
   });
 
   it("keeps docker-compose timezone env defaults aligned across services", async () => {

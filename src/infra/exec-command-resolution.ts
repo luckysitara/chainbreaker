@@ -302,6 +302,7 @@ export type ExecArgvToken =
       raw: string;
       style: "long";
       flag: string;
+      inlineValue?: string;
     }
   | {
       kind: "option";
@@ -336,6 +337,7 @@ export function parseExecArgvToken(raw: string): ExecArgvToken {
         raw,
         style: "long",
         flag: raw.slice(0, eqIndex),
+        inlineValue: raw.slice(eqIndex + 1),
       };
     }
     return { kind: "option", raw, style: "long", flag: raw };

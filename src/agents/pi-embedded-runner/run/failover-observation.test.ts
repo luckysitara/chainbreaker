@@ -21,6 +21,7 @@ function normalizeObservation(
 }
 
 describe("normalizeFailoverDecisionObservationBase", () => {
+  it("fills timeout observation reasons for deadline timeouts without provider error text", () => {
     expect(
       normalizeObservation({
         runId: "run:timeout",

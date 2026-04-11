@@ -29,6 +29,7 @@ export const PREEMPTIVE_CONTEXT_OVERFLOW_MESSAGE =
 
 type GuardableTransformContext = (
   messages: AgentMessage[],
+  signal: AbortSignal,
 ) => AgentMessage[] | Promise<AgentMessage[]>;
 
 type GuardableAgent = object;
@@ -52,6 +53,9 @@ function truncateTextToBudget(text: string, maxChars: number): string {
   }
 
   let cutPoint = bodyBudget;
+  const newline = text.lastIndexOf("\n", bodyBudget);
+  if (newline > bodyBudget * 0.7) {
+    cutPoint = newline;
   }
 
   return text.slice(0, cutPoint) + CONTEXT_LIMIT_TRUNCATION_SUFFIX;
@@ -208,7 +212,9 @@ export function installToolResultContextGuard(params: {
   const mutableAgent = params.agent as GuardableAgentRecord;
   const originalTransformContext = mutableAgent.transformContext;
 
+  mutableAgent.transformContext = (async (messages: AgentMessage[], signal: AbortSignal) => {
     const transformed = originalTransformContext
+      ? await originalTransformContext.call(mutableAgent, messages, signal)
       : messages;
 
     const contextMessages = Array.isArray(transformed) ? transformed : messages;

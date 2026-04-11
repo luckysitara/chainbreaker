@@ -73,12 +73,14 @@ function makeApnChannelConfig() {
 function makeBluebubblesAndImessageChannels() {
   return {
     bluebubbles: { serverUrl: "http://localhost:1234", password: "x" },
+    imessage: { cliPath: "/usr/local/bin/imsg" },
   };
 }
 
 function applyWithSlackConfig(extra?: { plugins?: { allow?: string[] } }) {
   return applyPluginAutoEnable({
     config: {
+      channels: { slack: { botToken: "x" } },
       ...(extra?.plugins ? { plugins: extra.plugins } : {}),
     },
     env: {},
@@ -120,6 +122,8 @@ describe("applyPluginAutoEnable", () => {
   it("auto-enables built-in channels without appending to plugins.allow", () => {
     const result = applyWithSlackConfig({ plugins: { allow: ["telegram"] } });
 
+    expect(result.config.channels?.slack?.enabled).toBe(true);
+    expect(result.config.plugins?.entries?.slack).toBeUndefined();
     expect(result.config.plugins?.allow).toEqual(["telegram"]);
     expect(result.changes.join("\n")).toContain("Slack configured, enabled automatically.");
   });
@@ -127,6 +131,7 @@ describe("applyPluginAutoEnable", () => {
   it("does not create plugins.allow when allowlist is unset", () => {
     const result = applyWithSlackConfig();
 
+    expect(result.config.channels?.slack?.enabled).toBe(true);
     expect(result.config.plugins?.allow).toBeUndefined();
   });
 
@@ -296,30 +301,39 @@ describe("applyPluginAutoEnable", () => {
   it("respects explicit disable", () => {
     const result = applyPluginAutoEnable({
       config: {
+        channels: { slack: { botToken: "x" } },
+        plugins: { entries: { slack: { enabled: false } } },
       },
       env: {},
     });
 
+    expect(result.config.plugins?.entries?.slack?.enabled).toBe(false);
     expect(result.changes).toEqual([]);
   });
 
   it("respects built-in channel explicit disable via channels.<id>.enabled", () => {
     const result = applyPluginAutoEnable({
       config: {
+        channels: { slack: { botToken: "x", enabled: false } },
       },
       env: {},
     });
 
+    expect(result.config.channels?.slack?.enabled).toBe(false);
+    expect(result.config.plugins?.entries?.slack).toBeUndefined();
     expect(result.changes).toEqual([]);
   });
 
   it("does not auto-enable plugin channels when only enabled=false is set", () => {
     const result = applyPluginAutoEnable({
       config: {
+        channels: { matrix: { enabled: false } },
       },
       env: {},
+      manifestRegistry: makeRegistry([{ id: "matrix", channels: ["matrix"] }]),
     });
 
+    expect(result.config.plugins?.entries?.matrix).toBeUndefined();
     expect(result.changes).toEqual([]);
   });
 
@@ -489,10 +503,13 @@ describe("applyPluginAutoEnable", () => {
     expect(result.changes).toContain("xai tool configured, enabled automatically.");
   });
 
+  it("auto-enables minimax when minimax-portal profiles exist", () => {
     const result = applyPluginAutoEnable({
       config: {
         auth: {
           profiles: {
+            "minimax-portal:default": {
+              provider: "minimax-portal",
               mode: "oauth",
             },
           },
@@ -501,12 +518,17 @@ describe("applyPluginAutoEnable", () => {
       env: {},
     });
 
+    expect(result.config.plugins?.entries?.minimax?.enabled).toBe(true);
+    expect(result.config.plugins?.entries?.["minimax-portal-auth"]).toBeUndefined();
   });
 
+  it("auto-enables minimax when minimax API key auth is configured", () => {
     const result = applyPluginAutoEnable({
       config: {
         auth: {
           profiles: {
+            "minimax:default": {
+              provider: "minimax",
               mode: "api_key",
             },
           },
@@ -515,6 +537,7 @@ describe("applyPluginAutoEnable", () => {
       env: {},
     });
 
+    expect(result.config.plugins?.entries?.minimax?.enabled).toBe(true);
   });
 
   it("does not auto-enable unrelated provider plugins just because auth profiles exist", () => {
@@ -634,11 +657,13 @@ describe("applyPluginAutoEnable", () => {
   it("skips when plugins are globally disabled", () => {
     const result = applyPluginAutoEnable({
       config: {
+        channels: { slack: { botToken: "x" } },
         plugins: { enabled: false },
       },
       env: {},
     });
 
+    expect(result.config.plugins?.entries?.slack?.enabled).toBeUndefined();
     expect(result.changes).toEqual([]);
   });
 
@@ -718,42 +743,54 @@ describe("applyPluginAutoEnable", () => {
       );
     });
 
+    it("prefers bluebubbles: skips imessage auto-configure when both are configured", () => {
       const result = applyWithBluebubblesImessageConfig();
 
       expect(result.config.plugins?.entries?.bluebubbles?.enabled).toBe(true);
+      expect(result.config.plugins?.entries?.imessage?.enabled).toBeUndefined();
       expect(result.changes.join("\n")).toContain("bluebubbles configured, enabled automatically.");
       expect(result.changes.join("\n")).not.toContain(
         "iMessage configured, enabled automatically.",
       );
     });
 
+    it("keeps imessage enabled if already explicitly enabled (non-destructive)", () => {
       const result = applyWithBluebubblesImessageConfig({
+        plugins: { entries: { imessage: { enabled: true } } },
       });
 
       expect(result.config.plugins?.entries?.bluebubbles?.enabled).toBe(true);
+      expect(result.config.plugins?.entries?.imessage?.enabled).toBe(true);
     });
 
+    it("allows imessage auto-configure when bluebubbles is explicitly disabled", () => {
       const result = applyWithBluebubblesImessageConfig({
         plugins: { entries: { bluebubbles: { enabled: false } } },
       });
 
       expect(result.config.plugins?.entries?.bluebubbles?.enabled).toBe(false);
+      expect(result.config.channels?.imessage?.enabled).toBe(true);
       expect(result.changes.join("\n")).toContain("iMessage configured, enabled automatically.");
     });
 
+    it("allows imessage auto-configure when bluebubbles is in deny list", () => {
       const result = applyWithBluebubblesImessageConfig({
         plugins: { deny: ["bluebubbles"] },
       });
 
       expect(result.config.plugins?.entries?.bluebubbles?.enabled).toBeUndefined();
+      expect(result.config.channels?.imessage?.enabled).toBe(true);
     });
 
+    it("auto-enables imessage when only imessage is configured", () => {
       const result = applyPluginAutoEnable({
         config: {
+          channels: { imessage: { cliPath: "/usr/local/bin/imsg" } },
         },
         env: {},
       });
 
+      expect(result.config.channels?.imessage?.enabled).toBe(true);
       expect(result.changes.join("\n")).toContain("iMessage configured, enabled automatically.");
     });
 

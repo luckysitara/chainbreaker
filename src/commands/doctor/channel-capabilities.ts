@@ -17,6 +17,7 @@ const DEFAULT_DOCTOR_CHANNEL_CAPABILITIES: DoctorChannelCapabilities = {
 };
 
 const DOCTOR_CHANNEL_CAPABILITIES: Record<string, DoctorChannelCapabilities> = {
+  discord: {
     dmAllowFromMode: "topOrNested",
     groupModel: "route",
     groupAllowFromFallbackToAllowFrom: false,
@@ -28,6 +29,7 @@ const DOCTOR_CHANNEL_CAPABILITIES: Record<string, DoctorChannelCapabilities> = {
     groupAllowFromFallbackToAllowFrom: false,
     warnOnEmptyGroupSenderAllowlist: false,
   },
+  imessage: {
     dmAllowFromMode: "topOnly",
     groupModel: "sender",
     groupAllowFromFallbackToAllowFrom: false,
@@ -39,6 +41,7 @@ const DOCTOR_CHANNEL_CAPABILITIES: Record<string, DoctorChannelCapabilities> = {
     groupAllowFromFallbackToAllowFrom: false,
     warnOnEmptyGroupSenderAllowlist: true,
   },
+  matrix: {
     dmAllowFromMode: "nestedOnly",
     groupModel: "sender",
     groupAllowFromFallbackToAllowFrom: false,
@@ -50,6 +53,7 @@ const DOCTOR_CHANNEL_CAPABILITIES: Record<string, DoctorChannelCapabilities> = {
     groupAllowFromFallbackToAllowFrom: false,
     warnOnEmptyGroupSenderAllowlist: true,
   },
+  slack: {
     dmAllowFromMode: "topOrNested",
     groupModel: "route",
     groupAllowFromFallbackToAllowFrom: false,

@@ -29,12 +29,16 @@ describe("listManifestInstalledChannelIds", () => {
 
   it("uses the auto-enabled config snapshot for manifest discovery", () => {
     const autoEnabledConfig = {
+      channels: { slack: { enabled: true } },
+      plugins: { allow: ["slack"] },
       autoEnabled: true,
     } as never;
     applyPluginAutoEnable.mockReturnValue({
       config: autoEnabledConfig,
+      changes: ["slack"] as string[],
     });
     loadPluginManifestRegistry.mockReturnValue({
+      plugins: [{ id: "slack", channels: ["slack"] }],
       diagnostics: [],
     });
 
@@ -53,5 +57,6 @@ describe("listManifestInstalledChannelIds", () => {
       workspaceDir: "/tmp/workspace",
       env: { CHAINBREAKER_HOME: "/tmp/home" },
     });
+    expect(installedIds).toEqual(new Set(["slack"]));
   });
 });

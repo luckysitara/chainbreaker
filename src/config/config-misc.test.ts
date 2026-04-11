@@ -6,11 +6,7 @@ import {
   unsetConfigValueAtPath,
 } from "./config-paths.js";
 import { readConfigFileSnapshot, validateConfigObject } from "./config.js";
-import {
-  buildWebSearchProviderConfig,
-  withTempHome,
-  writeChainbreakerConfig,
-} from "./test-helpers.js";
+import { buildWebSearchProviderConfig, withTempHome, writeChainbreakerConfig } from "./test-helpers.js";
 import { ChainbreakerSchema } from "./zod-schema.js";
 
 describe("$schema key in config (#14998)", () => {

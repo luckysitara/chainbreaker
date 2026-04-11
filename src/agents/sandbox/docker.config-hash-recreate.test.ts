@@ -15,6 +15,7 @@ type MockDockerChild = EventEmitter & {
   stdout: Readable;
   stderr: Readable;
   stdin: { end: (input?: string | Buffer) => void };
+  kill: (signal?: NodeJS.Signals) => void;
 };
 
 const spawnState = vi.hoisted(() => ({

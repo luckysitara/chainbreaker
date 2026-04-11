@@ -76,20 +76,26 @@ describe("resolveDefaultGroupPolicy", () => {
 
 describe("warnMissingProviderGroupPolicyFallbackOnce", () => {
   it("logs only once per provider/account key", () => {
+    const lines: string[] = [];
     const first = warnMissingProviderGroupPolicyFallbackOnce({
       providerMissingFallbackApplied: true,
       providerKey: "runtime-policy-test",
       accountId: "account-a",
       blockedLabel: GROUP_POLICY_BLOCKED_LABEL.room,
+      log: (message) => lines.push(message),
     });
     const second = warnMissingProviderGroupPolicyFallbackOnce({
       providerMissingFallbackApplied: true,
       providerKey: "runtime-policy-test",
       accountId: "account-a",
       blockedLabel: GROUP_POLICY_BLOCKED_LABEL.room,
+      log: (message) => lines.push(message),
     });
 
     expect(first).toBe(true);
     expect(second).toBe(false);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain("channels.runtime-policy-test is missing");
+    expect(lines[0]).toContain("room messages blocked");
   });
 });

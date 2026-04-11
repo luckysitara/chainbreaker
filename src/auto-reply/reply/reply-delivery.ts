@@ -2,6 +2,8 @@ import { resolveSendableOutboundReplyParts } from "chainbreaker/plugin-sdk/reply
 import { logVerbose } from "../../globals.js";
 import { SILENT_REPLY_TOKEN } from "../tokens.js";
 import type { BlockReplyContext, ReplyPayload } from "../types.js";
+import type { BlockReplyPipeline } from "./block-reply-pipeline.js";
+import { createBlockReplyContentKey } from "./block-reply-pipeline.js";
 import { parseReplyDirectives } from "./reply-directives.js";
 import { applyReplyTagsToPayload, isRenderablePayload } from "./reply-payloads.js";
 import type { TypingSignaler } from "./typing-mode.js";
@@ -64,6 +66,7 @@ export function createBlockReplyDeliveryHandler(params: {
   normalizeMediaPaths?: (payload: ReplyPayload) => Promise<ReplyPayload>;
   typingSignals: TypingSignaler;
   blockStreamingEnabled: boolean;
+  blockReplyPipeline: BlockReplyPipeline | null;
   directlySentBlockKeys: Set<string>;
 }): (payload: ReplyPayload) => Promise<void> {
   return async (payload) => {
@@ -112,10 +115,16 @@ export function createBlockReplyDeliveryHandler(params: {
     }
 
     if (blockPayload.text) {
+      void params.typingSignals.signalTextDelta(blockPayload.text).catch((err) => {
+        logVerbose(`block reply typing signal failed: ${String(err)}`);
       });
     }
 
+    // Use pipeline if available (block streaming enabled), otherwise send directly.
+    if (params.blockStreamingEnabled && params.blockReplyPipeline) {
+      params.blockReplyPipeline.enqueue(blockPayload);
     } else if (params.blockStreamingEnabled) {
+      // Send directly when flushing before tool execution (no pipeline but streaming enabled).
       // Track sent key to avoid duplicate in final payloads.
       params.directlySentBlockKeys.add(createBlockReplyContentKey(blockPayload));
       await params.onBlockReply(blockPayload);

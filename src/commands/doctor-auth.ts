@@ -152,6 +152,7 @@ export async function maybeRemoveDeprecatedCliAuthProfiles(
     return cfg;
   }
 
+  const lines = ["Deprecated external CLI auth profiles detected (no longer supported):"];
   for (const entry of deprecatedEntries) {
     const authCommand =
       resolveProviderAuthLoginCommand({
@@ -159,7 +160,9 @@ export async function maybeRemoveDeprecatedCliAuthProfiles(
         config: cfg,
         env: process.env,
       }) ?? formatCliCommand("chainbreaker configure");
+    lines.push(`- ${entry.profileId} (${entry.providerLabel}): use ${authCommand}`);
   }
+  note(lines.join("\n"), "Auth profiles");
 
   const shouldRemove = await prompter.confirmAutoFix({
     message: "Remove deprecated CLI auth profiles now?",

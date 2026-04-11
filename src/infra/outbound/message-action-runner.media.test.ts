@@ -27,7 +27,9 @@ vi.mock("../../media/web-media.js", async () => {
   };
 });
 
+const slackConfig = {
   channels: {
+    slack: {
       botToken: "xoxb-test",
       appToken: "xapp-test",
     },
@@ -64,7 +66,9 @@ async function expectSandboxMediaRewrite(params: {
   expectedRelativePath: string;
 }) {
   const result = await runDrySend({
+    cfg: slackConfig,
     actionParams: {
+      channel: "slack",
       target: "#C12345678",
       ...(params.media
         ? {
@@ -91,10 +95,13 @@ type WebMediaModule = typeof import("../../media/web-media.js");
 let runMessageAction: MessageActionRunnerModule["runMessageAction"];
 let loadWebMedia: WebMediaModule["loadWebMedia"];
 
+const slackPlugin: ChannelPlugin = {
   ...createChannelTestPluginBase({
+    id: "slack",
     label: "Slack",
     config: {
       listAccountIds: () => ["default"],
+      resolveAccount: (cfg) => cfg.channels?.slack ?? {},
       isConfigured: async (account) =>
         typeof (account as { botToken?: unknown }).botToken === "string" &&
         (account as { botToken?: string }).botToken!.trim() !== "" &&
@@ -109,10 +116,13 @@ let loadWebMedia: WebMediaModule["loadWebMedia"];
       if (!trimmed) {
         return {
           ok: false,
+          error: new Error("missing target for slack"),
         };
       }
       return { ok: true, to: trimmed };
     },
+    sendText: async () => ({ channel: "slack", messageId: "msg-test" }),
+    sendMedia: async () => ({ channel: "slack", messageId: "msg-test" }),
   },
 };
 
@@ -450,7 +460,9 @@ describe("runMessageAction media behavior", () => {
       setActivePluginRegistry(
         createTestRegistry([
           {
+            pluginId: "slack",
             source: "test",
+            plugin: slackPlugin,
           },
         ]),
       );
@@ -485,7 +497,9 @@ describe("runMessageAction media behavior", () => {
       await withSandbox(async (sandboxDir) => {
         await expect(
           runDrySend({
+            cfg: slackConfig,
             actionParams: {
+              channel: "slack",
               target: "#C12345678",
               [mediaField]: media,
               message: "",
@@ -499,7 +513,9 @@ describe("runMessageAction media behavior", () => {
     it("rejects data URLs in media params", async () => {
       await expect(
         runDrySend({
+          cfg: slackConfig,
           actionParams: {
+            channel: "slack",
             target: "#C12345678",
             media: "data:image/png;base64,abcd",
             message: "",
@@ -557,7 +573,9 @@ describe("runMessageAction media behavior", () => {
     it("prefers media over mediaUrl when both aliases are present", async () => {
       await withSandbox(async (sandboxDir) => {
         const result = await runDrySend({
+          cfg: slackConfig,
           actionParams: {
+            channel: "slack",
             target: "#C12345678",
             media: "./data/primary.txt",
             mediaUrl: "./data/secondary.txt",
@@ -589,7 +607,9 @@ describe("runMessageAction media behavior", () => {
         await withSandbox(async (sandboxDir) => {
           const remoteUrl = "https://example.com/files/report.pdf?sig=1";
           const result = await runDrySend({
+            cfg: slackConfig,
             actionParams: {
+              channel: "slack",
               target: "#C12345678",
               [mediaField]: remoteUrl,
               message: "",
@@ -613,8 +633,10 @@ describe("runMessageAction media behavior", () => {
       try {
         const tmpFile = path.join(tmpRoot, "test-media-image.png");
         const result = await runMessageAction({
+          cfg: slackConfig,
           action: "send",
           params: {
+            channel: "slack",
             target: "#C12345678",
             media: tmpFile,
             message: "",
@@ -628,15 +650,13 @@ describe("runMessageAction media behavior", () => {
           throw new Error("expected send result");
         }
         expect(result.sendResult?.mediaUrl).toBe(path.resolve(tmpFile));
-        const hostTmpOutsideChainbreaker = path.join(
-          os.tmpdir(),
-          "outside-chainbreaker",
-          "test-media.png",
-        );
+        const hostTmpOutsideChainbreaker = path.join(os.tmpdir(), "outside-chainbreaker", "test-media.png");
         await expect(
           runMessageAction({
+            cfg: slackConfig,
             action: "send",
             params: {
+              channel: "slack",
               target: "#C12345678",
               media: hostTmpOutsideChainbreaker,
               message: "",

@@ -87,6 +87,7 @@ import {
   evaluateTelegramGroupPolicyAccess,
 } from "./group-access.js";
 import { migrateTelegramGroupConfig } from "./group-migration.js";
+import { resolveTelegramInlineButtonsScope } from "./inline-buttons.js";
 import {
   buildModelsKeyboard,
   buildProviderKeyboard,
@@ -96,6 +97,7 @@ import {
   resolveModelSelection,
   type ProviderInfo,
 } from "./model-buttons.js";
+import { buildInlineKeyboard } from "./send.js";
 
 export const registerTelegramHandlers = ({
   cfg,
@@ -647,12 +649,16 @@ export const registerTelegramHandlers = ({
     "callback-scope": {
       enforceDirectAuthorization: false,
       enforceGroupAllowlistAuthorization: false,
+      deniedDmReason: "callback unauthorized by inlineButtonsScope",
+      deniedGroupReason: "callback unauthorized by inlineButtonsScope",
     },
     "callback-allowlist": {
       enforceDirectAuthorization: true,
       // Group auth is already enforced by shouldSkipGroupMessage (group policy + allowlist).
       // An extra allowlist gate here would block users whose original command was authorized.
       enforceGroupAllowlistAuthorization: false,
+      deniedDmReason: "callback unauthorized by inlineButtonsScope allowlist",
+      deniedGroupReason: "callback unauthorized by inlineButtonsScope allowlist",
     },
   };
 
@@ -1121,6 +1127,7 @@ export const registerTelegramHandlers = ({
         );
       };
       const clearCallbackButtons = async () => {
+        const emptyKeyboard = { inline_keyboard: [] };
         const replyMarkup = { reply_markup: emptyKeyboard };
         const editReplyMarkupFn = (ctx as { editMessageReplyMarkup?: unknown })
           .editMessageReplyMarkup;
@@ -1148,6 +1155,7 @@ export const registerTelegramHandlers = ({
           Array<{ text: string; callback_data: string; style?: "danger" | "success" | "primary" }>
         >,
       ) => {
+        const keyboard = buildInlineKeyboard(buttons) ?? { inline_keyboard: [] };
         const replyMarkup = { reply_markup: keyboard };
         const editReplyMarkupFn = (ctx as { editMessageReplyMarkup?: unknown })
           .editMessageReplyMarkup;
@@ -1183,6 +1191,7 @@ export const registerTelegramHandlers = ({
         callbackMessage.chat.type === "group" || callbackMessage.chat.type === "supergroup";
       const approvalCallback = parseExecApprovalCommandText(data);
       const isApprovalCallback = approvalCallback !== null;
+      const inlineButtonsScope = resolveTelegramInlineButtonsScope({
         cfg,
         accountId,
       });
@@ -1194,10 +1203,13 @@ export const registerTelegramHandlers = ({
           to: String(chatId),
         });
       if (!execApprovalButtonsEnabled) {
+        if (inlineButtonsScope === "off") {
           return;
         }
+        if (inlineButtonsScope === "dm" && isGroup) {
           return;
         }
+        if (inlineButtonsScope === "group" && !isGroup) {
           return;
         }
       }
@@ -1227,6 +1239,7 @@ export const registerTelegramHandlers = ({
       const senderId = callback.from?.id ? String(callback.from.id) : "";
       const senderUsername = callback.from?.username ?? "";
       const authorizationMode: TelegramEventAuthorizationMode =
+        !isGroup || (!execApprovalButtonsEnabled && inlineButtonsScope === "allowlist")
           ? "callback-allowlist"
           : "callback-scope";
       const senderAuthorization = authorizeTelegramEventSender({
@@ -1283,11 +1296,13 @@ export const registerTelegramHandlers = ({
           reply: async ({ text, buttons }) => {
             await replyToCallbackChat(
               text,
+              buttons ? { reply_markup: buildInlineKeyboard(buttons) } : undefined,
             );
           },
           editMessage: async ({ text, buttons }) => {
             await editCallbackMessage(
               text,
+              buttons ? { reply_markup: buildInlineKeyboard(buttons) } : undefined,
             );
           },
           editButtons: async ({ buttons }) => {
@@ -1386,6 +1401,7 @@ export const registerTelegramHandlers = ({
 
         const keyboard =
           result.totalPages > 1
+            ? buildInlineKeyboard(
                 buildCommandsPaginationKeyboard(result.currentPage, result.totalPages, agentId),
               )
             : undefined;
@@ -1422,6 +1438,7 @@ export const registerTelegramHandlers = ({
           text: string,
           buttons: ReturnType<typeof buildProviderKeyboard>,
         ) => {
+          const keyboard = buildInlineKeyboard(buttons);
           try {
             await editCallbackMessage(text, keyboard ? { reply_markup: keyboard } : undefined);
           } catch (editErr) {
@@ -1565,6 +1582,7 @@ export const registerTelegramHandlers = ({
               : `changed to **${selection.provider}/${selection.model}**`;
             await editMessageWithButtons(
               `✅ Model ${actionText}\n\nThis model will be used for your next message.`,
+              [], // Empty buttons = remove inline keyboard
             );
           } catch (err) {
             await editMessageWithButtons(`❌ Failed to change model: ${String(err)}`, []);
@@ -1781,6 +1799,7 @@ export const registerTelegramHandlers = ({
 
   // Handle channel posts — enables bot-to-bot communication via Telegram channels.
   // Telegram bots cannot see other bot messages in groups, but CAN in channels.
+  // This handler normalizes channel_post updates into the standard message pipeline.
   bot.on("channel_post", async (ctx) => {
     const post = ctx.channelPost;
     if (!post) {

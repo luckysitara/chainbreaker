@@ -115,6 +115,7 @@ describe("message action media helpers", () => {
     };
     await hydrateAttachmentParamsForAction({
       cfg,
+      channel: "slack",
       args: mediaArgs,
       action: "sendAttachment",
       dryRun: true,
@@ -127,6 +128,7 @@ describe("message action media helpers", () => {
     };
     await hydrateAttachmentParamsForAction({
       cfg,
+      channel: "slack",
       args: fileArgs,
       action: "sendAttachment",
       dryRun: true,
@@ -142,6 +144,7 @@ describe("message action media helpers", () => {
 
     await hydrateAttachmentParamsForAction({
       cfg,
+      channel: "slack",
       args,
       action: "sendAttachment",
       dryRun: true,
@@ -184,6 +187,7 @@ describe("message action sandbox media hydration", () => {
       await expect(
         hydrateAttachmentParamsForAction({
           cfg,
+          channel: "slack",
           args,
           action: "sendAttachment",
           mediaPolicy,

@@ -16,9 +16,7 @@ let tinyPngFile = "";
 
 beforeAll(async () => {
   ({ loadWebMedia } = await import("./web-media.js"));
-  fixtureRoot = await fs.mkdtemp(
-    path.join(resolvePreferredChainbreakerTmpDir(), "web-media-core-"),
-  );
+  fixtureRoot = await fs.mkdtemp(path.join(resolvePreferredChainbreakerTmpDir(), "web-media-core-"));
   tinyPngFile = path.join(fixtureRoot, "tiny.png");
   oversizedJpegFile = path.join(fixtureRoot, "oversized.jpg");
   await fs.writeFile(tinyPngFile, Buffer.from(TINY_PNG_BASE64, "base64"));

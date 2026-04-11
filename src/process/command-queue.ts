@@ -257,6 +257,7 @@ export function clearCommandLane(lane: string = CommandLane.Main) {
 /**
  * Test-only hard reset that discards all queue state, including preserved
  * queued work from previous generations. Use this when a suite needs an
+ * isolated baseline across shared-worker runs.
  */
 export function resetCommandQueueStateForTest(): void {
   const queueState = getQueueState();
@@ -321,6 +322,7 @@ export function getActiveTaskCount(): number {
 export function waitForActiveTasks(timeoutMs: number): Promise<{ drained: boolean }> {
   // Keep shutdown/drain checks responsive without busy looping.
   const POLL_INTERVAL_MS = 50;
+  const deadline = Date.now() + timeoutMs;
   const queueState = getQueueState();
   const activeAtStart = new Set<number>();
   for (const state of queueState.lanes.values()) {
@@ -353,6 +355,7 @@ export function waitForActiveTasks(timeoutMs: number): Promise<{ drained: boolea
         resolve({ drained: true });
         return;
       }
+      if (Date.now() >= deadline) {
         resolve({ drained: false });
         return;
       }

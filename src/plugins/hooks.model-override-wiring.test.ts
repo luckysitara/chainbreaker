@@ -58,6 +58,7 @@ function addBeforePromptBuildHook(
 
 const stubCtx: PluginHookAgentContext = TEST_PLUGIN_AGENT_CTX;
 
+describe("model override pipeline wiring", () => {
   let registry: PluginRegistry;
 
   beforeEach(() => {

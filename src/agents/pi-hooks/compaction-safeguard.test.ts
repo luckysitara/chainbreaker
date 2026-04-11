@@ -126,6 +126,7 @@ const createCompactionEvent = (params: { messageText: string; tokensBefore: numb
     },
   },
   customInstructions: "",
+  signal: new AbortController().signal,
 });
 
 const createCompactionContext = (params: {
@@ -251,6 +252,7 @@ describe("compaction-safeguard tool failures", () => {
     expect(section).toContain("exec (exitCode=2): failed");
   });
 
+  it("caps the number of failures and adds overflow line", () => {
     const messages: AgentMessage[] = Array.from({ length: 9 }, (_, idx) => ({
       role: "toolResult",
       toolCallId: `call-${idx}`,
@@ -340,8 +342,13 @@ describe("compaction-safeguard summary budgets", () => {
     expect(capped.endsWith(diagnosticSuffix)).toBe(true);
   });
 
+  it("keeps section separator when body ends without newline (e.g. buildStructuredFallbackSummary)", () => {
+    const bodyNoNewline = "## Exact identifiers\nNone.";
+    const suffixNoLeadingNewline = "## Tool Failures\n- exec: failed";
 
     const capped = capCompactionSummaryPreservingSuffix(
+      bodyNoNewline,
+      `\n\n${suffixNoLeadingNewline}`,
     );
 
     expect(capped).toContain("None.\n\n## Tool Failures");
@@ -1256,6 +1263,7 @@ describe("compaction-safeguard recent-turn preservation", () => {
         isSplitTurn: false,
       },
       customInstructions: "Keep security caveats.",
+      signal: new AbortController().signal,
     };
 
     const result = (await compactionHandler(event, mockContext)) as {
@@ -1309,6 +1317,7 @@ describe("compaction-safeguard recent-turn preservation", () => {
         isSplitTurn: false,
       },
       customInstructions: "",
+      signal: new AbortController().signal,
     };
 
     const result = (await compactionHandler(event, mockContext)) as {
@@ -1395,6 +1404,7 @@ describe("compaction-safeguard recent-turn preservation", () => {
         isSplitTurn: false,
       },
       customInstructions: "",
+      signal: new AbortController().signal,
     };
 
     const result = (await compactionHandler(event, mockContext)) as {
@@ -1481,6 +1491,7 @@ describe("compaction-safeguard recent-turn preservation", () => {
         isSplitTurn: false,
       },
       customInstructions: "",
+      signal: new AbortController().signal,
     };
 
     const result = (await compactionHandler(event, mockContext)) as {
@@ -1545,6 +1556,7 @@ describe("compaction-safeguard recent-turn preservation", () => {
         isSplitTurn: true,
       },
       customInstructions: "",
+      signal: new AbortController().signal,
     };
 
     const result = (await compactionHandler(event, mockContext)) as {
@@ -1603,6 +1615,7 @@ describe("compaction-safeguard recent-turn preservation", () => {
         isSplitTurn: false,
       },
       customInstructions: "",
+      signal: new AbortController().signal,
     };
 
     const result = (await compactionHandler(event, mockContext)) as {
@@ -1691,6 +1704,7 @@ describe("compaction-safeguard double-compaction guard", () => {
         fileOps: { read: [], edited: [], written: [] },
       },
       customInstructions: "",
+      signal: new AbortController().signal,
     };
     const { result, getApiKeyAndHeadersMock } = await runCompactionScenario({
       sessionManager,
@@ -1725,6 +1739,7 @@ describe("compaction-safeguard double-compaction guard", () => {
         settings: { reserveTokens: 16384 },
       },
       customInstructions: "",
+      signal: new AbortController().signal,
     };
     const { result } = await runCompactionScenario({
       sessionManager,
@@ -1752,6 +1767,7 @@ describe("compaction-safeguard double-compaction guard", () => {
         fileOps: { read: [], edited: [], written: [] },
       },
       customInstructions: "",
+      signal: new AbortController().signal,
     };
 
     // First call — writes boundary
@@ -1794,6 +1810,7 @@ describe("compaction-safeguard double-compaction guard", () => {
         isSplitTurn: true,
       },
       customInstructions: "",
+      signal: new AbortController().signal,
     };
     const { result } = await runCompactionScenario({
       sessionManager,

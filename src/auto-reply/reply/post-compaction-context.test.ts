@@ -160,12 +160,14 @@ This is inside a code block and should NOT be extracted.
 
 ## Red Lines
 
+Real red lines here.
 
 ## Other
 `;
     fs.writeFileSync(path.join(tmpDir, "AGENTS.md"), content);
     const result = await readPostCompactionContext(tmpDir);
     expect(result).not.toBeNull();
+    expect(result).toContain("Real red lines here");
     expect(result).not.toContain("inside a code block");
   });
 
@@ -236,6 +238,7 @@ Never modify memory/YYYY-MM-DD.md destructively.
     );
   });
 
+  it("appends current time line even when no YYYY-MM-DD placeholder is present", async () => {
     const content = `## Session Startup
 
 Read WORKFLOW.md on startup.

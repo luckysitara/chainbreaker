@@ -13,6 +13,7 @@ describe("resolveExecWrapperTrustPlan", () => {
         wrapperChain: ["caffeinate"],
         policyBlocked: false,
         shellWrapperExecutable: true,
+        shellInlineCommand: "echo hi",
       },
     },
     {
@@ -25,6 +26,7 @@ describe("resolveExecWrapperTrustPlan", () => {
         wrapperChain: ["time", "busybox"],
         policyBlocked: false,
         shellWrapperExecutable: true,
+        shellInlineCommand: "echo hi",
       },
     },
     {
@@ -37,6 +39,7 @@ describe("resolveExecWrapperTrustPlan", () => {
         wrapperChain: ["script"],
         policyBlocked: false,
         shellWrapperExecutable: true,
+        shellInlineCommand: "echo hi",
       },
     },
     {
@@ -49,6 +52,7 @@ describe("resolveExecWrapperTrustPlan", () => {
         wrapperChain: ["sandbox-exec"],
         policyBlocked: false,
         shellWrapperExecutable: true,
+        shellInlineCommand: "echo hi",
       },
     },
     {
@@ -62,6 +66,7 @@ describe("resolveExecWrapperTrustPlan", () => {
         policyBlocked: true,
         blockedWrapper: "busybox",
         shellWrapperExecutable: false,
+        shellInlineCommand: null,
       },
     },
     {
@@ -76,6 +81,7 @@ describe("resolveExecWrapperTrustPlan", () => {
         policyBlocked: true,
         blockedWrapper: "busybox",
         shellWrapperExecutable: false,
+        shellInlineCommand: null,
       },
     },
     {
@@ -89,6 +95,7 @@ describe("resolveExecWrapperTrustPlan", () => {
         policyBlocked: true,
         blockedWrapper: "env",
         shellWrapperExecutable: false,
+        shellInlineCommand: null,
       },
     },
   ])("$name", ({ enabled, argv, depth, expected }) => {

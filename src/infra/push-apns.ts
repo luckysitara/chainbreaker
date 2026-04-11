@@ -385,6 +385,7 @@ async function persistRegistrationsState(
   await writeJsonAtomic(filePath, state, {
     mode: 0o600,
     ensureDirMode: 0o700,
+    trailingNewline: true,
   });
 }
 
@@ -598,13 +599,16 @@ export async function resolveApnsAuthConfigFromEnv(
     };
   }
 
+  const inlineKeyRaw =
     normalizeNonEmptyString(env.CHAINBREAKER_APNS_PRIVATE_KEY_P8) ??
     normalizeNonEmptyString(env.CHAINBREAKER_APNS_PRIVATE_KEY);
+  if (inlineKeyRaw) {
     return {
       ok: true,
       value: {
         teamId,
         keyId,
+        privateKey: normalizePrivateKey(inlineKeyRaw),
       },
     };
   }

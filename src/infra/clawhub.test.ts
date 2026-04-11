@@ -168,6 +168,7 @@ describe("clawhub helpers", () => {
   });
   it("downloads package archives to sanitized temp paths and cleans them up", async () => {
     const archive = await downloadClawHubPackageArchive({
+      name: "@hyf/zai-external-alpha",
       version: "0.0.1",
       fetchImpl: async () =>
         new Response(new Uint8Array([1, 2, 3]), {
@@ -177,6 +178,7 @@ describe("clawhub helpers", () => {
     });
 
     try {
+      expect(path.basename(archive.archivePath)).toBe("zai-external-alpha.zip");
       expect(archive.archivePath.includes("@hyf")).toBe(false);
       await expect(fs.readFile(archive.archivePath)).resolves.toEqual(Buffer.from([1, 2, 3]));
     } finally {

@@ -108,6 +108,7 @@ export function runDockerSandboxShellCommand(
   return execDockerRaw(dockerArgs, {
     input: params.stdin,
     allowFailure: params.allowFailure,
+    signal: params.signal,
   });
 }
 

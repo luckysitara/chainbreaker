@@ -1,4 +1,5 @@
 import { sanitizeForLog } from "../../terminal/ansi.js";
+import { maybeRepairDiscordNumericIds } from "./providers/discord.js";
 import {
   collectTelegramEmptyAllowlistExtraWarnings,
   maybeRepairTelegramAllowFromUsernames,
@@ -26,6 +27,7 @@ export async function runDoctorRepairSequence(params: {
   let state = params.state;
   const changeNotes: string[] = [];
   const warningNotes: string[] = [];
+  const sanitizeLines = (lines: string[]) => lines.map((line) => sanitizeForLog(line)).join("\n");
 
   const applyMutation = (mutation: {
     config: DoctorConfigMutationState["candidate"];

@@ -7,6 +7,7 @@ import {
 import { validateConfigObject } from "./config.js";
 
 describe("sandbox docker config", () => {
+  it("joins setupCommand arrays with newlines", () => {
     const res = validateConfigObject({
       agents: {
         defaults: {

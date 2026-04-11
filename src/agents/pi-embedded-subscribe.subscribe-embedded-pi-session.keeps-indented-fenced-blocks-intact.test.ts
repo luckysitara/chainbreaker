@@ -33,6 +33,7 @@ describe("subscribeEmbeddedPiSession", () => {
       },
     });
 
+    const text = "Intro\n\n````md\nline1\nline2\n````\n\nOutro";
 
     emitAssistantTextDeltaAndEnd({ emit, text });
 
@@ -40,6 +41,8 @@ describe("subscribeEmbeddedPiSession", () => {
     expect(payloadTexts.length).toBeGreaterThan(0);
     const combined = payloadTexts.join(" ").replace(/\s+/g, " ").trim();
     expect(combined).toContain("````md");
+    expect(combined).toContain("line1");
+    expect(combined).toContain("line2");
     expect(combined).toContain("````");
     expect(combined).toContain("Intro");
     expect(combined).toContain("Outro");

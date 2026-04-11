@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const spawnSyncMock = vi.hoisted(() => vi.fn());
 const readFileSyncMock = vi.hoisted(() => vi.fn());
 const parseCmdScriptCommandLineMock = vi.hoisted(() => vi.fn());
+const parseProcCmdlineMock = vi.hoisted(() => vi.fn());
 const isGatewayArgvMock = vi.hoisted(() => vi.fn());
 const findGatewayPidsOnPortSyncMock = vi.hoisted(() => vi.fn());
 
@@ -21,6 +22,7 @@ vi.mock("../daemon/cmd-argv.js", () => ({
 }));
 
 vi.mock("./gateway-process-argv.js", () => ({
+  parseProcCmdline: (...args: unknown[]) => parseProcCmdlineMock(...args),
   isGatewayArgv: (...args: unknown[]) => isGatewayArgvMock(...args),
 }));
 
@@ -32,6 +34,7 @@ const {
   findVerifiedGatewayListenerPidsOnPortSync,
   formatGatewayPidList,
   readGatewayProcessArgsSync,
+  signalVerifiedGatewayPidSync,
 } = await import("./gateway-processes.js");
 
 const originalPlatformDescriptor = Object.getOwnPropertyDescriptor(process, "platform");
@@ -48,6 +51,7 @@ describe("gateway-processes", () => {
     spawnSyncMock.mockReset();
     readFileSyncMock.mockReset();
     parseCmdScriptCommandLineMock.mockReset();
+    parseProcCmdlineMock.mockReset();
     isGatewayArgvMock.mockReset();
     findGatewayPidsOnPortSyncMock.mockReset();
   });
@@ -59,10 +63,14 @@ describe("gateway-processes", () => {
     }
   });
 
+  it("reads linux process args from /proc and parses cmdlines", () => {
     setPlatform("linux");
     readFileSyncMock.mockReturnValue("node\0dist/index.js\0gateway\0run\0");
+    parseProcCmdlineMock.mockReturnValue(["node", "dist/index.js", "gateway", "run"]);
 
     expect(readGatewayProcessArgsSync(4242)).toEqual(["node", "dist/index.js", "gateway", "run"]);
+    expect(readFileSyncMock).toHaveBeenCalledWith("/proc/4242/cmdline", "utf8");
+    expect(parseProcCmdlineMock).toHaveBeenCalledWith("node\0dist/index.js\0gateway\0run\0");
   });
 
   it("reads darwin process args from ps output and returns null on ps failure", () => {
@@ -107,13 +115,18 @@ describe("gateway-processes", () => {
     expect(parseCmdScriptCommandLineMock).toHaveBeenCalledWith("node.exe gateway run");
   });
 
+  it("signals only verified gateway processes", () => {
     setPlatform("linux");
     readFileSyncMock.mockReturnValue("node\0gateway\0");
+    parseProcCmdlineMock.mockReturnValue(["node", "gateway"]);
     isGatewayArgvMock.mockReturnValueOnce(true).mockReturnValueOnce(false);
     const killSpy = vi.spyOn(process, "kill").mockImplementation(() => true);
 
+    signalVerifiedGatewayPidSync(500, "SIGTERM");
     expect(killSpy).toHaveBeenCalledWith(500, "SIGTERM");
 
+    expect(() => signalVerifiedGatewayPidSync(501, "SIGUSR1")).toThrow(
+      /refusing to signal non-gateway process pid 501/,
     );
   });
 
@@ -122,6 +135,7 @@ describe("gateway-processes", () => {
     findGatewayPidsOnPortSyncMock.mockReturnValue([process.pid, 200, 200, 300, -1]);
     readFileSyncMock.mockReturnValueOnce("chainbreaker-gateway\0gateway\0");
     readFileSyncMock.mockReturnValueOnce("python\0-m\0http.server\0");
+    parseProcCmdlineMock
       .mockReturnValueOnce(["chainbreaker-gateway", "gateway"])
       .mockReturnValueOnce(["python", "-m", "http.server"]);
     isGatewayArgvMock.mockReturnValueOnce(true).mockReturnValueOnce(false);

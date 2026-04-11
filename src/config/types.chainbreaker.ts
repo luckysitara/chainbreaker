@@ -45,6 +45,7 @@ export type ChainbreakerConfig = {
       /** Timeout for the login shell exec (ms). Default: 15000. */
       timeoutMs?: number;
     };
+    /** Inline env vars to apply when not already present in the process env. */
     vars?: Record<string, string>;
     /** Sugar: allow env vars directly under env (string values only). */
     [key: string]:

@@ -161,6 +161,7 @@ function expectDeliverySessionMirror(params: { agentId: string; sessionKey: stri
 }
 
 function mockDeliverySuccess(messageId: string) {
+  mocks.deliverOutboundPayloads.mockResolvedValue([{ messageId, channel: "slack" }]);
 }
 
 describe("gateway send mirroring", () => {
@@ -175,10 +176,14 @@ describe("gateway send mirroring", () => {
     mocks.resolveOutboundSessionRoute.mockImplementation(
       async ({ agentId, channel }: { agentId?: string; channel?: string }) => ({
         sessionKey:
+          channel === "slack"
+            ? `agent:${agentId ?? "main"}:slack:channel:resolved`
             : `agent:${agentId ?? "main"}:${channel ?? "main"}:resolved`,
       }),
     );
     mocks.resolveMessageChannelSelection.mockResolvedValue({
+      channel: "slack",
+      configured: ["slack"],
     });
     mocks.sendPoll.mockResolvedValue({ messageId: "poll-1" });
     mocks.getChannelPlugin.mockReturnValue({ outbound: { sendPoll: mocks.sendPoll } });
@@ -191,6 +196,7 @@ describe("gateway send mirroring", () => {
     const { respond } = await runSend({
       to: "channel:C1",
       mediaUrl: "https://example.com/a.png",
+      channel: "slack",
       idempotencyKey: "idem-media-only",
     });
 
@@ -203,6 +209,7 @@ describe("gateway send mirroring", () => {
       true,
       expect.objectContaining({ messageId: "m-media" }),
       undefined,
+      expect.objectContaining({ channel: "slack" }),
     );
   });
 
@@ -213,6 +220,7 @@ describe("gateway send mirroring", () => {
       {
         to: "channel:C1",
         message: "hi",
+        channel: "slack",
         idempotencyKey: "idem-scope",
       },
       { connect: { scopes: ["operator.write"] } },
@@ -220,6 +228,7 @@ describe("gateway send mirroring", () => {
 
     expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
       expect.objectContaining({
+        channel: "slack",
         gatewayClientScopes: ["operator.write"],
       }),
     );
@@ -232,6 +241,7 @@ describe("gateway send mirroring", () => {
       {
         to: "channel:C1",
         message: "hi",
+        channel: "slack",
         idempotencyKey: "idem-empty-scope",
       },
       { connect: { scopes: [] } },
@@ -239,6 +249,7 @@ describe("gateway send mirroring", () => {
 
     expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
       expect.objectContaining({
+        channel: "slack",
         gatewayClientScopes: [],
       }),
     );
@@ -248,6 +259,7 @@ describe("gateway send mirroring", () => {
     const { respond } = await runSend({
       to: "channel:C1",
       message: "   ",
+      channel: "slack",
       idempotencyKey: "idem-empty",
     });
 
@@ -301,10 +313,12 @@ describe("gateway send mirroring", () => {
       true,
       expect.objectContaining({ messageId: "m-single-send" }),
       undefined,
+      expect.objectContaining({ channel: "slack" }),
     );
   });
 
   it("auto-picks the single configured channel from the auto-enabled config snapshot for send", async () => {
+    const autoEnabledConfig = { channels: { slack: {} }, plugins: { allow: ["slack"] } };
     mocks.applyPluginAutoEnable.mockReturnValue({ config: autoEnabledConfig, changes: [] });
     mockDeliverySuccess("m-single-send-auto");
 
@@ -325,11 +339,13 @@ describe("gateway send mirroring", () => {
       true,
       expect.objectContaining({ messageId: "m-single-send-auto" }),
       undefined,
+      expect.objectContaining({ channel: "slack" }),
     );
   });
 
   it("returns invalid request when send channel selection is ambiguous", async () => {
     mocks.resolveMessageChannelSelection.mockRejectedValueOnce(
+      new Error("Channel is required when multiple channels are configured: telegram, slack"),
     );
 
     const { respond } = await runSend({
@@ -354,6 +370,7 @@ describe("gateway send mirroring", () => {
         to: "channel:C1",
         question: "Q?",
         options: ["A", "B"],
+        channel: "slack",
         idempotencyKey: "idem-poll-scope",
       },
       { connect: { scopes: ["operator.admin"] } },
@@ -374,6 +391,7 @@ describe("gateway send mirroring", () => {
         to: "channel:C1",
         question: "Q?",
         options: ["A", "B"],
+        channel: "slack",
         idempotencyKey: "idem-poll-empty-scope",
       },
       { connect: { scopes: [] } },
@@ -398,11 +416,13 @@ describe("gateway send mirroring", () => {
 
     expect(mocks.resolveMessageChannelSelection).toHaveBeenCalled();
     expect(respond).toHaveBeenCalledWith(true, expect.any(Object), undefined, {
+      channel: "slack",
     });
   });
 
   it("returns invalid request when poll channel selection is ambiguous", async () => {
     mocks.resolveMessageChannelSelection.mockRejectedValueOnce(
+      new Error("Channel is required when multiple channels are configured: telegram, slack"),
     );
 
     const { respond } = await runPoll({
@@ -427,6 +447,7 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hi",
+      channel: "slack",
       idempotencyKey: "idem-1",
       sessionKey: "agent:main:main",
     });
@@ -447,6 +468,7 @@ describe("gateway send mirroring", () => {
       to: "channel:C1",
       message: "caption",
       mediaUrl: "https://example.com/files/report.pdf?sig=1",
+      channel: "slack",
       idempotencyKey: "idem-2",
       sessionKey: "agent:main:main",
     });
@@ -469,6 +491,7 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "Here\nMEDIA:https://example.com/image.png",
+      channel: "slack",
       idempotencyKey: "idem-3",
       sessionKey: "agent:main:main",
     });
@@ -490,12 +513,15 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hi",
+      channel: "slack",
       idempotencyKey: "idem-lower",
+      sessionKey: "agent:main:slack:channel:C123",
     });
 
     expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
       expect.objectContaining({
         mirror: expect.objectContaining({
+          sessionKey: "agent:main:slack:channel:c123",
         }),
       }),
     );
@@ -507,12 +533,14 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hello",
+      channel: "slack",
       idempotencyKey: "idem-4",
     });
 
     expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
       expect.objectContaining({
         mirror: expect.objectContaining({
+          sessionKey: "agent:main:slack:channel:resolved",
           agentId: "main",
         }),
       }),
@@ -525,6 +553,7 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hello",
+      channel: "slack",
       agentId: "work",
       idempotencyKey: "idem-agent-explicit",
     });
@@ -533,8 +562,10 @@ describe("gateway send mirroring", () => {
       expect.objectContaining({
         session: expect.objectContaining({
           agentId: "work",
+          key: "agent:work:slack:channel:resolved",
         }),
         mirror: expect.objectContaining({
+          sessionKey: "agent:work:slack:channel:resolved",
           agentId: "work",
         }),
       }),
@@ -547,11 +578,14 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hello",
+      channel: "slack",
+      sessionKey: "agent:work:slack:channel:c1",
       idempotencyKey: "idem-session-agent",
     });
 
     expectDeliverySessionMirror({
       agentId: "work",
+      sessionKey: "agent:work:slack:channel:c1",
     });
   });
 
@@ -561,7 +595,9 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hello",
+      channel: "slack",
       agentId: "work",
+      sessionKey: "agent:main:slack:channel:c1",
       idempotencyKey: "idem-agent-precedence",
     });
 
@@ -569,8 +605,10 @@ describe("gateway send mirroring", () => {
       expect.objectContaining({
         session: expect.objectContaining({
           agentId: "work",
+          key: "agent:main:slack:channel:c1",
         }),
         mirror: expect.objectContaining({
+          sessionKey: "agent:main:slack:channel:c1",
           agentId: "work",
         }),
       }),
@@ -583,12 +621,15 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hello",
+      channel: "slack",
       agentId: "   ",
+      sessionKey: "agent:work:slack:channel:c1",
       idempotencyKey: "idem-agent-blank",
     });
 
     expectDeliverySessionMirror({
       agentId: "work",
+      sessionKey: "agent:work:slack:channel:c1",
     });
   });
 
@@ -598,6 +639,7 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hi",
+      channel: "slack",
       threadId: "1710000000.9999",
       idempotencyKey: "idem-thread",
     });
@@ -618,6 +660,7 @@ describe("gateway send mirroring", () => {
     const { respond } = await runSend({
       to: "channel:C1",
       message: "hi",
+      channel: "slack",
       idempotencyKey: "idem-target-fail",
     });
 
@@ -629,6 +672,7 @@ describe("gateway send mirroring", () => {
         message: expect.stringContaining("target not found"),
       }),
       expect.objectContaining({
+        channel: "slack",
       }),
     );
   });
@@ -636,6 +680,7 @@ describe("gateway send mirroring", () => {
   it("recovers cold plugin resolution for threaded sends", async () => {
     mocks.resolveOutboundTarget.mockReturnValue({ ok: true, to: "123" });
     mocks.deliverOutboundPayloads.mockResolvedValue([
+      { messageId: "m-threaded", channel: "slack" },
     ]);
     const outboundPlugin = { outbound: { sendPoll: mocks.sendPoll } };
     mocks.getChannelPlugin
@@ -646,12 +691,14 @@ describe("gateway send mirroring", () => {
     const { respond } = await runSend({
       to: "123",
       message: "threaded completion",
+      channel: "slack",
       threadId: "1710000000.9999",
       idempotencyKey: "idem-cold-thread",
     });
 
     expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
       expect.objectContaining({
+        channel: "slack",
         to: "123",
         threadId: "1710000000.9999",
       }),
@@ -660,6 +707,7 @@ describe("gateway send mirroring", () => {
       true,
       expect.objectContaining({ messageId: "m-threaded" }),
       undefined,
+      expect.objectContaining({ channel: "slack" }),
     );
   });
 });

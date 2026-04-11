@@ -23,6 +23,7 @@ type ChildAdapter = SpawnProcessAdapter<NodeJS.Signals | null>;
 type StubChildAdapter = ChildAdapter & {
   emitStdout: (chunk: string) => void;
   emitStderr: (chunk: string) => void;
+  settle: (code: number | null, signal?: NodeJS.Signals | null) => void;
   killMock: ReturnType<typeof vi.fn>;
   disposeMock: ReturnType<typeof vi.fn>;
 };
@@ -40,11 +41,14 @@ function createSilentIdleArgv(): string[] {
 
 function createStubChildAdapter(options?: {
   pid?: number;
+  onKill?: (signal: NodeJS.Signals | undefined, adapter: StubChildAdapter) => void;
 }): StubChildAdapter {
   const stdoutListeners: Array<(chunk: string) => void> = [];
   const stderrListeners: Array<(chunk: string) => void> = [];
   let resolveWait:
+    | ((value: { code: number | null; signal: NodeJS.Signals | null }) => void)
     | null = null;
+  const waitPromise = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(
     (resolve) => {
       resolveWait = resolve;
     },
@@ -63,6 +67,9 @@ function createStubChildAdapter(options?: {
       stderrListeners.push(listener);
     },
     wait: async () => await waitPromise,
+    kill: (signal) => {
+      killMock(signal);
+      options?.onKill?.(signal, adapter);
     },
     dispose: () => {
       disposeMock();
@@ -77,6 +84,8 @@ function createStubChildAdapter(options?: {
         listener(chunk);
       }
     },
+    settle: (code, signal = null) => {
+      resolveWait?.({ code, signal });
       resolveWait = null;
     },
     killMock,
@@ -133,6 +142,8 @@ describe("process supervisor", () => {
   it("enforces no-output timeout for silent processes", async () => {
     vi.useFakeTimers();
     const adapter = createStubChildAdapter({
+      onKill: (signal, current) => {
+        current.settle(null, signal ?? "SIGKILL");
       },
     });
     createChildAdapterMock.mockResolvedValue(adapter);
@@ -158,6 +169,8 @@ describe("process supervisor", () => {
 
   it("cancels prior scoped run when replaceExistingScope is enabled", async () => {
     const first = createStubChildAdapter({
+      onKill: (signal, current) => {
+        current.settle(null, signal ?? "SIGKILL");
       },
     });
     const second = createStubChildAdapter();
@@ -187,6 +200,7 @@ describe("process supervisor", () => {
     const firstExit = await firstRun.wait();
     const secondExit = await secondRun.wait();
     expect(first.killMock).toHaveBeenCalledWith("SIGKILL");
+    expect(firstExit.reason === "manual-cancel" || firstExit.reason === "signal").toBe(true);
     expect(secondExit.reason).toBe("exit");
     expect(secondExit.stdout).toBe("new");
   });
@@ -194,6 +208,8 @@ describe("process supervisor", () => {
   it("applies overall timeout even for near-immediate timer firing", async () => {
     vi.useFakeTimers();
     const adapter = createStubChildAdapter({
+      onKill: (signal, current) => {
+        current.settle(null, signal ?? "SIGKILL");
       },
     });
     createChildAdapterMock.mockResolvedValue(adapter);

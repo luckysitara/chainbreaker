@@ -16,6 +16,7 @@ describe("runHeartbeatOnce", () => {
               workspace: tmpDir,
               heartbeat: {
                 every: "5m",
+                target: "slack",
                 to: "C0A9P2N8QHY",
               },
             },
@@ -43,6 +44,7 @@ describe("runHeartbeatOnce", () => {
         await runHeartbeatOnce({
           cfg,
           deps: {
+            slack: sendSlack,
             getQueueSize: () => 0,
             nowMs: () => 0,
           },

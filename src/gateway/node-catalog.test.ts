@@ -141,6 +141,7 @@ describe("gateway/node-catalog", () => {
     );
   });
 
+  it("surfaces node-pair metadata even when the node is offline", () => {
     const catalog = createKnownNodeCatalog({
       pairedDevices: [
         {

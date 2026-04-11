@@ -6,9 +6,14 @@ describe("resolveNativeCommandSessionTargets", () => {
     expect(
       resolveNativeCommandSessionTargets({
         agentId: "codex",
+        sessionPrefix: "discord:slash",
         userId: "user-1",
+        targetSessionKey: "agent:codex:discord:channel:chan-1",
+        boundSessionKey: "agent:codex:acp:binding:discord:default:seed",
       }),
     ).toEqual({
+      sessionKey: "agent:codex:acp:binding:discord:default:seed",
+      commandTargetSessionKey: "agent:codex:acp:binding:discord:default:seed",
     });
   });
 
@@ -32,9 +37,12 @@ describe("resolveNativeCommandSessionTargets", () => {
         agentId: "Qwen",
         sessionPrefix: "Slack:Slash",
         userId: "U123",
+        targetSessionKey: "agent:qwen:slack:channel:c1",
         lowercaseSessionKey: true,
       }),
     ).toEqual({
+      sessionKey: "agent:qwen:slack:slash:u123",
+      commandTargetSessionKey: "agent:qwen:slack:channel:c1",
     });
   });
 });

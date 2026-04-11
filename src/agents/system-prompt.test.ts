@@ -83,6 +83,10 @@ describe("buildAgentSystemPrompt", () => {
       ownerDisplaySecret: "secret-key-B", // pragma: allowlist secret
     });
 
+    const lineA = secretA.split("## Authorized Senders")[1]?.split("\n")[1];
+    const lineB = secretB.split("## Authorized Senders")[1]?.split("\n")[1];
+    const tokenA = lineA?.match(/[a-f0-9]{12}/)?.[0];
+    const tokenB = lineB?.match(/[a-f0-9]{12}/)?.[0];
 
     expect(tokenA).toBeDefined();
     expect(tokenB).toBeDefined();
@@ -158,6 +162,7 @@ describe("buildAgentSystemPrompt", () => {
   it("keeps manual /approve instructions for non-native approval channels", () => {
     const prompt = buildAgentSystemPrompt({
       workspaceDir: "/tmp/chainbreaker",
+      runtimeInfo: { channel: "signal" },
     });
 
     expect(prompt).toContain(
@@ -331,9 +336,7 @@ describe("buildAgentSystemPrompt", () => {
     expect(prompt).not.toContain('runtime="acp" requires `agentId`');
     expect(prompt).not.toContain("not ACP harness ids");
     expect(prompt).toContain("- sessions_spawn: Spawn an isolated sub-agent session");
-    expect(prompt).toContain(
-      "- agents_list: List Chainbreaker agent ids allowed for sessions_spawn",
-    );
+    expect(prompt).toContain("- agents_list: List Chainbreaker agent ids allowed for sessions_spawn");
   });
 
   it("omits ACP harness spawn guidance for sandboxed sessions and shows ACP block note", () => {
@@ -597,11 +600,13 @@ describe("buildAgentSystemPrompt", () => {
     expect(prompt).toContain(`respond with ONLY: ${SILENT_REPLY_TOKEN}`);
   });
 
+  it("includes inline button style guidance when runtime supports inline buttons", () => {
     const prompt = buildAgentSystemPrompt({
       workspaceDir: "/tmp/chainbreaker",
       toolNames: ["message"],
       runtimeInfo: {
         channel: "telegram",
+        capabilities: ["inlineButtons"],
       },
     });
 
@@ -614,10 +619,12 @@ describe("buildAgentSystemPrompt", () => {
       workspaceDir: "/tmp/chainbreaker",
       runtimeInfo: {
         channel: "telegram",
+        capabilities: ["inlineButtons"],
       },
     });
 
     expect(prompt).toContain("channel=telegram");
+    expect(prompt).toContain("capabilities=inlineButtons");
   });
 
   it("includes agent id in runtime when provided", () => {
@@ -647,6 +654,8 @@ describe("buildAgentSystemPrompt", () => {
     expect(prompt).toContain("/status shows Reasoning");
   });
 
+  it("builds runtime line with agent and channel details", () => {
+    const line = buildRuntimeLine(
       {
         agentId: "work",
         host: "host",
@@ -658,9 +667,20 @@ describe("buildAgentSystemPrompt", () => {
         defaultModel: "anthropic/claude-opus-4-5",
       },
       "telegram",
+      ["inlineButtons"],
       "low",
     );
 
+    expect(line).toContain("agent=work");
+    expect(line).toContain("host=host");
+    expect(line).toContain("repo=/repo");
+    expect(line).toContain("os=macOS (arm64)");
+    expect(line).toContain("node=v20");
+    expect(line).toContain("model=anthropic/claude");
+    expect(line).toContain("default_model=anthropic/claude-opus-4-5");
+    expect(line).toContain("channel=telegram");
+    expect(line).toContain("capabilities=inlineButtons");
+    expect(line).toContain("thinking=low");
   });
 
   it("describes sandboxed runtime and elevated when allowed", () => {

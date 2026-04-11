@@ -126,6 +126,7 @@ export async function waitForDescendantSubagentSummary(params: {
 }): Promise<string | undefined> {
   const timings = resolveCronSubagentTimings();
   const initialReply = params.initialReply?.trim();
+  const deadline = Date.now() + Math.max(timings.waitMinMs, Math.floor(params.timeoutMs));
 
   // Snapshot the currently active descendant run IDs.
   const getActiveRuns = () =>
@@ -147,6 +148,8 @@ export async function waitForDescendantSubagentSummary(params: {
   // we wait, so new active runs can appear between rounds.
   let pendingRunIds = new Set<string>(initialActiveRuns.map((e) => e.runId));
 
+  while (pendingRunIds.size > 0 && Date.now() < deadline) {
+    const remainingMs = Math.max(1, deadline - Date.now());
     // Wait for all currently pending runs concurrently.  If any fails or times
     // out, allSettled absorbs the error so we proceed to the next iteration.
     await Promise.allSettled(
@@ -168,6 +171,7 @@ export async function waitForDescendantSubagentSummary(params: {
   // After the subagent announces fire and the cron agent processes them, it
   // produces a new assistant message.  Poll briefly (bounded by
   // finalReplyGraceMs) to capture that synthesis.
+  const gracePeriodDeadline = Math.min(Date.now() + timings.finalReplyGraceMs, deadline);
 
   const resolveUsableLatestReply = async () => {
     const latest = (await readLatestAssistantReply({ sessionKey: params.sessionKey }))?.trim();
@@ -181,6 +185,7 @@ export async function waitForDescendantSubagentSummary(params: {
     return undefined;
   };
 
+  while (Date.now() < gracePeriodDeadline) {
     const latest = await resolveUsableLatestReply();
     if (latest) {
       return latest;

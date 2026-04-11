@@ -125,8 +125,10 @@ describe("scanStatus", () => {
     configureScanStatus({
       hasConfiguredChannels: true,
       sourceConfig: createStatusScanConfig({
+        channels: { discord: {} },
       }),
       resolvedConfig: createStatusScanConfig({
+        channels: { discord: {} },
       }),
     });
 

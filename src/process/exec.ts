@@ -22,6 +22,7 @@ function isWindowsBatchCommand(resolvedCommand: string): boolean {
 }
 
 function escapeForCmdExe(arg: string): string {
+  // Reject cmd metacharacters to avoid injection when we must pass a single command line.
   if (WINDOWS_UNSAFE_CMD_CHARS_RE.test(arg)) {
     throw new Error(
       `Unsafe Windows cmd.exe argument detected: ${JSON.stringify(arg)}. ` +
@@ -157,7 +158,9 @@ export type SpawnResult = {
   stdout: string;
   stderr: string;
   code: number | null;
+  signal: NodeJS.Signals | null;
   killed: boolean;
+  termination: "exit" | "timeout" | "no-output-timeout" | "signal";
   noOutputTimedOut?: boolean;
 };
 
@@ -272,6 +275,7 @@ export async function runCommandWithTimeout(
     let timedOut = false;
     let noOutputTimedOut = false;
     let killIssuedByTimeout = false;
+    let childExitState: { code: number | null; signal: NodeJS.Signals | null } | null = null;
     let closeFallbackTimer: NodeJS.Timeout | null = null;
     let noOutputTimer: NodeJS.Timeout | null = null;
     const shouldTrackOutputTimeout =
@@ -344,6 +348,8 @@ export async function runCommandWithTimeout(
       clearCloseFallbackTimer();
       reject(err);
     });
+    child.on("exit", (code, signal) => {
+      childExitState = { code, signal };
       if (settled || closeFallbackTimer) {
         return;
       }
@@ -355,6 +361,7 @@ export async function runCommandWithTimeout(
         child.stderr?.destroy();
       }, 250);
     });
+    const resolveFromClose = (code: number | null, signal: NodeJS.Signals | null) => {
       if (settled) {
         return;
       }
@@ -362,6 +369,7 @@ export async function runCommandWithTimeout(
       clearTimeout(timer);
       clearNoOutputTimer();
       clearCloseFallbackTimer();
+      const resolvedSignal = childExitState?.signal ?? signal ?? child.signalCode ?? null;
       const resolvedCode = resolveProcessExitCode({
         explicitCode: childExitState?.code ?? code,
         childExitCode: child.exitCode,
@@ -376,6 +384,7 @@ export async function runCommandWithTimeout(
         : timedOut
           ? "timeout"
           : resolvedSignal != null
+            ? "signal"
             : "exit";
       const normalizedCode =
         termination === "timeout" || termination === "no-output-timeout"
@@ -388,17 +397,22 @@ export async function runCommandWithTimeout(
         stdout,
         stderr,
         code: normalizedCode,
+        signal: resolvedSignal,
         killed: child.killed,
         termination,
         noOutputTimedOut,
       });
     };
+    child.on("close", (code, signal) => {
       if (
         process.platform !== "win32" ||
         childExitState != null ||
         code != null ||
+        signal != null ||
         child.exitCode != null ||
+        child.signalCode != null
       ) {
+        resolveFromClose(code, signal);
         return;
       }
 
@@ -407,9 +421,12 @@ export async function runCommandWithTimeout(
         if (settled) {
           return;
         }
+        if (childExitState != null || child.exitCode != null || child.signalCode != null) {
+          resolveFromClose(code, signal);
           return;
         }
         if (Date.now() - startedAt >= WINDOWS_CLOSE_STATE_SETTLE_TIMEOUT_MS) {
+          resolveFromClose(code, signal);
           return;
         }
         setTimeout(waitForExitState, WINDOWS_CLOSE_STATE_POLL_MS);

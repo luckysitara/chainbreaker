@@ -196,9 +196,7 @@ describe("ssh sandbox backend", () => {
     );
     expect(sshMocks.runSshSandboxCommand).toHaveBeenCalledWith(
       expect.objectContaining({
-        remoteCommand: expect.stringContaining(
-          "/remote/chainbreaker/chainbreaker-ssh-agent-worker",
-        ),
+        remoteCommand: expect.stringContaining("/remote/chainbreaker/chainbreaker-ssh-agent-worker"),
       }),
     );
   });

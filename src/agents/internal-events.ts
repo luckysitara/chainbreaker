@@ -17,6 +17,7 @@ export type AgentTaskCompletionInternalEvent = {
 export type AgentInternalEvent = AgentTaskCompletionInternalEvent;
 
 function formatTaskCompletionEvent(event: AgentTaskCompletionInternalEvent): string {
+  const lines = [
     "[Internal task completion event]",
     `source: ${event.source}`,
     `session_key: ${event.childSessionKey}`,
@@ -31,7 +32,10 @@ function formatTaskCompletionEvent(event: AgentTaskCompletionInternalEvent): str
     "<<<END_UNTRUSTED_CHILD_RESULT>>>",
   ];
   if (event.statsLine?.trim()) {
+    lines.push("", event.statsLine.trim());
   }
+  lines.push("", "Action:", event.replyInstruction);
+  return lines.join("\n");
 }
 
 export function formatAgentInternalEventsForPrompt(events?: AgentInternalEvent[]): string {

@@ -94,12 +94,17 @@ export function resolveAcpSessionIdentifierLinesFromIdentity(params: {
     }
     return [];
   }
+  const lines: string[] = [];
   if (agentSessionId) {
+    lines.push(`agent session id: ${agentSessionId}`);
   }
   if (acpxSessionId) {
+    lines.push(`${backend} session id: ${acpxSessionId}`);
   }
   if (acpxRecordId) {
+    lines.push(`${backend} record id: ${acpxRecordId}`);
   }
+  return lines;
 }
 
 export function resolveAcpSessionCwd(meta?: SessionAcpMeta): string | undefined {
@@ -117,15 +122,20 @@ export function resolveAcpThreadSessionDetailLines(params: {
   const meta = params.meta;
   const identity = resolveSessionIdentityFromMeta(meta);
   const backend = normalizeText(meta?.backend) ?? "backend";
+  const lines = resolveAcpSessionIdentifierLinesFromIdentity({
     backend,
     identity,
     mode: "thread",
   });
+  if (lines.length === 0) {
+    return lines;
   }
   const hint = resolveAcpAgentResumeHintLine({
     agentId: meta?.agent,
     agentSessionId: identity?.agentSessionId,
   });
   if (hint) {
+    lines.push(hint);
   }
+  return lines;
 }

@@ -309,9 +309,7 @@ function readJpegExifOrientation(buffer: Buffer): number | null {
 }
 
 async function withTempDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
-  const dir = await fs.mkdtemp(
-    path.join(resolvePreferredChainbreakerTmpDir(), "chainbreaker-img-"),
-  );
+  const dir = await fs.mkdtemp(path.join(resolvePreferredChainbreakerTmpDir(), "chainbreaker-img-"));
   try {
     return await fn(dir);
   } finally {

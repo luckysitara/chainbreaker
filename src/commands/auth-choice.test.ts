@@ -6,6 +6,8 @@ import type { ChainbreakerConfig } from "../config/config.js";
 import { resolveAgentModelPrimaryValue } from "../config/model-input.js";
 import type { ModelProviderConfig } from "../config/types.models.js";
 import { GOOGLE_GEMINI_DEFAULT_MODEL } from "../plugin-sdk/google.js";
+import { MINIMAX_CN_API_BASE_URL } from "../plugin-sdk/minimax.js";
+import { ZAI_CODING_CN_BASE_URL, ZAI_CODING_GLOBAL_BASE_URL } from "../plugin-sdk/zai.js";
 import { createProviderApiKeyAuthMethod } from "../plugins/provider-api-key-auth.js";
 import { providerApiKeyAuthRuntime } from "../plugins/provider-api-key-auth.runtime.js";
 import type { ProviderAuthMethod, ProviderPlugin } from "../plugins/types.js";
@@ -22,6 +24,7 @@ import {
   setupAuthTestEnv,
 } from "./test-wizard-helpers.js";
 
+type DetectZaiEndpoint = typeof import("./zai-endpoint-detect.js").detectZaiEndpoint;
 
 const loginOpenAICodexOAuth = vi.hoisted(() =>
   vi.fn<() => Promise<OAuthCredentials | null>>(async () => null),
@@ -41,6 +44,7 @@ vi.mock("../plugins/provider-auth-choice.runtime.js", async (importOriginal) => 
 });
 
 const detectZaiEndpoint = vi.hoisted(() => vi.fn<DetectZaiEndpoint>(async () => null));
+vi.mock("./zai-endpoint-detect.js", () => ({
   detectZaiEndpoint,
 }));
 
@@ -107,9 +111,7 @@ function createApiKeyProvider(params: {
         ...(params.expectedProviders ? { expectedProviders: params.expectedProviders } : {}),
         ...(params.noteMessage ? { noteMessage: params.noteMessage } : {}),
         ...(params.noteTitle ? { noteTitle: params.noteTitle } : {}),
-        ...(params.applyConfig
-          ? { applyConfig: () => params.applyConfig as ChainbreakerConfig }
-          : {}),
+        ...(params.applyConfig ? { applyConfig: () => params.applyConfig as ChainbreakerConfig } : {}),
         wizard: {
           choiceId: params.choiceId,
           choiceLabel: params.label,
@@ -151,22 +153,27 @@ function createDefaultProviderPlugins() {
   const normalizeApiKeyInput = providerApiKeyAuthRuntime.normalizeApiKeyInput;
   const validateApiKeyInput = providerApiKeyAuthRuntime.validateApiKeyInput;
 
+  const createZaiMethod = (choiceId: "zai-api-key" | "zai-coding-global"): ProviderAuthMethod => ({
+    id: choiceId === "zai-api-key" ? "api-key" : "coding-global",
     label: "Z.AI API key",
     kind: "api_key",
     wizard: {
       choiceId,
       choiceLabel: "Z.AI API key",
+      groupId: "zai",
       groupLabel: "Z.AI",
     },
     run: async (ctx) => {
       const token = normalizeText(await ctx.prompter.text({ message: "Enter Z.AI API key" }));
       const detectResult = await detectZaiEndpoint(
+        choiceId === "zai-coding-global"
           ? { apiKey: token, endpoint: "coding-global" }
           : { apiKey: token },
       );
       let baseUrl = detectResult?.baseUrl;
       let modelId = detectResult?.modelId;
       if (!baseUrl || !modelId) {
+        if (choiceId === "zai-coding-global") {
           baseUrl = ZAI_CODING_GLOBAL_BASE_URL;
           modelId = "glm-5";
         } else {
@@ -185,8 +192,12 @@ function createDefaultProviderPlugins() {
       return {
         profiles: [
           {
+            profileId: "zai:default",
+            credential: buildApiKeyCredential("zai", token),
           },
         ],
+        configPatch: providerConfigPatch("zai", { baseUrl }) as ChainbreakerConfig,
+        defaultModel: `zai/${modelId}`,
       };
     },
   });
@@ -342,14 +353,28 @@ function createDefaultProviderPlugins() {
       defaultModel: "litellm/anthropic/claude-opus-4.6",
     }),
     createApiKeyProvider({
+      providerId: "minimax",
       label: "MiniMax API key (Global)",
+      choiceId: "minimax-global-api",
+      optionKey: "minimaxApiKey",
+      flagName: "--minimax-api-key",
       envVar: "MINIMAX_API_KEY",
       promptMessage: "Enter MiniMax API key",
+      profileId: "minimax:global",
+      defaultModel: "minimax/MiniMax-M2.7",
     }),
     createApiKeyProvider({
+      providerId: "minimax",
       label: "MiniMax API key (CN)",
+      choiceId: "minimax-cn-api",
+      optionKey: "minimaxApiKey",
+      flagName: "--minimax-api-key",
       envVar: "MINIMAX_API_KEY",
       promptMessage: "Enter MiniMax CN API key",
+      profileId: "minimax:cn",
+      defaultModel: "minimax/MiniMax-M2.7",
+      applyConfig: providerConfigPatch("minimax", { baseUrl: MINIMAX_CN_API_BASE_URL }),
+      expectedProviders: ["minimax", "minimax-cn"],
     }),
     createApiKeyProvider({
       providerId: "mistral",
@@ -503,7 +528,9 @@ function createDefaultProviderPlugins() {
       defaultModel: "xiaomi/mimo-v2-flash",
     }),
     {
+      id: "zai",
       label: "Z.AI",
+      auth: [createZaiMethod("zai-api-key"), createZaiMethod("zai-coding-global")],
     },
     {
       id: "cloudflare-ai-gateway",
@@ -736,6 +763,8 @@ describe("applyAuthChoice", () => {
   it("prompts and writes provider API key profiles for common providers", async () => {
     const scenarios: Array<{
       authChoice:
+        | "minimax-global-api"
+        | "minimax-cn-api"
         | "synthetic-api-key"
         | "huggingface-api-key";
       promptContains: string;
@@ -744,10 +773,18 @@ describe("applyAuthChoice", () => {
       token: string;
     }> = [
       {
+        authChoice: "minimax-global-api" as const,
         promptContains: "Enter MiniMax API key",
+        profileId: "minimax:global",
+        provider: "minimax",
+        token: "sk-minimax-test",
       },
       {
+        authChoice: "minimax-cn-api" as const,
         promptContains: "Enter MiniMax CN API key",
+        profileId: "minimax:cn",
+        provider: "minimax",
+        token: "sk-minimax-test",
       },
       {
         authChoice: "synthetic-api-key" as const,
@@ -791,6 +828,7 @@ describe("applyAuthChoice", () => {
 
   it("uses Z.AI endpoint detection and prompts in the auth flow", async () => {
     const scenarios: Array<{
+      authChoice: "zai-api-key" | "zai-coding-global";
       token: string;
       endpointSelection?: "coding-cn" | "global";
       detectResult?: {
@@ -803,10 +841,14 @@ describe("applyAuthChoice", () => {
       expectedDetectCall?: { apiKey: string; endpoint?: "coding-global" | "coding-cn" };
     }> = [
       {
+        authChoice: "zai-api-key",
+        token: "zai-test-key",
         endpointSelection: "coding-cn",
         shouldPromptForEndpoint: true,
       },
       {
+        authChoice: "zai-coding-global",
+        token: "zai-test-key",
         detectResult: {
           endpoint: "coding-global",
           modelId: "glm-4.7",
@@ -814,8 +856,11 @@ describe("applyAuthChoice", () => {
           note: "Detected coding-global endpoint with GLM-4.7 fallback",
         },
         shouldPromptForEndpoint: false,
+        expectedDetectCall: { apiKey: "zai-test-key", endpoint: "coding-global" },
       },
       {
+        authChoice: "zai-api-key",
+        token: "zai-detected-key",
         detectResult: {
           endpoint: "coding-global",
           modelId: "glm-4.5",
@@ -823,6 +868,7 @@ describe("applyAuthChoice", () => {
           note: "Detected coding-global endpoint",
         },
         shouldPromptForEndpoint: false,
+        expectedDetectCall: { apiKey: "zai-detected-key" },
       },
     ];
     for (const scenario of scenarios) {
@@ -865,8 +911,11 @@ describe("applyAuthChoice", () => {
           expect.objectContaining({ message: "Select Z.AI endpoint" }),
         );
       }
+      expect(result.config.auth?.profiles?.["zai:default"]).toMatchObject({
+        provider: "zai",
         mode: "api_key",
       });
+      expect((await readAuthProfile("zai:default"))?.key).toBe(scenario.token);
     }
   });
 
@@ -1804,6 +1853,7 @@ describe("applyAuthChoice", () => {
 
   it("writes portal OAuth credentials for plugin providers", async () => {
     const scenarios: Array<{
+      authChoice: "minimax-global-oauth";
       label: string;
       authId: string;
       authLabel: string;
@@ -1816,10 +1866,16 @@ describe("applyAuthChoice", () => {
       selectValue?: string;
     }> = [
       {
+        authChoice: "minimax-global-oauth",
         label: "MiniMax",
         authId: "oauth",
         authLabel: "MiniMax OAuth (Global)",
+        providerId: "minimax-portal",
+        profileId: "minimax-portal:default",
+        baseUrl: "https://api.minimax.io/anthropic",
         api: "anthropic-messages",
+        defaultModel: "minimax-portal/MiniMax-M2.7",
+        apiKey: "minimax-oauth", // pragma: allowlist secret
       },
     ];
     for (const scenario of scenarios) {

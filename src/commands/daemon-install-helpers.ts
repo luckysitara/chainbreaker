@@ -97,6 +97,7 @@ export async function buildGatewayInstallPlan(params: {
   devMode?: boolean;
   nodePath?: string;
   warn?: DaemonInstallWarnFn;
+  /** Full config to extract env vars from (env vars + inline env keys). */
   config?: ChainbreakerConfig;
   authStore?: AuthProfileStore;
 }): Promise<GatewayInstallPlan> {
@@ -133,6 +134,7 @@ export async function buildGatewayInstallPlan(params: {
 
   // Merge env sources into the service environment in ascending priority:
   //   1. ~/.chainbreaker/.env file vars  (lowest — user secrets / fallback keys)
+  //   2. Config env vars              (chainbreaker.json env.vars + inline keys)
   //   3. Auth-profile env refs        (credential store → env var lookups)
   //   4. Service environment          (HOME, PATH, CHAINBREAKER_* — highest)
   return {

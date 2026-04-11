@@ -163,6 +163,7 @@ describe("registerPluginCommand", () => {
     const result = registerVoiceCommandForTest({
       nativeNames: {
         default: "talkvoice",
+        discord: "discordvoice",
       },
       description: "Demo command",
     });
@@ -170,7 +171,9 @@ describe("registerPluginCommand", () => {
     expect(result).toEqual({ ok: true });
     expectProviderCommandSpecCases([
       { provider: undefined, expectedNames: ["talkvoice"] },
+      { provider: "discord", expectedNames: ["discordvoice"] },
       { provider: "telegram", expectedNames: ["talkvoice"] },
+      { provider: "slack", expectedNames: [] },
     ]);
   });
 
@@ -208,11 +211,13 @@ describe("registerPluginCommand", () => {
     second.clearPluginCommands();
   });
 
+  it.each(["/talkvoice now", "/discordvoice now"] as const)(
     "matches provider-specific native alias %s back to the canonical command",
     (commandBody) => {
       const result = registerVoiceCommandForTest({
         nativeNames: {
           default: "talkvoice",
+          discord: "discordvoice",
         },
         description: "Demo command",
         acceptsArgs: true,
@@ -274,10 +279,13 @@ describe("registerPluginCommand", () => {
     {
       name: "resolves Discord DM command bindings with the user target prefix intact",
       params: {
+        channel: "discord",
+        from: "discord:1177378744822943744",
         to: "slash:1177378744822943744",
         accountId: "default",
       },
       expected: {
+        channel: "discord",
         accountId: "default",
         conversationId: "user:1177378744822943744",
       },
@@ -285,9 +293,12 @@ describe("registerPluginCommand", () => {
     {
       name: "resolves Discord guild command bindings with the channel target prefix intact",
       params: {
+        channel: "discord",
+        from: "discord:channel:1480554272859881494",
         accountId: "default",
       },
       expected: {
+        channel: "discord",
         accountId: "default",
         conversationId: "channel:1480554272859881494",
       },
@@ -295,11 +306,14 @@ describe("registerPluginCommand", () => {
     {
       name: "resolves Discord thread command bindings with parent channel context intact",
       params: {
+        channel: "discord",
+        from: "discord:channel:1480554272859881494",
         accountId: "default",
         messageThreadId: "thread-42",
         threadParentId: "channel-parent-7",
       },
       expected: {
+        channel: "discord",
         accountId: "default",
         conversationId: "channel:1480554272859881494",
         parentConversationId: "channel-parent-7",
@@ -309,6 +323,8 @@ describe("registerPluginCommand", () => {
     {
       name: "does not resolve binding conversations for unsupported command channels",
       params: {
+        channel: "slack",
+        from: "slack:U123",
         to: "C456",
         accountId: "default",
       },
@@ -357,10 +373,12 @@ describe("registerPluginCommand", () => {
         pluginId: "demo-plugin",
         pluginRoot: "/plugins/demo-plugin",
       },
+      channel: "slack",
       senderId: "U123",
       isAuthorizedSender: true,
       commandBody: "/bindcheck",
       config: {} as never,
+      from: "slack:U123",
       to: "C456",
       accountId: "default",
     });

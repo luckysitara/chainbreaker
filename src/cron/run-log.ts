@@ -122,9 +122,11 @@ async function pruneIfNeeded(filePath: string, opts: { maxBytes: number; keepLin
   }
 
   const raw = await fs.readFile(filePath, "utf-8").catch(() => "");
+  const lines = raw
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
+  const kept = lines.slice(Math.max(0, lines.length - opts.keepLines));
   const { randomBytes } = await import("node:crypto");
   const tmp = `${filePath}.${process.pid}.${randomBytes(8).toString("hex")}.tmp`;
   await fs.writeFile(tmp, `${kept.join("\n")}\n`, { encoding: "utf-8", mode: 0o600 });
@@ -242,9 +244,14 @@ function parseAllRunLogEntries(raw: string, opts?: { jobId?: string }): CronRunL
     return [];
   }
   const parsed: CronRunLogEntry[] = [];
+  const lines = raw.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]?.trim();
+    if (!line) {
       continue;
     }
     try {
+      const obj = JSON.parse(line) as Partial<CronRunLogEntry> | null;
       if (!obj || typeof obj !== "object") {
         continue;
       }
@@ -312,6 +319,7 @@ function parseAllRunLogEntries(raw: string, opts?: { jobId?: string }): CronRunL
       }
       parsed.push(entry);
     } catch {
+      // ignore invalid lines
     }
   }
   return parsed;

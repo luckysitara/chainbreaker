@@ -98,6 +98,7 @@ function collectMcpServerEnvAssignments(params: {
     }
 
     for (const [envKey, envValue] of Object.entries(env)) {
+      // SecretInput allows both explicit objects and inline env-template refs
       // like `${MCP_API_KEY}`. Non-ref strings remain untouched because
       // collectSecretInputAssignment ignores them.
       collectSecretInputAssignment({

@@ -96,6 +96,7 @@ describe("buildGatewayCronService", () => {
         schedule: { kind: "at", at: new Date(1).toISOString() },
         sessionTarget: "main",
         wakeMode: "next-heartbeat",
+        sessionKey: "discord:channel:ops",
         payload: { kind: "systemEvent", text: "hello" },
       });
 
@@ -104,10 +105,12 @@ describe("buildGatewayCronService", () => {
       expect(enqueueSystemEventMock).toHaveBeenCalledWith(
         "hello",
         expect.objectContaining({
+          sessionKey: "agent:main:discord:channel:ops",
         }),
       );
       expect(requestHeartbeatNowMock).toHaveBeenCalledWith(
         expect.objectContaining({
+          sessionKey: "agent:main:discord:channel:ops",
         }),
       );
     } finally {
@@ -152,6 +155,7 @@ describe("buildGatewayCronService", () => {
             "Content-Type": "application/json",
           },
           body: expect.stringContaining('"action":"finished"'),
+          signal: expect.any(AbortSignal),
         },
       });
     } finally {

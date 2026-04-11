@@ -9,6 +9,9 @@ const ENV_OPTIONS_WITH_VALUE = new Set([
   "--chdir",
   "-s",
   "--split-string",
+  "--default-signal",
+  "--ignore-signal",
+  "--block-signal",
 ]);
 const ENV_INLINE_VALUE_PREFIXES = [
   "-u",
@@ -17,6 +20,9 @@ const ENV_INLINE_VALUE_PREFIXES = [
   "--unset=",
   "--chdir=",
   "--split-string=",
+  "--default-signal=",
+  "--ignore-signal=",
+  "--block-signal=",
 ] as const;
 const ENV_FLAG_OPTIONS = new Set(["-i", "--ignore-environment", "-0", "--null"]);
 const NICE_OPTIONS_WITH_VALUE = new Set(["-n", "--adjustment", "--priority"]);
@@ -41,6 +47,7 @@ const BSD_SCRIPT_FLAG_OPTIONS = new Set(["-a", "-d", "-k", "-p", "-q", "-r"]);
 const BSD_SCRIPT_OPTIONS_WITH_VALUE = new Set(["-F", "-t"]);
 const SANDBOX_EXEC_OPTIONS_WITH_VALUE = new Set(["-f", "-p", "-d"]);
 const TIMEOUT_FLAG_OPTIONS = new Set(["--foreground", "--preserve-status", "-v", "--verbose"]);
+const TIMEOUT_OPTIONS_WITH_VALUE = new Set(["-k", "--kill-after", "-s", "--signal"]);
 const XCRUN_FLAG_OPTIONS = new Set([
   "-k",
   "--kill-cache",
@@ -87,6 +94,7 @@ export function isEnvAssignment(token: string): boolean {
   return /^[A-Za-z_][A-Za-z0-9_]*=.*/.test(token);
 }
 
+function hasEnvInlineValuePrefix(lower: string): boolean {
   for (const prefix of ENV_INLINE_VALUE_PREFIXES) {
     if (lower.startsWith(prefix)) {
       return true;
@@ -159,6 +167,7 @@ export function unwrapEnvInvocation(argv: string[]): string[] | null {
       if (ENV_OPTIONS_WITH_VALUE.has(flag)) {
         return lower.includes("=") ? "continue" : "consume-next";
       }
+      if (hasEnvInlineValuePrefix(lower)) {
         return "continue";
       }
       return "invalid";
@@ -201,6 +210,7 @@ function envInvocationUsesModifiers(argv: string[]): boolean {
       idx += 1;
       continue;
     }
+    if (hasEnvInlineValuePrefix(lower)) {
       return true;
     }
     return true;

@@ -39,6 +39,7 @@ describe("resolveConversationLabel", () => {
       ctx: {
         ChatType: "channel",
         GroupSubject: "#general",
+        From: "slack:channel:C123",
       },
       expected: "#general",
     },

@@ -120,6 +120,7 @@ describe("gateway tool", () => {
           expect(result.details).toMatchObject({
             ok: true,
             pid: process.pid,
+            signal: "SIGUSR1",
             delayMs: 0,
           });
 

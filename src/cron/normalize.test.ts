@@ -132,8 +132,10 @@ describe("normalizeCronJobCreate", () => {
       schedule: { kind: "cron", expr: "* * * * *" },
       sessionTarget: "main",
       wakeMode: "next-heartbeat",
+      sessionKey: "  agent:main:discord:channel:ops  ",
       payload: { kind: "systemEvent", text: "hi" },
     }) as unknown as Record<string, unknown>;
+    expect(normalized.sessionKey).toBe("agent:main:discord:channel:ops");
 
     const cleared = normalizeCronJobCreate({
       name: "session-key-clear",
@@ -445,8 +447,10 @@ describe("normalizeCronJobCreate", () => {
         sessionTarget: "current",
         payload: { kind: "agentTurn", message: "hello" },
       },
+      { sessionContext: { sessionKey: "agent:main:discord:group:ops" } },
     ) as unknown as Record<string, unknown>;
 
+    expect(normalized.sessionTarget).toBe("session:agent:main:discord:group:ops");
   });
 
   it("falls back current sessionTarget to isolated without context", () => {

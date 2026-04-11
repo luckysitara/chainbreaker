@@ -41,6 +41,7 @@ export function mapQueueOutcomeToDeliveryResult(
 
 export async function runSubagentAnnounceDispatch(params: {
   expectsCompletionMessage: boolean;
+  signal?: AbortSignal;
   queue: () => Promise<SubagentAnnounceQueueOutcome>;
   direct: () => Promise<SubagentAnnounceDeliveryResult>;
 }): Promise<SubagentAnnounceDeliveryResult> {
@@ -61,6 +62,7 @@ export async function runSubagentAnnounceDispatch(params: {
     phases,
   });
 
+  if (params.signal?.aborted) {
     return withPhases({
       delivered: false,
       path: "none",
@@ -89,6 +91,7 @@ export async function runSubagentAnnounceDispatch(params: {
     return withPhases(primaryDirect);
   }
 
+  if (params.signal?.aborted) {
     return withPhases(primaryDirect);
   }
 

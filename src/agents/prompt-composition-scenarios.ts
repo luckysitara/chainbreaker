@@ -180,6 +180,9 @@ function buildToolRichSystemPrompt(params: {
 
 function createDirectScenario(workspaceDir: string): PromptScenario {
   const baseCtx: TemplateContext = {
+    Provider: "slack",
+    Surface: "slack",
+    OriginatingChannel: "slack",
     OriginatingTo: "D123",
     AccountId: "A1",
     ChatType: "direct",
@@ -217,6 +220,7 @@ function createDirectScenario(workspaceDir: string): PromptScenario {
           },
           body: "Please summarize yesterday's decision.",
         }),
+        notes: ["Direct chat baseline", "Per-message ids and reply context change in body only"],
       },
       {
         id: "t2",
@@ -288,6 +292,9 @@ function createDirectScenario(workspaceDir: string): PromptScenario {
 
 function createGroupScenario(workspaceDir: string): PromptScenario {
   const baseCtx: TemplateContext = {
+    Provider: "slack",
+    Surface: "slack",
+    OriginatingChannel: "slack",
     OriginatingTo: "C123",
     AccountId: "A1",
     ChatType: "group",
@@ -517,6 +524,7 @@ async function createBootstrapWarningScenario(workspaceDir: string): Promise<Pro
           workspaceDir,
           contextFiles,
         }),
+        bodyPrompt: appendBootstrapPromptWarning("hello", warningFirst.lines),
         notes: ["Warning is appended to the turn body", "System prompt should stay stable"],
       },
       {
@@ -526,6 +534,8 @@ async function createBootstrapWarningScenario(workspaceDir: string): Promise<Pro
           workspaceDir,
           contextFiles,
         }),
+        bodyPrompt: appendBootstrapPromptWarning("hello again", warningSeen.lines),
+        notes: ["Once-mode removes warning lines", "Only the body tail changes now"],
       },
       {
         id: "t3",
@@ -534,6 +544,7 @@ async function createBootstrapWarningScenario(workspaceDir: string): Promise<Pro
           workspaceDir,
           contextFiles,
         }),
+        bodyPrompt: appendBootstrapPromptWarning("one more turn", warningAlways.lines),
         notes: [
           "Always-mode keeps warning in the body prompt tail",
           "System prompt remains stable",
@@ -592,6 +603,9 @@ async function createMaintenanceScenario(workspaceDir: string): Promise<PromptSc
   const postCompactionSystemPrompt = buildSystemPrompt({
     workspaceDir,
     extraSystemPrompt: buildInboundMetaSystemPrompt({
+      Provider: "slack",
+      Surface: "slack",
+      OriginatingChannel: "slack",
       OriginatingTo: "D123",
       AccountId: "A1",
       ChatType: "direct",

@@ -19,9 +19,7 @@ const pluginApiMocks = vi.hoisted(() => ({
   revokeDeviceBootstrapToken: vi.fn(async () => ({ removed: true })),
   renderQrPngBase64: vi.fn(async () => "ZmFrZXBuZw=="),
   resolveGatewayPort: vi.fn(() => 18789),
-  resolvePreferredChainbreakerTmpDir: vi.fn(() =>
-    path.join(os.tmpdir(), "chainbreaker-device-pair-tests"),
-  ),
+  resolvePreferredChainbreakerTmpDir: vi.fn(() => path.join(os.tmpdir(), "chainbreaker-device-pair-tests")),
 }));
 
 vi.mock("./api.js", () => {
@@ -157,12 +155,10 @@ describe("device-pair /pair qr", () => {
   });
 
   afterEach(async () => {
-    await fs.rm(pluginApiMocks.resolvePreferredChainbreakerTmpDir(), {
-      recursive: true,
-      force: true,
-    });
+    await fs.rm(pluginApiMocks.resolvePreferredChainbreakerTmpDir(), { recursive: true, force: true });
   });
 
+  it("returns an inline QR image for webchat surfaces", async () => {
     const command = registerPairCommand();
     const result = await command.handler(createCommandContext({ channel: "webchat" }));
     const text = requireText(result);
@@ -227,8 +223,10 @@ describe("device-pair /pair qr", () => {
     },
     {
       label: "Discord",
+      runtimeKey: "discord",
       sendKey: "sendMessageDiscord",
       ctx: {
+        channel: "discord",
         senderId: "123",
         accountId: "default",
       },
@@ -239,8 +237,10 @@ describe("device-pair /pair qr", () => {
     },
     {
       label: "Slack",
+      runtimeKey: "slack",
       sendKey: "sendMessageSlack",
       ctx: {
+        channel: "slack",
         senderId: "user:U123",
         accountId: "default",
         messageThreadId: "1234567890.000001",
@@ -253,18 +253,24 @@ describe("device-pair /pair qr", () => {
     },
     {
       label: "Signal",
+      runtimeKey: "signal",
       sendKey: "sendMessageSignal",
       ctx: {
+        channel: "signal",
+        senderId: "signal:+15551234567",
         accountId: "default",
       },
+      expectedTarget: "signal:+15551234567",
       expectedOpts: {
         accountId: "default",
       },
     },
     {
       label: "iMessage",
+      runtimeKey: "imessage",
       sendKey: "sendMessageIMessage",
       ctx: {
+        channel: "imessage",
         senderId: "+15551234567",
         accountId: "default",
       },
@@ -339,10 +345,12 @@ describe("device-pair /pair qr", () => {
 
     const sendMessage = vi.fn().mockRejectedValue(new Error("upload failed"));
     const command = registerPairCommand({
+      runtime: createChannelRuntime("discord", "sendMessageDiscord", sendMessage),
     });
 
     const result = await command.handler(
       createCommandContext({
+        channel: "discord",
         senderId: "123",
       }),
     );

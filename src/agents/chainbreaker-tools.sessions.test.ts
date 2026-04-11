@@ -33,10 +33,7 @@ vi.mock("../config/config.js", async (importOriginal) => {
 });
 
 import "./test-helpers/fast-core-tools.js";
-import {
-  __testing as openClawToolsTesting,
-  createChainbreakerTools,
-} from "./chainbreaker-tools.js";
+import { __testing as openClawToolsTesting, createChainbreakerTools } from "./chainbreaker-tools.js";
 import { __testing as subagentControlTesting } from "./subagent-control.js";
 import { __testing as agentStepTesting } from "./tools/agent-step.js";
 import { __testing as sessionsResolutionTesting } from "./tools/sessions-resolution.js";
@@ -151,9 +148,12 @@ describe("sessions tools", () => {
               lastChannel: "whatsapp",
             },
             {
+              key: "discord:group:dev",
               kind: "group",
               sessionId: "s-group",
               updatedAt: 11,
+              channel: "discord",
+              displayName: "discord:g-dev",
               status: "running",
               startedAt: 100,
               runtimeMs: 42,
@@ -226,6 +226,7 @@ describe("sessions tools", () => {
     expect(main?.messages?.length).toBe(1);
     expect(main?.messages?.[0]?.role).toBe("assistant");
 
+    const group = details.sessions?.find((s) => s.key === "discord:group:dev");
     expect(group?.status).toBe("running");
     expect(group?.startedAt).toBe(100);
     expect(group?.runtimeMs).toBe(42);
@@ -300,9 +301,7 @@ describe("sessions tools", () => {
       return {};
     });
 
-    const tool = createChainbreakerTools().find(
-      (candidate) => candidate.name === "sessions_history",
-    );
+    const tool = createChainbreakerTools().find((candidate) => candidate.name === "sessions_history");
     expect(tool).toBeDefined();
     if (!tool) {
       throw new Error("missing sessions_history tool");
@@ -351,9 +350,7 @@ describe("sessions tools", () => {
       return {};
     });
 
-    const tool = createChainbreakerTools().find(
-      (candidate) => candidate.name === "sessions_history",
-    );
+    const tool = createChainbreakerTools().find((candidate) => candidate.name === "sessions_history");
     expect(tool).toBeDefined();
     if (!tool) {
       throw new Error("missing sessions_history tool");
@@ -417,9 +414,7 @@ describe("sessions tools", () => {
       return {};
     });
 
-    const tool = createChainbreakerTools().find(
-      (candidate) => candidate.name === "sessions_history",
-    );
+    const tool = createChainbreakerTools().find((candidate) => candidate.name === "sessions_history");
     expect(tool).toBeDefined();
     if (!tool) {
       throw new Error("missing sessions_history tool");
@@ -468,9 +463,7 @@ describe("sessions tools", () => {
       return {};
     });
 
-    const tool = createChainbreakerTools().find(
-      (candidate) => candidate.name === "sessions_history",
-    );
+    const tool = createChainbreakerTools().find((candidate) => candidate.name === "sessions_history");
     expect(tool).toBeDefined();
     if (!tool) {
       throw new Error("missing sessions_history tool");
@@ -511,9 +504,7 @@ describe("sessions tools", () => {
       return {};
     });
 
-    const tool = createChainbreakerTools().find(
-      (candidate) => candidate.name === "sessions_history",
-    );
+    const tool = createChainbreakerTools().find((candidate) => candidate.name === "sessions_history");
     expect(tool).toBeDefined();
     if (!tool) {
       throw new Error("missing sessions_history tool");
@@ -532,6 +523,7 @@ describe("sessions tools", () => {
 
   it("sessions_history resolves sessionId inputs", async () => {
     const sessionId = "sess-group";
+    const targetKey = "agent:main:discord:channel:1457165743010611293";
     callGatewayMock.mockImplementation(async (opts: unknown) => {
       const request = opts as {
         method?: string;
@@ -550,9 +542,7 @@ describe("sessions tools", () => {
       return {};
     });
 
-    const tool = createChainbreakerTools().find(
-      (candidate) => candidate.name === "sessions_history",
-    );
+    const tool = createChainbreakerTools().find((candidate) => candidate.name === "sessions_history");
     expect(tool).toBeDefined();
     if (!tool) {
       throw new Error("missing sessions_history tool");
@@ -580,9 +570,7 @@ describe("sessions tools", () => {
       return {};
     });
 
-    const tool = createChainbreakerTools().find(
-      (candidate) => candidate.name === "sessions_history",
-    );
+    const tool = createChainbreakerTools().find((candidate) => candidate.name === "sessions_history");
     expect(tool).toBeDefined();
     if (!tool) {
       throw new Error("missing sessions_history tool");
@@ -601,6 +589,7 @@ describe("sessions tools", () => {
     let sendCallCount = 0;
     let lastWaitedRunId: string | undefined;
     const replyByRunId = new Map<string, string>();
+    const requesterKey = "discord:group:req";
     callGatewayMock.mockImplementation(async (opts: unknown) => {
       const request = opts as { method?: string; params?: unknown };
       calls.push(request);
@@ -656,6 +645,7 @@ describe("sessions tools", () => {
 
     const tool = createChainbreakerTools({
       agentSessionKey: requesterKey,
+      agentChannel: "discord",
     }).find((candidate) => candidate.name === "sessions_send");
     expect(tool).toBeDefined();
     if (!tool) {
@@ -737,6 +727,7 @@ describe("sessions tools", () => {
 
   it("sessions_send resolves sessionId inputs", async () => {
     const sessionId = "sess-send";
+    const targetKey = "agent:main:discord:channel:123";
     callGatewayMock.mockImplementation(async (opts: unknown) => {
       const request = opts as {
         method?: string;
@@ -759,6 +750,7 @@ describe("sessions tools", () => {
 
     const tool = createChainbreakerTools({
       agentSessionKey: "main",
+      agentChannel: "discord",
     }).find((candidate) => candidate.name === "sessions_send");
     expect(tool).toBeDefined();
     if (!tool) {
@@ -786,6 +778,8 @@ describe("sessions tools", () => {
     let agentCallCount = 0;
     let lastWaitedRunId: string | undefined;
     const replyByRunId = new Map<string, string>();
+    const requesterKey = "discord:group:req";
+    const targetKey = "discord:group:target";
     let sendParams: { to?: string; channel?: string; message?: string } = {};
     callGatewayMock.mockImplementation(async (opts: unknown) => {
       const request = opts as { method?: string; params?: unknown };
@@ -847,6 +841,7 @@ describe("sessions tools", () => {
 
     const tool = createChainbreakerTools({
       agentSessionKey: requesterKey,
+      agentChannel: "discord",
     }).find((candidate) => candidate.name === "sessions_send");
     expect(tool).toBeDefined();
     if (!tool) {
@@ -890,6 +885,7 @@ describe("sessions tools", () => {
     expect(replySteps).toHaveLength(2);
     expect(sendParams).toMatchObject({
       to: "group:target",
+      channel: "discord",
       message: "announce now",
     });
   });

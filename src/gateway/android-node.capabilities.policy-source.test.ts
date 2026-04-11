@@ -25,9 +25,9 @@ describe("shouldFetchRemotePolicyConfig", () => {
   });
 
   it("returns true for env and cli overrides", () => {
-    expect(
-      shouldFetchRemotePolicyConfig(details({ urlSource: "env CHAINBREAKER_GATEWAY_URL" })),
-    ).toBe(true);
+    expect(shouldFetchRemotePolicyConfig(details({ urlSource: "env CHAINBREAKER_GATEWAY_URL" }))).toBe(
+      true,
+    );
     expect(shouldFetchRemotePolicyConfig(details({ urlSource: "cli --url" }))).toBe(true);
   });
 

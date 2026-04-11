@@ -333,6 +333,7 @@ export const ChainbreakerSchema = z
       .object({
         banner: z
           .object({
+            taglineMode: z
               .union([z.literal("random"), z.literal("default"), z.literal("off")])
               .optional(),
           })
@@ -392,11 +393,7 @@ export const ChainbreakerSchema = z
                 cdpUrl: z.string().optional(),
                 userDataDir: z.string().optional(),
                 driver: z
-                  .union([
-                    z.literal("chainbreaker"),
-                    z.literal("clawd"),
-                    z.literal("existing-session"),
-                  ])
+                  .union([z.literal("chainbreaker"), z.literal("clawd"), z.literal("existing-session")])
                   .optional(),
                 attachOnly: z.boolean().optional(),
                 color: HexColorSchema,
@@ -485,6 +482,7 @@ export const ChainbreakerSchema = z
               .union([
                 z.literal("none"),
                 z.literal("space"),
+                z.literal("newline"),
                 z.literal("paragraph"),
               ])
               .optional(),

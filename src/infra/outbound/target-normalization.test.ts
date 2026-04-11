@@ -122,6 +122,7 @@ describe("buildTargetResolverSignature", () => {
       },
     });
 
+    const first = buildTargetResolverSignature("slack");
     getChannelPluginMock.mockReturnValueOnce({
       messaging: {
         targetResolver: {
@@ -130,6 +131,7 @@ describe("buildTargetResolverSignature", () => {
         },
       },
     });
+    const second = buildTargetResolverSignature("slack");
 
     expect(first).toBe(second);
   });
@@ -143,6 +145,7 @@ describe("buildTargetResolverSignature", () => {
         },
       },
     });
+    const first = buildTargetResolverSignature("slack");
 
     getChannelPluginMock.mockReturnValueOnce({
       messaging: {
@@ -152,6 +155,7 @@ describe("buildTargetResolverSignature", () => {
         },
       },
     });
+    const second = buildTargetResolverSignature("slack");
 
     expect(first).not.toBe(second);
   });

@@ -7,6 +7,7 @@ function formatDiscordAllowFromEntries(allowFrom: Array<string | number>): strin
   return allowFrom
     .map((entry) => String(entry).trim())
     .filter(Boolean)
+    .map((entry) => entry.replace(/^(discord|user|pk):/i, "").replace(/^<@!?(\d+)>$/, "$1"))
     .map((entry) => entry.toLowerCase());
 }
 
@@ -29,10 +30,13 @@ function resolveChannelAllowFrom(
 export const createCommandAuthRegistry = () =>
   createTestRegistry([
     {
+      pluginId: "discord",
       plugin: {
+        ...createOutboundTestPlugin({ id: "discord", outbound: { deliveryMode: "direct" } }),
         config: {
           listAccountIds: () => [],
           resolveAllowFrom: ({ cfg }: { cfg: Record<string, unknown> }) =>
+            resolveChannelAllowFrom(cfg, "discord"),
           formatAllowFrom: ({ allowFrom }: { allowFrom: Array<string | number> }) =>
             formatDiscordAllowFromEntries(allowFrom),
         },

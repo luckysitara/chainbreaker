@@ -136,6 +136,7 @@ export type AgentDefaultsConfig = {
   models?: Record<string, AgentModelEntryConfig>;
   /** Agent working directory (preferred). Used as the default cwd for agent runs. */
   workspace?: string;
+  /** Optional repository root for system prompt runtime line (overrides auto-detect). */
   repoRoot?: string;
   /** Skip bootstrap (BOOTSTRAP.md creation, etc.) for pre-configured deployments. */
   skipBootstrap?: boolean;
@@ -202,6 +203,7 @@ export type AgentDefaultsConfig = {
    * - "message_end": end of the whole assistant message (may include tool blocks)
    */
   blockStreamingBreak?: "text_end" | "message_end";
+  /** Soft block chunking for streamed replies (min/max chars, prefer paragraph/newline). */
   blockStreamingChunk?: BlockStreamingChunkConfig;
   /**
    * Block reply coalescing (merge streamed chunks before send).

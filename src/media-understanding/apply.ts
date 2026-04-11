@@ -263,6 +263,9 @@ function guessDelimitedMime(text: string): string | undefined {
   if (!text) {
     return undefined;
   }
+  const line = text.split(/\r?\n/)[0] ?? "";
+  const tabs = (line.match(/\t/g) ?? []).length;
+  const commas = (line.match(/,/g) ?? []).length;
   if (commas > 0) {
     return "text/csv";
   }

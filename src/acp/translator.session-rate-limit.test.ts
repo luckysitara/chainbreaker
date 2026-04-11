@@ -808,6 +808,7 @@ describe("acp tool streaming bridge behavior", () => {
         phase: "start",
         toolCallId: "tool-1",
         name: "read",
+        args: { path: "src/app.ts", line: 12 },
       }),
     );
     await agent.handleGatewayEvent(
@@ -842,8 +843,11 @@ describe("acp tool streaming bridge behavior", () => {
       update: {
         sessionUpdate: "tool_call",
         toolCallId: "tool-1",
+        title: "read: path: src/app.ts, line: 12",
         status: "in_progress",
+        rawInput: { path: "src/app.ts", line: 12 },
         kind: "read",
+        locations: [{ path: "src/app.ts", line: 12 }],
       },
     });
     expect(sessionUpdate).toHaveBeenCalledWith({
@@ -862,6 +866,7 @@ describe("acp tool streaming bridge behavior", () => {
             content: { type: "text", text: "partial output" },
           },
         ],
+        locations: [{ path: "src/app.ts", line: 12 }],
       },
     });
     expect(sessionUpdate).toHaveBeenCalledWith({
@@ -880,6 +885,7 @@ describe("acp tool streaming bridge behavior", () => {
             content: { type: "text", text: "FILE:src/app.ts" },
           },
         ],
+        locations: [{ path: "src/app.ts", line: 12 }],
       },
     });
 

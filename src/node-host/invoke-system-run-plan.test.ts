@@ -101,9 +101,7 @@ function withFakeRuntimeBins<T>(params: {
   tmpPrefix?: string;
   run: () => T;
 }): T {
-  const tmp = fs.mkdtempSync(
-    path.join(os.tmpdir(), params.tmpPrefix ?? "chainbreaker-runtime-bins-"),
-  );
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), params.tmpPrefix ?? "chainbreaker-runtime-bins-"));
   const binDir = path.join(tmp, "bin");
   fs.mkdirSync(binDir, { recursive: true });
   for (const binName of params.binNames) {
@@ -195,7 +193,9 @@ const unsafeRuntimeInvocationCases: UnsafeRuntimeInvocationCase[] = [
     command: ["tsx", "--eval", "console.log('SAFE')"],
   },
   {
+    name: "rejects node inline import operands that cannot be bound to one stable file",
     binName: "node",
+    tmpPrefix: "chainbreaker-node-import-inline-",
     command: ["node", "--import=./preload.mjs", "./main.mjs"],
     setup: (tmp) => {
       fs.writeFileSync(path.join(tmp, "main.mjs"), 'console.log("SAFE")\n');
@@ -250,6 +250,7 @@ const unsafeRuntimeInvocationCases: UnsafeRuntimeInvocationCase[] = [
   {
     name: "rejects shell payloads that hide mutable interpreter scripts",
     binName: "node",
+    tmpPrefix: "chainbreaker-inline-shell-node-",
     command: ["sh", "-lc", "node ./run.js"],
     setup: (tmp) => {
       fs.writeFileSync(path.join(tmp, "run.js"), 'console.log("SAFE")\n');

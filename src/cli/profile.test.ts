@@ -61,14 +61,7 @@ describe("parseCliProfileArgs", () => {
   });
 
   it("parses interleaved --profile after the command token", () => {
-    const res = parseCliProfileArgs([
-      "node",
-      "chainbreaker",
-      "status",
-      "--profile",
-      "work",
-      "--deep",
-    ]);
+    const res = parseCliProfileArgs(["node", "chainbreaker", "status", "--profile", "work", "--deep"]);
     if (!res.ok) {
       throw new Error(res.error);
     }
@@ -198,9 +191,9 @@ describe("formatCliCommand", () => {
   });
 
   it("trims whitespace from profile", () => {
-    expect(
-      formatCliCommand("chainbreaker doctor --fix", { CHAINBREAKER_PROFILE: "  jbchainbreaker  " }),
-    ).toBe("chainbreaker --profile jbchainbreaker doctor --fix");
+    expect(formatCliCommand("chainbreaker doctor --fix", { CHAINBREAKER_PROFILE: "  jbchainbreaker  " })).toBe(
+      "chainbreaker --profile jbchainbreaker doctor --fix",
+    );
   });
 
   it("handles command with no args after chainbreaker", () => {
@@ -217,9 +210,7 @@ describe("formatCliCommand", () => {
 
   it("inserts --container when a container hint is set", () => {
     expect(
-      formatCliCommand("chainbreaker gateway status --deep", {
-        CHAINBREAKER_CONTAINER_HINT: "demo",
-      }),
+      formatCliCommand("chainbreaker gateway status --deep", { CHAINBREAKER_CONTAINER_HINT: "demo" }),
     ).toBe("chainbreaker --container demo gateway status --deep");
   });
 
@@ -237,9 +228,7 @@ describe("formatCliCommand", () => {
       "chainbreaker update",
     );
     expect(
-      formatCliCommand("pnpm chainbreaker update --channel beta", {
-        CHAINBREAKER_CONTAINER_HINT: "demo",
-      }),
+      formatCliCommand("pnpm chainbreaker update --channel beta", { CHAINBREAKER_CONTAINER_HINT: "demo" }),
     ).toBe("pnpm chainbreaker update --channel beta");
   });
 });

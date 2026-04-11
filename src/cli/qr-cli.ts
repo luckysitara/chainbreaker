@@ -101,8 +101,7 @@ export function registerQrCli(program: Command) {
     .description("Generate an iOS pairing QR code and setup code")
     .addHelpText(
       "after",
-      () =>
-        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/qr", "docs.chainbreaker.ai/cli/qr")}\n`,
+      () => `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/qr", "docs.chainbreaker.ai/cli/qr")}\n`,
     )
     .option(
       "--remote",
@@ -235,6 +234,7 @@ export function registerQrCli(program: Command) {
           return;
         }
 
+        const lines: string[] = [
           theme.heading("Pairing QR"),
           "Scan this with the Chainbreaker iOS app (Onboarding -> Scan QR).",
           "",
@@ -242,8 +242,10 @@ export function registerQrCli(program: Command) {
 
         if (opts.ascii !== false) {
           const qrAscii = await renderQrAscii(setupCode);
+          lines.push(qrAscii.trimEnd(), "");
         }
 
+        lines.push(
           `${theme.muted("Setup code:")} ${setupCode}`,
           `${theme.muted("Gateway:")} ${resolved.payload.url}`,
           `${theme.muted("Auth:")} ${resolved.authLabel}`,
@@ -254,6 +256,7 @@ export function registerQrCli(program: Command) {
           `  ${theme.command("chainbreaker devices approve <requestId>")}`,
         );
 
+        defaultRuntime.log(lines.join("\n"));
       } catch (err) {
         defaultRuntime.error(String(err));
         defaultRuntime.exit(1);

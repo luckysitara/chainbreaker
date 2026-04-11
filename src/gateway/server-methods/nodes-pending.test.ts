@@ -57,6 +57,7 @@ describe("node.pending handlers", () => {
   it("drains pending work for the connected node identity", async () => {
     mocks.drainNodePendingWork.mockReturnValue({
       revision: 2,
+      items: [{ id: "baseline-status", type: "status.request", priority: "default" }],
       hasMore: false,
     });
     const respond = vi.fn();
@@ -79,6 +80,7 @@ describe("node.pending handlers", () => {
       {
         nodeId: "ios-node-1",
         revision: 2,
+        items: [{ id: "baseline-status", type: "status.request", priority: "default" }],
         hasMore: false,
       },
       undefined,

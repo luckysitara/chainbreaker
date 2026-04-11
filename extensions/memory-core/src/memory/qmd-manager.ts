@@ -2,6 +2,8 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import readline from "node:readline";
+import chokidar, { type FSWatcher } from "chokidar";
 import { withFileLock } from "chainbreaker/plugin-sdk/file-lock";
 import {
   createSubsystemLogger,
@@ -39,7 +41,6 @@ import {
   type ResolvedQmdConfig,
   type ResolvedQmdMcporterConfig,
 } from "chainbreaker/plugin-sdk/memory-core-host-engine-storage";
-import chokidar, { type FSWatcher } from "chokidar";
 
 type SqliteDatabase = import("node:sqlite").DatabaseSync;
 
@@ -720,9 +721,12 @@ export class QmdMemoryManager implements MemorySearchManager {
 
     let currentName: string | null = null;
     for (const rawLine of output.split(/\r?\n/)) {
+      const line = rawLine.trimEnd();
+      if (!line.trim()) {
         currentName = null;
         continue;
       }
+      const collectionLine = /^\s*([a-z0-9._-]+)\s+\(qmd:\/\/[^)]+\)\s*$/i.exec(line);
       if (collectionLine) {
         currentName = collectionLine[1];
         if (!listed.has(currentName)) {
@@ -730,8 +734,11 @@ export class QmdMemoryManager implements MemorySearchManager {
         }
         continue;
       }
+      if (/^\s*collections\b/i.test(line)) {
         continue;
       }
+      const bareNameLine = /^\s*([a-z0-9._-]+)\s*$/i.exec(line);
+      if (bareNameLine && !line.includes(":")) {
         currentName = bareNameLine[1];
         if (!listed.has(currentName)) {
           listed.set(currentName, {});
@@ -741,12 +748,14 @@ export class QmdMemoryManager implements MemorySearchManager {
       if (!currentName) {
         continue;
       }
+      const patternLine = /^\s*(?:pattern|mask)\s*:\s*(.+?)\s*$/i.exec(line);
       if (patternLine) {
         const existing = listed.get(currentName) ?? {};
         existing.pattern = patternLine[1].trim();
         listed.set(currentName, existing);
         continue;
       }
+      const pathLine = /^\s*path\s*:\s*(.+?)\s*$/i.exec(line);
       if (pathLine) {
         const existing = listed.get(currentName) ?? {};
         existing.path = pathLine[1].trim();
@@ -1009,6 +1018,7 @@ export class QmdMemoryManager implements MemorySearchManager {
         continue;
       }
       const snippet = entry.snippet?.slice(0, this.qmd.limits.maxSnippetChars) ?? "";
+      const lines = this.resolveSnippetLines(entry, snippet);
       const score = typeof entry.score === "number" ? entry.score : 0;
       const minScore = opts?.minScore ?? 0;
       if (score < minScore) {
@@ -1016,6 +1026,8 @@ export class QmdMemoryManager implements MemorySearchManager {
       }
       results.push({
         path: doc.rel,
+        startLine: lines.startLine,
+        endLine: lines.endLine,
         score,
         snippet,
         source: doc.source,
@@ -1045,6 +1057,7 @@ export class QmdMemoryManager implements MemorySearchManager {
   async readFile(params: {
     relPath: string;
     from?: number;
+    lines?: number;
   }): Promise<{ text: string; path: string }> {
     const relPath = params.relPath?.trim();
     if (!relPath) {
@@ -1058,6 +1071,8 @@ export class QmdMemoryManager implements MemorySearchManager {
     if (statResult.missing) {
       return { text: "", path: relPath };
     }
+    if (params.from !== undefined || params.lines !== undefined) {
+      const partial = await this.readPartialText(absPath, params.from, params.lines);
       if (partial.missing) {
         return { text: "", path: relPath };
       }
@@ -1067,9 +1082,13 @@ export class QmdMemoryManager implements MemorySearchManager {
     if (full.missing) {
       return { text: "", path: relPath };
     }
+    if (!params.from && !params.lines) {
       return { text: full.text, path: relPath };
     }
+    const lines = full.text.split("\n");
     const start = Math.max(1, params.from ?? 1);
+    const count = Math.max(1, params.lines ?? lines.length);
+    const slice = lines.slice(start - 1, start - 1 + count);
     return { text: slice.join("\n"), path: relPath };
   }
 
@@ -1675,6 +1694,7 @@ export class QmdMemoryManager implements MemorySearchManager {
           // QMD 1.1+ "query" tool accepts typed sub-queries via `searches` array.
           // Derive sub-query types from searchCommand to respect searchMode config.
           // Note: minScore is intentionally omitted — QMD 1.1+'s query tool uses
+          // its own reranking pipeline and does not accept a minScore parameter.
           searches: this.buildV2Searches(params.query, params.searchCommand),
           limit: params.limit,
         }
@@ -1775,6 +1795,8 @@ export class QmdMemoryManager implements MemorySearchManager {
         collection: typeof item.collection === "string" ? item.collection : undefined,
         file: typeof item.file === "string" ? item.file : undefined,
         body: typeof item.body === "string" ? item.body : undefined,
+        startLine: this.normalizeSnippetLine(item.start_line ?? item.startLine),
+        endLine: this.normalizeSnippetLine(item.end_line ?? item.endLine),
       });
     }
     return out;
@@ -1783,8 +1805,10 @@ export class QmdMemoryManager implements MemorySearchManager {
   private async readPartialText(
     absPath: string,
     from?: number,
+    lines?: number,
   ): Promise<{ missing: true } | { missing: false; text: string }> {
     const start = Math.max(1, from ?? 1);
+    const count = Math.max(1, lines ?? Number.POSITIVE_INFINITY);
     let handle;
     try {
       handle = await fs.open(absPath);
@@ -1795,12 +1819,14 @@ export class QmdMemoryManager implements MemorySearchManager {
       throw err;
     }
     const stream = handle.createReadStream({ encoding: "utf-8" });
+    const rl = readline.createInterface({
       input: stream,
       crlfDelay: Infinity,
     });
     const selected: string[] = [];
     let index = 0;
     try {
+      for await (const line of rl) {
         index += 1;
         if (index < start) {
           continue;
@@ -1808,6 +1834,7 @@ export class QmdMemoryManager implements MemorySearchManager {
         if (selected.length >= count) {
           break;
         }
+        selected.push(line);
       }
     } finally {
       rl.close();
@@ -2192,6 +2219,8 @@ export class QmdMemoryManager implements MemorySearchManager {
     if (headerLines) {
       return headerLines;
     }
+    const lines = snippet.split("\n").length;
+    return { startLine: 1, endLine: lines };
   }
 
   private resolveSnippetLines(

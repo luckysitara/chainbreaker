@@ -16,6 +16,7 @@ import {
 
 export type SpawnExit = {
   code: number | null;
+  signal: NodeJS.Signals | null;
   error: Error | null;
 };
 
@@ -240,8 +241,10 @@ export function spawnWithResolvedCommand(
 
 export async function waitForExit(child: ChildProcessWithoutNullStreams): Promise<SpawnExit> {
   // Handle callers that start waiting after the child has already exited.
+  if (child.exitCode !== null || child.signalCode !== null) {
     return {
       code: child.exitCode,
+      signal: child.signalCode,
       error: null,
     };
   }
@@ -257,8 +260,11 @@ export async function waitForExit(child: ChildProcessWithoutNullStreams): Promis
     };
 
     child.once("error", (err) => {
+      finish({ code: null, signal: null, error: err });
     });
 
+    child.once("close", (code, signal) => {
+      finish({ code, signal, error: null });
     });
   });
 }
@@ -272,17 +278,21 @@ export async function spawnAndCollect(
   },
   options?: SpawnCommandOptions,
   runtime?: {
+    signal?: AbortSignal;
   },
 ): Promise<{
   stdout: string;
   stderr: string;
   code: number | null;
+  signal: NodeJS.Signals | null;
   error: Error | null;
 }> {
+  if (runtime?.signal?.aborted) {
     return {
       stdout: "",
       stderr: "",
       code: null,
+      signal: null,
       error: createAbortError(),
     };
   }
@@ -302,6 +312,7 @@ export async function spawnAndCollect(
       // Ignore kill races when child already exited.
     }
     abortKillTimer = setTimeout(() => {
+      if (child.exitCode !== null || child.signalCode !== null) {
         return;
       }
       try {
@@ -312,6 +323,7 @@ export async function spawnAndCollect(
     }, 250);
     abortKillTimer.unref?.();
   };
+  runtime?.signal?.addEventListener("abort", onAbort, { once: true });
 
   try {
     const exit = await waitForExit(child);
@@ -320,9 +332,11 @@ export async function spawnAndCollect(
       stdout,
       stderr,
       code: exit.code,
+      signal: exit.signal,
       error: aborted ? createAbortError() : exit.error,
     };
   } finally {
+    runtime?.signal?.removeEventListener("abort", onAbort);
     if (abortKillTimer) {
       clearTimeout(abortKillTimer);
     }

@@ -208,6 +208,7 @@ describe("ollama setup", () => {
 
     expect(modelIds).toEqual([
       "kimi-k2.5:cloud",
+      "minimax-m2.5:cloud",
       "glm-5:cloud",
       "llama3:8b",
       "glm-4.7-flash",

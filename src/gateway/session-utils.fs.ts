@@ -2,6 +2,7 @@ import fs from "node:fs";
 import { deriveSessionTotalTokens, hasNonzeroUsage, normalizeUsage } from "../agents/usage.js";
 import { jsonUtf8Bytes } from "../infra/json-utf8-bytes.js";
 import { hasInterSessionUserProvenance } from "../sessions/input-provenance.js";
+import { stripInlineDirectiveTagsForDisplay } from "../utils/directive-tags.js";
 import { extractToolCallNames, hasToolCall } from "../utils/transcript-tools.js";
 import { stripEnvelope } from "./chat-sanitize.js";
 import {
@@ -75,9 +76,7 @@ export function attachChainbreakerTranscriptMeta(
   }
   const record = message as Record<string, unknown>;
   const existing =
-    record.__chainbreaker &&
-    typeof record.__chainbreaker === "object" &&
-    !Array.isArray(record.__chainbreaker)
+    record.__chainbreaker && typeof record.__chainbreaker === "object" && !Array.isArray(record.__chainbreaker)
       ? (record.__chainbreaker as Record<string, unknown>)
       : {};
   return {
@@ -101,11 +100,15 @@ export function readSessionMessages(
     return [];
   }
 
+  const lines = fs.readFileSync(filePath, "utf-8").split(/\r?\n/);
   const messages: unknown[] = [];
   let messageSeq = 0;
+  for (const line of lines) {
+    if (!line.trim()) {
       continue;
     }
     try {
+      const parsed = JSON.parse(line);
       if (parsed?.message) {
         messageSeq += 1;
         messages.push(
@@ -135,6 +138,7 @@ export function readSessionMessages(
         });
       }
     } catch {
+      // ignore bad lines
     }
   }
   return messages;
@@ -247,6 +251,7 @@ export function readSessionTitleFieldsFromTranscript(
 
 function extractTextFromContent(content: TranscriptMessage["content"]): string | null {
   if (typeof content === "string") {
+    const normalized = stripInlineDirectiveTagsForDisplay(content).text.trim();
     return normalized || null;
   }
   if (!Array.isArray(content)) {
@@ -257,6 +262,7 @@ function extractTextFromContent(content: TranscriptMessage["content"]): string |
       continue;
     }
     if (part.type === "text" || part.type === "output_text" || part.type === "input_text") {
+      const normalized = stripInlineDirectiveTagsForDisplay(part.text).text.trim();
       if (normalized) {
         return normalized;
       }
@@ -278,9 +284,13 @@ function extractFirstUserMessageFromTranscriptChunk(
   chunk: string,
   opts?: { includeInterSession?: boolean },
 ): string | null {
+  const lines = chunk.split(/\r?\n/).slice(0, MAX_LINES_TO_SCAN);
+  for (const line of lines) {
+    if (!line.trim()) {
       continue;
     }
     try {
+      const parsed = JSON.parse(line);
       const msg = parsed?.message as TranscriptMessage | undefined;
       if (msg?.role !== "user") {
         continue;
@@ -293,6 +303,7 @@ function extractFirstUserMessageFromTranscriptChunk(
         return text;
       }
     } catch {
+      // skip malformed lines
     }
   }
   return null;
@@ -357,9 +368,13 @@ function readLastMessagePreviewFromOpenTranscript(params: {
   fs.readSync(params.fd, buf, 0, readLen, readStart);
 
   const chunk = buf.toString("utf-8");
+  const lines = chunk.split(/\r?\n/).filter((l) => l.trim());
+  const tailLines = lines.slice(-LAST_MSG_MAX_LINES);
 
   for (let i = tailLines.length - 1; i >= 0; i--) {
+    const line = tailLines[i];
     try {
+      const parsed = JSON.parse(line);
       const msg = parsed?.message as TranscriptMessage | undefined;
       if (msg?.role !== "user" && msg?.role !== "assistant") {
         continue;
@@ -427,6 +442,7 @@ function resolvePositiveUsageNumber(value: unknown): number | undefined {
 function extractLatestUsageFromTranscriptChunk(
   chunk: string,
 ): SessionTranscriptUsageSnapshot | null {
+  const lines = chunk.split(/\r?\n/).filter((line) => line.trim().length > 0);
   const snapshot: SessionTranscriptUsageSnapshot = {};
   let sawSnapshot = false;
   let inputTokens = 0;
@@ -440,7 +456,9 @@ function extractLatestUsageFromTranscriptChunk(
   let costUsdTotal = 0;
   let sawCost = false;
 
+  for (const line of lines) {
     try {
+      const parsed = JSON.parse(line) as Record<string, unknown>;
       const message =
         parsed.message && typeof parsed.message === "object" && !Array.isArray(parsed.message)
           ? (parsed.message as Record<string, unknown>)
@@ -520,6 +538,7 @@ function extractLatestUsageFromTranscriptChunk(
         sawCost = true;
       }
     } catch {
+      // skip malformed lines
     }
   }
 
@@ -612,11 +631,13 @@ function truncatePreviewText(text: string, maxChars: number): string {
 
 function extractPreviewText(message: TranscriptPreviewMessage): string | null {
   if (typeof message.content === "string") {
+    const normalized = stripInlineDirectiveTagsForDisplay(message.content).text.trim();
     return normalized ? normalized : null;
   }
   if (Array.isArray(message.content)) {
     const parts = message.content
       .map((entry) =>
+        typeof entry?.text === "string" ? stripInlineDirectiveTagsForDisplay(entry.text).text : "",
       )
       .filter((text) => text.trim().length > 0);
     if (parts.length > 0) {
@@ -624,6 +645,7 @@ function extractPreviewText(message: TranscriptPreviewMessage): string | null {
     }
   }
   if (typeof message.text === "string") {
+    const normalized = stripInlineDirectiveTagsForDisplay(message.text).text.trim();
     return normalized ? normalized : null;
   }
   return null;
@@ -715,10 +737,14 @@ function readRecentMessagesFromTranscript(
     fs.readSync(fd, buf, 0, readLen, readStart);
 
     const chunk = buf.toString("utf-8");
+    const lines = chunk.split(/\r?\n/).filter((l) => l.trim());
+    const tailLines = lines.slice(-PREVIEW_MAX_LINES);
 
     const collected: TranscriptPreviewMessage[] = [];
     for (let i = tailLines.length - 1; i >= 0; i--) {
+      const line = tailLines[i];
       try {
+        const parsed = JSON.parse(line);
         const msg = parsed?.message as TranscriptPreviewMessage | undefined;
         if (msg && typeof msg === "object") {
           collected.push(msg);
@@ -727,6 +753,7 @@ function readRecentMessagesFromTranscript(
           }
         }
       } catch {
+        // skip malformed lines
       }
     }
     return collected.toReversed();

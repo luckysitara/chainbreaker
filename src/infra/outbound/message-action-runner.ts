@@ -369,6 +369,7 @@ async function handleBroadcastAction(
   }
   return {
     kind: "broadcast",
+    channel: targetChannels[0] ?? "discord",
     action: "broadcast",
     handledBy: input.dryRun ? "dry-run" : "core",
     payload: { results },

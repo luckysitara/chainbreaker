@@ -6,6 +6,7 @@ import {
 } from "./frontmatter.js";
 
 describe("parseFrontmatter", () => {
+  it("parses single-line key-value pairs", () => {
     const content = `---
 name: test-hook
 description: "A test hook"
@@ -34,6 +35,7 @@ name: broken
     expect(result).toEqual({});
   });
 
+  it("parses multi-line metadata block with indented JSON", () => {
     const content = `---
 name: session-memory
 description: "Save session context"
@@ -60,6 +62,7 @@ metadata:
     expect(parsed.chainbreaker.events).toEqual(["command:new"]);
   });
 
+  it("parses multi-line metadata with complex nested structure", () => {
     const content = `---
 name: command-logger
 description: "Log all command events"
@@ -86,6 +89,7 @@ metadata:
     expect(parsed.chainbreaker.install[0].kind).toBe("bundled");
   });
 
+  it("handles single-line metadata (inline JSON)", () => {
     const content = `---
 name: simple-hook
 metadata: {"chainbreaker": {"events": ["test"]}}
@@ -96,6 +100,7 @@ metadata: {"chainbreaker": {"events": ["test"]}}
     expect(result.metadata).toBe('{"chainbreaker": {"events": ["test"]}}');
   });
 
+  it("handles mixed single-line and multi-line values", () => {
     const content = `---
 name: mixed-hook
 description: "A hook with mixed values"
@@ -128,12 +133,14 @@ description: 'single-quoted'
     expect(result.description).toBe("single-quoted");
   });
 
+  it("handles CRLF line endings", () => {
     const content = "---\r\nname: test\r\ndescription: crlf\r\n---\r\n";
     const result = parseFrontmatter(content);
     expect(result.name).toBe("test");
     expect(result.description).toBe("crlf");
   });
 
+  it("handles CR line endings", () => {
     const content = "---\rname: test\rdescription: cr\r---\r";
     const result = parseFrontmatter(content);
     expect(result.name).toBe("test");

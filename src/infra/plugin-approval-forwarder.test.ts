@@ -18,6 +18,7 @@ const PLUGIN_TARGETS_CFG = {
     plugin: {
       enabled: true,
       mode: "targets",
+      targets: [{ channel: "slack", to: "U123" }],
     },
   },
 } as ChainbreakerConfig;
@@ -136,6 +137,7 @@ describe("plugin approval forwarding", () => {
     it("returns false when exec enabled but plugin disabled", async () => {
       const cfg = {
         approvals: {
+          exec: { enabled: true, mode: "targets", targets: [{ channel: "slack", to: "U123" }] },
           plugin: { enabled: false },
         },
       } as ChainbreakerConfig;
@@ -151,6 +153,7 @@ describe("plugin approval forwarding", () => {
           plugin: {
             enabled: true,
             mode: "targets",
+            targets: [{ channel: "slack", to: "U123" }],
           },
         },
       } as ChainbreakerConfig;
@@ -177,6 +180,7 @@ describe("plugin approval forwarding", () => {
         ChannelPlugin,
         "id" | "meta" | "capabilities" | "config" | "approvals"
       > = {
+        ...createChannelTestPluginBase({ id: "slack" as ChannelPlugin["id"] }),
         approvals: {
           render: {
             plugin: {
@@ -186,6 +190,7 @@ describe("plugin approval forwarding", () => {
         },
       };
       const registry = createTestRegistry([
+        { pluginId: "slack", plugin: adapterPlugin, source: "test" },
       ]);
       setActivePluginRegistry(registry);
 
@@ -206,12 +211,14 @@ describe("plugin approval forwarding", () => {
         ChannelPlugin,
         "id" | "meta" | "capabilities" | "config" | "outbound"
       > = {
+        ...createChannelTestPluginBase({ id: "slack" as ChannelPlugin["id"] }),
         outbound: {
           deliveryMode: "direct",
           beforeDeliverPayload,
         },
       };
       const registry = createTestRegistry([
+        { pluginId: "slack", plugin: adapterPlugin, source: "test" },
       ]);
       setActivePluginRegistry(registry);
 
@@ -229,6 +236,7 @@ describe("plugin approval forwarding", () => {
         ChannelPlugin,
         "id" | "meta" | "capabilities" | "config" | "approvals"
       > = {
+        ...createChannelTestPluginBase({ id: "slack" as ChannelPlugin["id"] }),
         approvals: {
           render: {
             plugin: {
@@ -238,6 +246,7 @@ describe("plugin approval forwarding", () => {
         },
       };
       const registry = createTestRegistry([
+        { pluginId: "slack", plugin: adapterPlugin, source: "test" },
       ]);
       setActivePluginRegistry(registry);
 

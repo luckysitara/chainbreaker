@@ -244,6 +244,7 @@ describe("isCloudflareOrHtmlErrorPage", () => {
     expect(isCloudflareOrHtmlErrorPage(htmlError)).toBe(true);
   });
 
+  it("does not flag non-HTML status lines", () => {
     expect(isCloudflareOrHtmlErrorPage("500 Internal Server Error")).toBe(false);
     expect(isCloudflareOrHtmlErrorPage("429 Too Many Requests")).toBe(false);
   });
@@ -571,6 +572,7 @@ describe("classifyFailoverReasonFromHttpStatus", () => {
     );
   });
 
+  it("preserves explicit billing and auth signals on HTTP 410", () => {
     expect(classifyFailoverReasonFromHttpStatus(410, "invalid_api_key")).toBe("auth_permanent");
     expect(classifyFailoverReasonFromHttpStatus(410, "authentication failed")).toBe("auth");
     expect(classifyFailoverReasonFromHttpStatus(410, "insufficient credits")).toBe("billing");
@@ -592,6 +594,7 @@ describe("classifyFailoverReason", () => {
     expect(classifyFailoverReason("410 conversation expired")).toBe("session_expired");
   });
 
+  it("keeps explicit billing and auth signals on 410 text", () => {
     expect(classifyFailoverReason("HTTP 410: invalid_api_key")).toBe("auth_permanent");
     expect(classifyFailoverReason("HTTP 410: authentication failed")).toBe("auth");
     expect(classifyFailoverReason("HTTP 410: insufficient credits")).toBe("billing");
@@ -707,6 +710,7 @@ describe("classifyFailoverReasonFromHttpStatus – 402 temporary limits", () => 
     }
   });
 
+  it("keeps 402 as billing when explicit billing signals are present", () => {
     expect(
       classifyFailoverReasonFromHttpStatus(
         402,
@@ -817,6 +821,7 @@ describe("classifyFailoverReason", () => {
       ),
     ).toBe("billing");
     expect(classifyFailoverReason(INSUFFICIENT_QUOTA_PAYLOAD)).toBe("billing");
+    expect(classifyFailoverReason("deadline exceeded")).toBe("timeout");
     expect(classifyFailoverReason("request ended without sending any chunks")).toBe("timeout");
     expect(classifyFailoverReason("Connection error.")).toBe("timeout");
     expect(classifyFailoverReason("fetch failed")).toBe("timeout");
@@ -895,6 +900,7 @@ describe("classifyFailoverReason", () => {
     expect(classifyFailoverReason("key has been disabled")).toBe("auth_permanent");
     expect(classifyFailoverReason("account has been deactivated")).toBe("auth_permanent");
   });
+  it("classifies JSON api_error with transient signal as timeout", () => {
     expect(
       classifyFailoverReason(
         '{"type":"error","error":{"type":"api_error","message":"Internal server error"}}',

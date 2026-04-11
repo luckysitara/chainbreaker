@@ -64,6 +64,7 @@ const SHARED_CHANNEL_CONFIG_KEYS = new Set(["defaults", "modelByChannel"]);
 /**
  * Resolve the channel config keys owned by a plugin during uninstall.
  * - `channelIds === undefined`: fall back to the plugin id for backward compatibility.
+ * - `channelIds === []`: explicit "owns no channels" signal; remove nothing.
  */
 export function resolveUninstallChannelConfigKeys(
   pluginId: string,

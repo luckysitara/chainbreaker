@@ -173,6 +173,7 @@ export type ExecProcessFailureKind =
   | "shell-not-executable"
   | "overall-timeout"
   | "no-output-timeout"
+  | "signal"
   | "aborted"
   | "runtime-error";
 
@@ -310,6 +311,7 @@ function maybeNotifyOnExit(session: ProcessSession, status: "completed" | "faile
   }
   session.exitNotified = true;
   const exitLabel = session.exitSignal
+    ? `signal ${session.exitSignal}`
     : `code ${session.exitCode ?? 0}`;
   const output = compactNotifyOutput(
     tail(session.tail || session.aggregated || "", DEFAULT_NOTIFY_TAIL_CHARS),
@@ -344,11 +346,24 @@ export function buildApprovalPendingMessage(params: {
     fence += "`";
   }
   const commandBlock = `${fence}sh\n${params.command}\n${fence}`;
+  const lines: string[] = [];
   const warningText = params.warningText?.trim();
   if (warningText) {
+    lines.push(warningText, "");
   }
+  lines.push(`Approval required (id ${params.approvalSlug}, full ${params.approvalId}).`);
+  lines.push(`Host: ${params.host}`);
   if (params.nodeId) {
+    lines.push(`Node: ${params.nodeId}`);
   }
+  lines.push(`CWD: ${params.cwd}`);
+  lines.push("Command:");
+  lines.push(commandBlock);
+  lines.push("Mode: foreground (interactive approvals available).");
+  lines.push("Background mode requires pre-approved policy (allow-always or ask=off).");
+  lines.push(`Reply with: /approve ${params.approvalSlug} allow-once|allow-always|deny`);
+  lines.push("If the short code is ambiguous, use the full id in /approve.");
+  return lines.join("\n");
 }
 
 export function resolveApprovalRunningNoticeMs(value?: number) {
@@ -393,6 +408,7 @@ function classifyExecFailureKind(params: {
     return "no-output-timeout";
   }
   if (params.exitSignal != null) {
+    return "signal";
   }
   return "aborted";
 }
@@ -413,6 +429,8 @@ export function formatExecFailureReason(params: {
         : "Command timed out. If this command is expected to take longer, re-run with a higher timeout (e.g., exec timeout=300).";
     case "no-output-timeout":
       return "Command timed out waiting for output";
+    case "signal":
+      return `Command aborted by signal ${params.exitSignal}`;
     case "aborted":
       return "Command aborted before exit code was captured";
   }

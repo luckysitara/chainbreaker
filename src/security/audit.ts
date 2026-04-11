@@ -9,6 +9,7 @@ import { resolveConfigPath, resolveStateDir } from "../config/paths.js";
 import { hasConfiguredSecretInput } from "../config/types.secrets.js";
 import { resolveGatewayAuth } from "../gateway/auth.js";
 import { type ExecApprovalsFile, loadExecApprovals } from "../infra/exec-approvals.js";
+import { isInterpreterLikeAllowlistPattern } from "../infra/exec-inline-eval.js";
 import {
   listInterpreterLikeSafeBins,
   resolveMergedSafeBinProfileFixtures,
@@ -894,6 +895,7 @@ function collectElevatedFindings(cfg: ChainbreakerConfig): SecurityAuditFinding[
 function collectExecRuntimeFindings(cfg: ChainbreakerConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
   const globalExecHost = cfg.tools?.exec?.host;
+  const globalStrictInlineEval = cfg.tools?.exec?.strictInlineEval === true;
   const defaultSandboxMode = resolveSandboxConfigForAgent(cfg).mode;
   const defaultHostIsExplicitSandbox = globalExecHost === "sandbox";
   const approvals = loadExecApprovals();
@@ -1006,15 +1008,22 @@ function collectExecRuntimeFindings(cfg: ChainbreakerConfig): SecurityAuditFindi
 
   const interpreterAllowlistHits = collectInterpreterAllowlistHits({
     approvals,
+    strictInlineEvalForAgentId: (agentId) => {
       if (!agentId || agentId === "*" || agentId === DEFAULT_AGENT_ID) {
+        return globalStrictInlineEval;
       }
       const agent = agents.find((entry) => entry?.id === agentId);
+      return agent?.tools?.exec?.strictInlineEval === true || globalStrictInlineEval;
     },
   });
   if (interpreterAllowlistHits.length > 0) {
     findings.push({
+      checkId: "tools.exec.allowlist_interpreter_without_strict_inline_eval",
       severity: "warn",
+      title: "Interpreter allowlist entries are missing strictInlineEval hardening",
+      detail: `Interpreter/runtime allowlist entries were found without strictInlineEval enabled:\n${interpreterAllowlistHits.map((entry) => `- ${entry}`).join("\n")}`,
       remediation:
+        "Set tools.exec.strictInlineEval=true (or per-agent tools.exec.strictInlineEval=true) when allowlisting interpreters like python, node, ruby, perl, php, lua, or osascript.",
     });
   }
 
@@ -1241,9 +1250,11 @@ function collectAutoAllowSkillsHits(approvals: ExecApprovalsFile): string[] {
 
 function collectInterpreterAllowlistHits(params: {
   approvals: ExecApprovalsFile;
+  strictInlineEvalForAgentId: (agentId: string | undefined) => boolean;
 }): string[] {
   const hits: string[] = [];
   for (const [agentId, agent] of Object.entries(params.approvals.agents ?? {})) {
+    if (!agent || params.strictInlineEvalForAgentId(agentId)) {
       continue;
     }
     for (const entry of agent.allowlist ?? []) {

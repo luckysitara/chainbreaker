@@ -860,6 +860,7 @@ describe("runReplyAgent block streaming", () => {
 
     const typing = createMockTypingController();
     const sessionCtx = {
+      Provider: "discord",
       OriginatingTo: "channel:C1",
       AccountId: "primary",
       MessageSid: "msg",
@@ -872,6 +873,7 @@ describe("runReplyAgent block streaming", () => {
       run: {
         sessionId: "session",
         sessionKey: "main",
+        messageProvider: "discord",
         sessionFile: "/tmp/session.jsonl",
         workspaceDir: "/tmp",
         config: {
@@ -960,6 +962,7 @@ describe("runReplyAgent block streaming", () => {
 
     const typing = createMockTypingController();
     const sessionCtx = {
+      Provider: "discord",
       OriginatingTo: "channel:C1",
       AccountId: "primary",
       MessageSid: "msg",
@@ -972,6 +975,7 @@ describe("runReplyAgent block streaming", () => {
       run: {
         sessionId: "session",
         sessionKey: "main",
+        messageProvider: "discord",
         sessionFile: "/tmp/session.jsonl",
         workspaceDir: "/tmp",
         config: {
@@ -1132,6 +1136,7 @@ describe("runReplyAgent claude-cli routing", () => {
 
 describe("runReplyAgent messaging tool suppression", () => {
   function createRun(
+    messageProvider = "slack",
     opts: { storePath?: string; sessionKey?: string } = {},
   ) {
     const typing = createMockTypingController();
@@ -1197,9 +1202,11 @@ describe("runReplyAgent messaging tool suppression", () => {
     runEmbeddedPiAgentMock.mockResolvedValueOnce({
       payloads: [{ text: "hello world!" }],
       messagingToolSentTexts: ["different message"],
+      messagingToolSentTargets: [{ tool: "slack", provider: "slack", to: "channel:C1" }],
       meta: {},
     });
 
+    const result = await createRun("slack");
 
     expect(result).toBeUndefined();
   });
@@ -1208,9 +1215,11 @@ describe("runReplyAgent messaging tool suppression", () => {
     runEmbeddedPiAgentMock.mockResolvedValueOnce({
       payloads: [{ text: "hello world!" }],
       messagingToolSentTexts: ["different message"],
+      messagingToolSentTargets: [{ tool: "discord", provider: "discord", to: "channel:C1" }],
       meta: {},
     });
 
+    const result = await createRun("slack");
 
     expect(result).toMatchObject({ text: "hello world!" });
   });
@@ -1219,9 +1228,11 @@ describe("runReplyAgent messaging tool suppression", () => {
     runEmbeddedPiAgentMock.mockResolvedValueOnce({
       payloads: [{ text: "hello world!" }],
       messagingToolSentTexts: ["hello world!"],
+      messagingToolSentTargets: [{ tool: "discord", provider: "discord", to: "channel:C1" }],
       meta: {},
     });
 
+    const result = await createRun("slack");
 
     expect(result).toMatchObject({ text: "hello world!" });
   });
@@ -1232,6 +1243,8 @@ describe("runReplyAgent messaging tool suppression", () => {
       messagingToolSentTexts: ["different message"],
       messagingToolSentTargets: [
         {
+          tool: "slack",
+          provider: "slack",
           to: "channel:C1",
           accountId: "alt",
         },
@@ -1239,6 +1252,7 @@ describe("runReplyAgent messaging tool suppression", () => {
       meta: {},
     });
 
+    const result = await createRun("slack");
 
     expect(result).toMatchObject({ text: "hello world!" });
   });
@@ -1255,6 +1269,7 @@ describe("runReplyAgent messaging tool suppression", () => {
     runEmbeddedPiAgentMock.mockResolvedValueOnce({
       payloads: [{ text: "hello world!" }],
       messagingToolSentTexts: ["different message"],
+      messagingToolSentTargets: [{ tool: "slack", provider: "slack", to: "channel:C1" }],
       meta: {
         agentMeta: {
           usage: { input: 10, output: 5 },
@@ -1264,6 +1279,7 @@ describe("runReplyAgent messaging tool suppression", () => {
       },
     });
 
+    const result = await createRun("slack", { storePath, sessionKey });
 
     expect(result).toBeUndefined();
     const store = loadSessionStore(storePath, { skipCache: true });
@@ -1286,6 +1302,7 @@ describe("runReplyAgent messaging tool suppression", () => {
     runEmbeddedPiAgentMock.mockResolvedValueOnce({
       payloads: [{ text: "hello world!" }],
       messagingToolSentTexts: ["different message"],
+      messagingToolSentTargets: [{ tool: "slack", provider: "slack", to: "channel:C1" }],
       meta: {
         agentMeta: {
           usage: { input: 10, output: 5 },
@@ -1296,6 +1313,7 @@ describe("runReplyAgent messaging tool suppression", () => {
       },
     });
 
+    const result = await createRun("slack", { storePath, sessionKey });
 
     expect(result).toBeUndefined();
     const store = loadSessionStore(storePath, { skipCache: true });
@@ -1321,6 +1339,7 @@ describe("runReplyAgent messaging tool suppression", () => {
     runEmbeddedPiAgentMock.mockResolvedValueOnce({
       payloads: [{ text: "hello world!" }],
       messagingToolSentTexts: ["different message"],
+      messagingToolSentTargets: [{ tool: "slack", provider: "slack", to: "channel:C1" }],
       meta: {
         agentMeta: {
           promptTokens: 41_000,
@@ -1330,6 +1349,7 @@ describe("runReplyAgent messaging tool suppression", () => {
       },
     });
 
+    const result = await createRun("slack", { storePath, sessionKey });
 
     expect(result).toBeUndefined();
     const store = loadSessionStore(storePath, { skipCache: true });
@@ -1867,6 +1887,7 @@ describe("runReplyAgent billing error classification", () => {
   // Billing errors from providers like OpenRouter can contain token/size wording that
   // matches context overflow heuristics. This test verifies the final user-visible
   // message is the billing-specific one, not the "Context overflow" fallback.
+  it("returns billing message for mixed-signal error (billing text + overflow patterns)", async () => {
     runEmbeddedPiAgentMock.mockRejectedValueOnce(
       new Error("402 Payment Required: request token limit exceeded for this billing plan"),
     );

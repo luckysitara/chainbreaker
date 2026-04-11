@@ -41,13 +41,16 @@ describe("MemoryIndexManager.readFile", () => {
     const relPath = "memory/2026-02-20.md";
     const absPath = path.join(workspaceDir, relPath);
     await fs.mkdir(path.dirname(absPath), { recursive: true });
+    await fs.writeFile(absPath, ["line 1", "line 2", "line 3"].join("\n"), "utf-8");
 
     const result = await readMemoryFile({
       workspaceDir,
       extraPaths: [],
       relPath,
       from: 2,
+      lines: 1,
     });
+    expect(result).toEqual({ text: "line 2", path: relPath });
   });
 
   it("returns empty text when the requested slice is past EOF", async () => {
@@ -61,6 +64,7 @@ describe("MemoryIndexManager.readFile", () => {
       extraPaths: [],
       relPath,
       from: 10,
+      lines: 5,
     });
     expect(result).toEqual({ text: "", path: relPath });
   });

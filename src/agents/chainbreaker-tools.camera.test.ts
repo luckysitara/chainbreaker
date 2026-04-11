@@ -213,6 +213,7 @@ describe("nodes camera_snap", () => {
     expectSingleImage(result, { mimeType: "image/jpeg" });
   });
 
+  it("omits inline base64 image blocks when model has no vision", async () => {
     setupNodeInvokeMock({
       invokePayload: JPG_PAYLOAD,
     });
@@ -381,6 +382,7 @@ describe("nodes photos_latest", () => {
     expect(result.details).toEqual([]);
   });
 
+  it("returns MEDIA paths and no inline images when model has no vision", async () => {
     setupPhotosLatestMock({ remoteIp: "198.51.100.42" });
 
     const result = await executePhotosLatest({ modelHasVision: false });
@@ -397,6 +399,7 @@ describe("nodes photos_latest", () => {
     expect(expectFirstMediaUrl(result)).toMatch(/chainbreaker-camera-snap-.*\.jpg$/);
   });
 
+  it("includes inline image blocks when model has vision", async () => {
     setupPhotosLatestMock();
 
     const result = await executePhotosLatest({ modelHasVision: true });

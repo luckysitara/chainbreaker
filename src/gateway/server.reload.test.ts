@@ -56,22 +56,26 @@ const hoisted = vi.hoisted(() => {
           lastError: null,
           mode: null,
         },
+        discord: {
           running: false,
           lastStartAt: null,
           lastStopAt: null,
           lastError: null,
         },
+        slack: {
           running: false,
           lastStartAt: null,
           lastStopAt: null,
           lastError: null,
         },
+        signal: {
           running: false,
           lastStartAt: null,
           lastStopAt: null,
           lastError: null,
           baseUrl: null,
         },
+        imessage: {
           running: false,
           lastStartAt: null,
           lastStopAt: null,
@@ -89,6 +93,10 @@ const hoisted = vi.hoisted(() => {
       providerAccounts: {
         whatsapp: {},
         telegram: {},
+        discord: {},
+        slack: {},
+        signal: {},
+        imessage: {},
         msteams: {},
       },
     })),
@@ -440,6 +448,7 @@ describe("gateway hot reload", () => {
     );
   }
 
+  it("applies hot reload actions and emits restart signal", async () => {
     await withGatewayServer(async () => {
       const onHotReload = hoisted.getOnHotReload();
       expect(onHotReload).toBeTypeOf("function");
@@ -455,6 +464,9 @@ describe("gateway hot reload", () => {
         web: { enabled: true },
         channels: {
           telegram: { botToken: "token" },
+          discord: { token: "token" },
+          signal: { account: "+15550000000" },
+          imessage: { enabled: true },
         },
       };
 
@@ -466,6 +478,9 @@ describe("gateway hot reload", () => {
             "agents.defaults.heartbeat.every",
             "web.enabled",
             "channels.telegram.botToken",
+            "channels.discord.token",
+            "channels.signal.account",
+            "channels.imessage.enabled",
           ],
           restartGateway: false,
           restartReasons: [],
@@ -474,6 +489,7 @@ describe("gateway hot reload", () => {
           restartGmailWatcher: true,
           restartCron: true,
           restartHeartbeat: true,
+          restartChannels: new Set(["whatsapp", "telegram", "discord", "signal", "imessage"]),
           noopPaths: [],
         },
         nextConfig,
@@ -498,10 +514,18 @@ describe("gateway hot reload", () => {
       expect(hoisted.providerManager.startChannel).toHaveBeenCalledWith("whatsapp");
       expect(hoisted.providerManager.stopChannel).toHaveBeenCalledWith("telegram");
       expect(hoisted.providerManager.startChannel).toHaveBeenCalledWith("telegram");
+      expect(hoisted.providerManager.stopChannel).toHaveBeenCalledWith("discord");
+      expect(hoisted.providerManager.startChannel).toHaveBeenCalledWith("discord");
+      expect(hoisted.providerManager.stopChannel).toHaveBeenCalledWith("signal");
+      expect(hoisted.providerManager.startChannel).toHaveBeenCalledWith("signal");
+      expect(hoisted.providerManager.stopChannel).toHaveBeenCalledWith("imessage");
+      expect(hoisted.providerManager.startChannel).toHaveBeenCalledWith("imessage");
 
       const onRestart = hoisted.getOnRestart();
       expect(onRestart).toBeTypeOf("function");
 
+      const signalSpy = vi.fn();
+      process.once("SIGUSR1", signalSpy);
 
       const restartResult = onRestart?.(
         {
@@ -520,6 +544,7 @@ describe("gateway hot reload", () => {
       );
       await Promise.resolve(restartResult);
 
+      expect(signalSpy).toHaveBeenCalledTimes(1);
     });
   });
 

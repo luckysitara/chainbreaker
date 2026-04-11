@@ -234,8 +234,7 @@ vi.doMock("chainbreaker/plugin-sdk/agent-runtime", async (importOriginal) => {
 });
 
 vi.doMock("chainbreaker/plugin-sdk/conversation-runtime", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("chainbreaker/plugin-sdk/conversation-runtime")>();
+  const actual = await importOriginal<typeof import("chainbreaker/plugin-sdk/conversation-runtime")>();
   return {
     ...actual,
     readChannelAllowFromStore: telegramBotDepsForTest.readChannelAllowFromStore,

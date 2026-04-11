@@ -67,6 +67,7 @@ describe("stripReasoningTagsFromText", () => {
         input: "Use the tag like this:\n```\n<think>reasoning</think>\n```\nThat's it!",
       },
       {
+        name: "preserves inline literal think tag documentation",
         input: "The `<think>` tag is used for reasoning. Don't forget the closing `</think>` tag.",
       },
       {
@@ -155,6 +156,7 @@ describe("stripReasoningTagsFromText", () => {
         input: "Start `unclosed <think>hidden</think> end",
         expected: "Start `unclosed  end",
       },
+    ] as const)("handles fenced/inline code edge behavior: %j", (testCase) => {
       expectStrippedCase(testCase);
     });
 

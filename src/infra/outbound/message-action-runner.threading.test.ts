@@ -8,7 +8,9 @@ import {
 const ensureOutboundSessionEntry = vi.fn(async () => undefined);
 const resolveOutboundSessionRoute = vi.fn();
 
+const slackConfig = {
   channels: {
+    slack: {
       botToken: "xoxb-test",
     },
   },
@@ -38,13 +40,17 @@ describe("message action threading helpers", () => {
       name: "exact channel id",
       target: "channel:C123",
       threadTs: "111.222",
+      expectedSessionKey: "agent:main:slack:channel:c123:thread:111.222",
     },
     {
       name: "case-insensitive channel id",
       target: "channel:c123",
       threadTs: "333.444",
+      expectedSessionKey: "agent:main:slack:channel:c123:thread:333.444",
     },
+  ] as const)("prepares outbound routes for slack using $name", async (testCase) => {
     const actionParams: Record<string, unknown> = {
+      channel: "slack",
       target: testCase.target,
       message: "hi",
     };
@@ -59,6 +65,8 @@ describe("message action threading helpers", () => {
     });
 
     const result = await prepareOutboundMirrorRoute({
+      cfg: slackConfig,
+      channel: "slack",
       to: testCase.target,
       actionParams,
       toolContext: {

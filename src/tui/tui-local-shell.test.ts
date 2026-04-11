@@ -18,6 +18,8 @@ function createShellHarness(params?: {
 }) {
   const messages: string[] = [];
   const chatLog = {
+    addSystem: (line: string) => {
+      messages.push(line);
     },
   };
   const tui = { requestRender: vi.fn() };

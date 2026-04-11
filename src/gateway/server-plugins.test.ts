@@ -6,6 +6,7 @@ import type { PluginDiagnostic } from "../plugins/types.js";
 import type { GatewayRequestContext, GatewayRequestOptions } from "./server-methods/types.js";
 
 const loadChainbreakerPlugins = vi.hoisted(() => vi.fn());
+const resolveGatewayStartupPluginIds = vi.hoisted(() => vi.fn(() => ["discord", "telegram"]));
 const applyPluginAutoEnable = vi.hoisted(() => vi.fn(({ config }) => ({ config, changes: [] })));
 const primeConfiguredBindingRegistry = vi.hoisted(() =>
   vi.fn(() => ({ bindingCount: 0, channelCount: 0 })),
@@ -188,6 +189,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   loadChainbreakerPlugins.mockReset();
+  resolveGatewayStartupPluginIds.mockReset().mockReturnValue(["discord", "telegram"]);
   applyPluginAutoEnable.mockReset().mockImplementation(({ config }) => ({ config, changes: [] }));
   primeConfiguredBindingRegistry.mockClear().mockReturnValue({ bindingCount: 0, channelCount: 0 });
   handleGatewayRequest.mockReset();
@@ -250,6 +252,7 @@ describe("loadGatewayPlugins", () => {
     });
     expect(loadChainbreakerPlugins).toHaveBeenCalledWith(
       expect.objectContaining({
+        onlyPluginIds: ["discord", "telegram"],
       }),
     );
   });
@@ -270,6 +273,7 @@ describe("loadGatewayPlugins", () => {
   });
 
   test("loads gateway plugins from the auto-enabled config snapshot", async () => {
+    const autoEnabledConfig = { channels: { slack: { enabled: true } }, autoEnabled: true };
     applyPluginAutoEnable.mockReturnValue({ config: autoEnabledConfig, changes: [] });
     loadChainbreakerPlugins.mockReturnValue(createRegistry([]));
 
@@ -582,6 +586,7 @@ describe("loadGatewayPlugins", () => {
   test("primes configured bindings during gateway startup", async () => {
     loadChainbreakerPlugins.mockReturnValue(createRegistry([]));
     const cfg = {};
+    const autoEnabledConfig = { channels: { slack: { enabled: true } }, autoEnabled: true };
     applyPluginAutoEnable.mockReturnValue({ config: autoEnabledConfig, changes: [] });
     loadGatewayStartupPluginsForTest({ cfg });
 
@@ -654,12 +659,14 @@ describe("loadGatewayPlugins", () => {
       log: createTestLog(),
       coreGatewayHandlers: {},
       baseMethods: [],
+      pluginIds: ["discord"],
       logDiagnostics: false,
     });
 
     expect(resolveGatewayStartupPluginIds).not.toHaveBeenCalled();
     expect(loadChainbreakerPlugins).toHaveBeenCalledWith(
       expect.objectContaining({
+        onlyPluginIds: ["discord"],
       }),
     );
   });

@@ -605,6 +605,7 @@ export async function handleOpenResponsesHttpRequest(
                   renderFileContextBlock({
                     filename: file.filename,
                     content: "[PDF content rendered to images]",
+                    surroundContentWithNewlines: false,
                   }),
                 );
               }

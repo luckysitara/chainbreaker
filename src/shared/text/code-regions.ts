@@ -12,6 +12,8 @@ export function findCodeRegions(text: string): CodeRegion[] {
     regions.push({ start, end: start + match[0].length - match[1].length });
   }
 
+  const inlineRe = /`+[^`]+`+/g;
+  for (const match of text.matchAll(inlineRe)) {
     const start = match.index ?? 0;
     const end = start + match[0].length;
     const insideFenced = regions.some((r) => start >= r.start && end <= r.end);

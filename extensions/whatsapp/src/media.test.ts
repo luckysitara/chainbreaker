@@ -8,6 +8,7 @@ import { mockPinnedHostnameResolution } from "chainbreaker/plugin-sdk/testing";
 import sharp from "sharp";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { captureEnv } from "../../../test/helpers/plugins/env.js";
+import { sendVoiceMessageDiscord } from "../../discord/src/send.js";
 import {
   LocalMediaAccessError,
   loadWebMedia,

@@ -17,6 +17,7 @@ describe("resolveApprovalCommandAuthorization", () => {
     expect(
       resolveApprovalCommandAuthorization({
         cfg: {} as never,
+        channel: "slack",
         senderId: "U123",
         kind: "exec",
       }),
@@ -41,6 +42,7 @@ describe("resolveApprovalCommandAuthorization", () => {
     expect(
       resolveApprovalCommandAuthorization({
         cfg: {} as never,
+        channel: "discord",
         accountId: "work",
         senderId: "123",
         kind: "exec",
@@ -50,6 +52,7 @@ describe("resolveApprovalCommandAuthorization", () => {
     expect(
       resolveApprovalCommandAuthorization({
         cfg: {} as never,
+        channel: "discord",
         accountId: "work",
         senderId: "123",
         kind: "plugin",
@@ -68,6 +71,7 @@ describe("resolveApprovalCommandAuthorization", () => {
     expect(
       resolveApprovalCommandAuthorization({
         cfg: {} as never,
+        channel: "slack",
         accountId: "work",
         senderId: "U123",
         kind: "exec",

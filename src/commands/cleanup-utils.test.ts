@@ -83,6 +83,7 @@ describe("cleanup path removals", () => {
     );
 
     const joinedLogs = runtime.log.mock.calls
+      .map(([line]) => line.replaceAll("\\", "/"))
       .join("\n");
     expect(joinedLogs).toContain("/tmp/chainbreaker-cleanup/state");
     expect(joinedLogs).toContain("/tmp/chainbreaker-cleanup/oauth");
@@ -95,6 +96,7 @@ describe("cleanup path removals", () => {
 
     await removeWorkspaceDirs(workspaces, runtime, { dryRun: true });
 
+    const logs = runtime.log.mock.calls.map(([line]) => line);
     expect(logs).toContain("[dry-run] remove /tmp/chainbreaker-workspace-1");
     expect(logs).toContain("[dry-run] remove /tmp/chainbreaker-workspace-2");
   });

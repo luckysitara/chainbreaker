@@ -75,8 +75,11 @@ function maskToken(token: string): string {
 }
 
 function redactPemBlock(block: string): string {
+  const lines = block.split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) {
     return "***";
   }
+  return `${lines[0]}\n…redacted…\n${lines[lines.length - 1]}`;
 }
 
 function redactMatch(match: string, groups: string[]): string {

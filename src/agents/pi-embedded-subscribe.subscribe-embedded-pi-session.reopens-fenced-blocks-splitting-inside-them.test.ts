@@ -30,8 +30,10 @@ describe("subscribeEmbeddedPiSession", () => {
       },
     });
 
+    const text = "Intro\n\n~~~sh\nline1\nline2\n~~~\n\nOutro";
     emitAssistantTextDeltaAndEnd({ emit, text });
 
     expect(onBlockReply).toHaveBeenCalledTimes(3);
+    expect(onBlockReply.mock.calls[1][0].text).toBe("~~~sh\nline1\nline2\n~~~");
   });
 });

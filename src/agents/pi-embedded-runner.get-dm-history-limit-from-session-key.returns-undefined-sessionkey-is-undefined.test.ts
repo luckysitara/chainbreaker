@@ -50,8 +50,12 @@ describe("getDmHistoryLimitFromSessionKey", () => {
   it("returns historyLimit for channel session kinds when configured", () => {
     const config = {
       channels: {
+        slack: { historyLimit: 10, dmHistoryLimit: 15 },
+        discord: { historyLimit: 8 },
       },
     } as ChainbreakerConfig;
+    expect(getDmHistoryLimitFromSessionKey("agent:beta:slack:channel:c1", config)).toBe(10);
+    expect(getDmHistoryLimitFromSessionKey("discord:channel:123456", config)).toBe(8);
   });
   it("returns undefined for non-dm/channel/group session kinds", () => {
     const config = {
@@ -76,6 +80,10 @@ describe("getDmHistoryLimitFromSessionKey", () => {
     const providers = [
       "telegram",
       "whatsapp",
+      "discord",
+      "slack",
+      "signal",
+      "imessage",
       "msteams",
       "nextcloud-talk",
     ] as const;
@@ -91,6 +99,10 @@ describe("getDmHistoryLimitFromSessionKey", () => {
     const providers = [
       "telegram",
       "whatsapp",
+      "discord",
+      "slack",
+      "signal",
+      "imessage",
       "msteams",
       "nextcloud-talk",
     ] as const;
@@ -133,6 +145,10 @@ describe("getDmHistoryLimitFromSessionKey", () => {
     const providers = [
       "telegram",
       "whatsapp",
+      "discord",
+      "slack",
+      "signal",
+      "imessage",
       "msteams",
       "nextcloud-talk",
     ] as const;
@@ -150,14 +166,20 @@ describe("getDmHistoryLimitFromSessionKey", () => {
   it("returns historyLimit for group sessions", () => {
     const config = {
       channels: {
+        discord: { historyLimit: 15 },
+        slack: { historyLimit: 10 },
       },
     } as ChainbreakerConfig;
+    expect(getDmHistoryLimitFromSessionKey("discord:group:123", config)).toBe(15);
+    expect(getDmHistoryLimitFromSessionKey("agent:main:slack:group:abc", config)).toBe(10);
   });
   it("returns undefined for channel sessions when historyLimit is not configured", () => {
     const config = {
       channels: {
+        discord: { dmHistoryLimit: 10 }, // only dmHistoryLimit, no historyLimit
       },
     } as ChainbreakerConfig;
+    expect(getDmHistoryLimitFromSessionKey("discord:channel:123", config)).toBeUndefined();
   });
 
   describe("backward compatibility", () => {

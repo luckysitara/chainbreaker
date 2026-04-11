@@ -63,6 +63,7 @@ export const finalizeWithFollowup = <T>(
   return value;
 };
 
+export const signalTypingIfNeeded = async (
   payloads: ReplyPayload[],
   typingSignals: TypingSignaler,
 ): Promise<void> => {
@@ -70,5 +71,6 @@ export const finalizeWithFollowup = <T>(
     hasOutboundReplyContent(payload, { trimText: true }),
   );
   if (shouldSignalTyping) {
+    await typingSignals.signalRunStart();
   }
 };

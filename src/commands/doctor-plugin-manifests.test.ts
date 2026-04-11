@@ -125,9 +125,7 @@ describe("doctor plugin manifest legacy contract repair", () => {
       prompter: createPrompter(),
     });
 
-    const next = JSON.parse(
-      fs.readFileSync(path.join(root, "chainbreaker.plugin.json"), "utf-8"),
-    ) as {
+    const next = JSON.parse(fs.readFileSync(path.join(root, "chainbreaker.plugin.json"), "utf-8")) as {
       speechProviders?: string[];
       mediaUnderstandingProviders?: string[];
       contracts?: Record<string, string[]>;

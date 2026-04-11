@@ -15,13 +15,17 @@ vi.mock("../../kill-tree.js", () => ({
 }));
 
 function createStubPty(pid = 1234) {
+  let exitListener: ((event: { exitCode: number; signal?: number }) => void) | null = null;
   return {
     pid,
     write: vi.fn(),
     onData: vi.fn(() => ({ dispose: vi.fn() })),
+    onExit: vi.fn((listener: (event: { exitCode: number; signal?: number }) => void) => {
       exitListener = listener;
       return { dispose: vi.fn() };
     }),
+    kill: (signal?: string) => ptyKillMock(signal),
+    emitExit: (event: { exitCode: number; signal?: number }) => {
       exitListener?.(event);
     },
   };
@@ -51,6 +55,7 @@ describe("createPtyAdapter", () => {
     vi.clearAllMocks();
   });
 
+  it("forwards explicit signals to node-pty kill on non-Windows", async () => {
     const originalPlatform = Object.getOwnPropertyDescriptor(process, "platform");
     Object.defineProperty(process, "platform", { value: "linux", configurable: true });
     try {
@@ -106,6 +111,7 @@ describe("createPtyAdapter", () => {
     expect(settled).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(1);
+    await expect(waitPromise).resolves.toEqual({ code: null, signal: "SIGKILL" });
   });
 
   it("prefers real PTY exit over SIGKILL fallback settle", async () => {
@@ -120,9 +126,12 @@ describe("createPtyAdapter", () => {
 
     const waitPromise = adapter.wait();
     adapter.kill();
+    stub.emitExit({ exitCode: 0, signal: 9 });
 
+    await expect(waitPromise).resolves.toEqual({ code: 0, signal: 9 });
 
     await vi.advanceTimersByTimeAsync(4_001);
+    await expect(adapter.wait()).resolves.toEqual({ code: 0, signal: 9 });
   });
 
   it("resolves wait when exit fires before wait is called", async () => {
@@ -135,6 +144,8 @@ describe("createPtyAdapter", () => {
     });
 
     expect(stub.onExit).toHaveBeenCalledTimes(1);
+    stub.emitExit({ exitCode: 3, signal: 0 });
+    await expect(adapter.wait()).resolves.toEqual({ code: 3, signal: null });
   });
 
   it("keeps inherited env when no override env is provided", async () => {
@@ -162,6 +173,7 @@ describe("createPtyAdapter", () => {
     expect(expectSpawnEnv()).toEqual({ FOO: "bar", COUNT: "12" });
   });
 
+  it("does not pass a signal to node-pty on Windows", async () => {
     const originalPlatform = Object.getOwnPropertyDescriptor(process, "platform");
     Object.defineProperty(process, "platform", { value: "win32", configurable: true });
     try {

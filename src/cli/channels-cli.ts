@@ -18,6 +18,7 @@ const optionNamesAdd = [
   "tokenFile",
   "botToken",
   "appToken",
+  "signalNumber",
   "cliPath",
   "dbPath",
   "service",
@@ -149,6 +150,7 @@ export function registerChannelsCli(program: Command) {
     .command("logs")
     .description("Show recent channel logs from the gateway log file")
     .option("--channel <name>", `Channel (${formatCliChannelOptions(["all"])})`, "all")
+    .option("--lines <n>", "Number of lines (default: 200)", "200")
     .option("--json", "Output JSON", false)
     .action(async (opts) => {
       await runChannelsCommand(async () => {
@@ -168,7 +170,10 @@ export function registerChannelsCli(program: Command) {
     .option("--token-file <path>", "Bot token file (Telegram)")
     .option("--bot-token <token>", "Slack bot token (xoxb-...)")
     .option("--app-token <token>", "Slack app token (xapp-...)")
+    .option("--signal-number <e164>", "Signal account number (E.164)")
+    .option("--cli-path <path>", "CLI path (signal-cli or imsg)")
     .option("--db-path <path>", "iMessage database path")
+    .option("--service <service>", "iMessage service (imessage|sms|auto)")
     .option("--region <region>", "iMessage region (for SMS)")
     .option("--auth-dir <path>", "WhatsApp auth directory override")
     .option("--http-url <url>", "Signal HTTP daemon base URL")

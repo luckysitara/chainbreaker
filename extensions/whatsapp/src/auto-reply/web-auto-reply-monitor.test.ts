@@ -5,6 +5,7 @@ import { resolveAgentRoute } from "chainbreaker/plugin-sdk/routing";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildMentionConfig } from "./mentions.js";
 import { applyGroupGating, type GroupHistoryEntry } from "./monitor/group-gating.js";
+import { buildInboundLine, formatReplyContext } from "./monitor/message-line.js";
 
 let sessionDir: string | undefined;
 let sessionStorePath: string;
@@ -47,6 +48,7 @@ function runGroupGating(params: {
   const baseMentionConfig = buildMentionConfig(params.cfg, undefined);
   const result = applyGroupGating({
     cfg: params.cfg,
+    // oxlint-disable-next-line typescript/no-explicit-any
     msg: params.msg as any,
     conversationId,
     groupHistoryKey: `whatsapp:default:group:${conversationId}`,
@@ -272,6 +274,7 @@ describe("applyGroupGating", () => {
 
 describe("buildInboundLine", () => {
   it("prefixes group messages with sender", () => {
+    const line = buildInboundLine({
       cfg: makeInboundCfg(""),
       agentId: "main",
       msg: createGroupMessage({
@@ -285,9 +288,12 @@ describe("buildInboundLine", () => {
       }) as never,
     });
 
+    expect(line).toContain("Bob (+15550001111):");
+    expect(line).toContain("ping");
   });
 
   it("includes reply-to context blocks when replyToBody is present", () => {
+    const line = buildInboundLine({
       cfg: makeInboundCfg(""),
       agentId: "main",
       msg: {
@@ -302,9 +308,13 @@ describe("buildInboundLine", () => {
       envelope: { includeTimestamp: false },
     });
 
+    expect(line).toContain("[Replying to +1999 id:q1]");
+    expect(line).toContain("original");
+    expect(line).toContain("[/Replying]");
   });
 
   it("applies the WhatsApp messagePrefix when configured", () => {
+    const line = buildInboundLine({
       cfg: makeInboundCfg("[PFX]"),
       agentId: "main",
       msg: {
@@ -316,9 +326,11 @@ describe("buildInboundLine", () => {
       envelope: { includeTimestamp: false },
     });
 
+    expect(line).toContain("[PFX] ping");
   });
 
   it("normalizes direct from labels by stripping whatsapp: prefix", () => {
+    const line = buildInboundLine({
       cfg: makeInboundCfg(""),
       agentId: "main",
       msg: {
@@ -330,6 +342,8 @@ describe("buildInboundLine", () => {
       envelope: { includeTimestamp: false },
     });
 
+    expect(line).toContain("+15550001111");
+    expect(line).not.toContain("whatsapp:+15550001111");
   });
 });
 

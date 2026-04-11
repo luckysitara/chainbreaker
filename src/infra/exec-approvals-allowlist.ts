@@ -16,7 +16,9 @@ import {
 } from "./exec-approvals-analysis.js";
 import type { ExecAllowlistEntry } from "./exec-approvals.js";
 import {
+  detectInterpreterInlineEvalArgv,
   isInterpreterLikeAllowlistPattern,
+} from "./exec-inline-eval.js";
 import {
   DEFAULT_SAFE_BINS,
   SAFE_BIN_PROFILES,
@@ -25,6 +27,7 @@ import {
 } from "./exec-safe-bin-policy.js";
 import { isTrustedSafeBinPath } from "./exec-safe-bin-trust.js";
 import {
+  extractShellWrapperInlineCommand,
   isShellWrapperExecutable,
   normalizeExecutableToken,
 } from "./exec-wrapper-resolution.js";
@@ -394,7 +397,9 @@ function evaluateSegments(
         ? { ...executableResolution, resolvedPath: candidatePath }
         : executableResolution;
     const executableMatch = matchAllowlist(params.allowlist, candidateResolution);
+    const inlineCommand = extractShellWrapperInlineCommand(allowlistSegment.argv);
     const shellScriptCandidatePath =
+      inlineCommand === null
         ? resolveShellWrapperScriptCandidatePath({
             segment: allowlistSegment,
             cwd: params.cwd,
@@ -605,6 +610,7 @@ function collectAllowAlwaysPatterns(params: {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
   platform?: string | null;
+  strictInlineEval?: boolean;
   depth: number;
   out: Set<string>;
 }) {
@@ -632,6 +638,8 @@ function collectAllowAlwaysPatterns(params: {
   if (isInterpreterLikeAllowlistPattern(candidatePath)) {
     const effectiveArgv = segment.resolution?.effectiveArgv ?? segment.argv;
     if (
+      params.strictInlineEval !== true ||
+      detectInterpreterInlineEvalArgv(effectiveArgv) !== null
     ) {
       return;
     }
@@ -640,6 +648,9 @@ function collectAllowAlwaysPatterns(params: {
     params.out.add(candidatePath);
     return;
   }
+  const inlineCommand =
+    trustPlan.shellInlineCommand ?? extractShellWrapperInlineCommand(segment.argv);
+  if (!inlineCommand) {
     const scriptPath = resolveShellWrapperScriptCandidatePath({
       segment,
       cwd: params.cwd,
@@ -650,6 +661,7 @@ function collectAllowAlwaysPatterns(params: {
     return;
   }
   const nested = analyzeShellCommand({
+    command: inlineCommand,
     cwd: params.cwd,
     env: params.env,
     platform: params.platform,
@@ -663,6 +675,7 @@ function collectAllowAlwaysPatterns(params: {
       cwd: params.cwd,
       env: params.env,
       platform: params.platform,
+      strictInlineEval: params.strictInlineEval,
       depth: params.depth + 1,
       out: params.out,
     });
@@ -679,6 +692,7 @@ export function resolveAllowAlwaysPatterns(params: {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
   platform?: string | null;
+  strictInlineEval?: boolean;
 }): string[] {
   const patterns = new Set<string>();
   for (const segment of params.segments) {
@@ -687,6 +701,7 @@ export function resolveAllowAlwaysPatterns(params: {
       cwd: params.cwd,
       env: params.env,
       platform: params.platform,
+      strictInlineEval: params.strictInlineEval,
       depth: 0,
       out: patterns,
     });
@@ -713,6 +728,7 @@ export function evaluateShellAllowlist(
     segmentSatisfiedBy: [],
   });
 
+  // Keep allowlist analysis conservative: line-continuation semantics are shell-dependent
   // and can rewrite token boundaries at runtime.
   if (hasShellLineContinuation(params.command)) {
     return analysisFailure();

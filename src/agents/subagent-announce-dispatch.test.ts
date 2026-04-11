@@ -168,6 +168,7 @@ describe("runSubagentAnnounceDispatch", () => {
 
     const result = await runSubagentAnnounceDispatch({
       expectsCompletionMessage: true,
+      signal: controller.signal,
       queue,
       direct,
     });
@@ -189,6 +190,7 @@ describe("runSubagentAnnounceDispatch", () => {
     ]);
   });
 
+  it("returns none immediately when signal is already aborted", async () => {
     const queue = vi.fn(async () => "none" as const);
     const direct = vi.fn(async () => ({ delivered: true, path: "direct" as const }));
     const controller = new AbortController();
@@ -196,6 +198,7 @@ describe("runSubagentAnnounceDispatch", () => {
 
     const result = await runSubagentAnnounceDispatch({
       expectsCompletionMessage: true,
+      signal: controller.signal,
       queue,
       direct,
     });

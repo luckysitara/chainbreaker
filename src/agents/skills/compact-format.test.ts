@@ -161,8 +161,10 @@ describe("applySkillsPromptLimits (via buildWorkspaceSkillsPrompt)", () => {
     expect(prompt).toContain("<description>");
   });
 
+  it("compact budget reserves space for the warning line", () => {
     // Build skills whose compact output exactly equals the char budget.
     // Without overhead reservation the compact block would fit, but the
+    // warning line prepended by the caller would push the total over budget.
     const skills = Array.from({ length: 50 }, (_, i) => makeSkill(`s-${i}`, "A".repeat(200)));
     const compactLen = formatSkillsCompact(skills).length;
     // Set budget = compactLen + 50 — less than the 150-char overhead reserve.
@@ -212,11 +214,7 @@ describe("applySkillsPromptLimits (via buildWorkspaceSkillsPrompt)", () => {
   it("resolvedSkills in snapshot keeps canonical paths, not compacted", () => {
     const home = os.homedir();
     const skills = Array.from({ length: 5 }, (_, i) =>
-      makeSkill(
-        `skill-${i}`,
-        "A skill",
-        `${home}/.chainbreaker/workspace/skills/skill-${i}/SKILL.md`,
-      ),
+      makeSkill(`skill-${i}`, "A skill", `${home}/.chainbreaker/workspace/skills/skill-${i}/SKILL.md`),
     );
     const snapshot = buildWorkspaceSkillSnapshot("/fake", {
       entries: skills.map(makeEntry),

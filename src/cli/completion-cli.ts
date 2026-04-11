@@ -111,17 +111,26 @@ function formatCompletionSourceLine(
   return `source "${cachePath}"`;
 }
 
+function isCompletionProfileHeader(line: string): boolean {
+  return line.trim() === "# Chainbreaker Completion";
 }
 
+function isCompletionProfileLine(line: string, binName: string, cachePath: string | null): boolean {
+  if (line.includes(`${binName} completion`)) {
     return true;
   }
+  if (cachePath && line.includes(cachePath)) {
     return true;
   }
   return false;
 }
 
+/** Check if a line uses the slow dynamic completion pattern (source <(...)) */
+function isSlowDynamicCompletionLine(line: string, binName: string): boolean {
   // Matches patterns like: source <(chainbreaker completion --shell zsh)
   return (
+    line.includes(`<(${binName} completion`) ||
+    (line.includes(`${binName} completion`) && line.includes("| source"))
   );
 }
 
@@ -131,16 +140,22 @@ function updateCompletionProfile(
   cachePath: string | null,
   sourceLine: string,
 ): { next: string; changed: boolean; hadExisting: boolean } {
+  const lines = content.split("\n");
   const filtered: string[] = [];
   let hadExisting = false;
 
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i] ?? "";
+    if (isCompletionProfileHeader(line)) {
       hadExisting = true;
       i += 1;
       continue;
     }
+    if (isCompletionProfileLine(line, binName, cachePath)) {
       hadExisting = true;
       continue;
     }
+    filtered.push(line);
   }
 
   const trimmed = filtered.join("\n").trimEnd();
@@ -184,6 +199,9 @@ export async function isCompletionInstalled(
   const cachePathCandidate = resolveCompletionCachePath(shell, binName);
   const cachedPath = (await pathExists(cachePathCandidate)) ? cachePathCandidate : null;
   const content = await fs.readFile(profilePath, "utf-8");
+  const lines = content.split("\n");
+  return lines.some(
+    (line) => isCompletionProfileHeader(line) || isCompletionProfileLine(line, binName, cachedPath),
   );
 }
 
@@ -203,7 +221,11 @@ export async function usesSlowDynamicCompletion(
 
   const cachePath = resolveCompletionCachePath(shell, binName);
   const content = await fs.readFile(profilePath, "utf-8");
+  const lines = content.split("\n");
 
+  // Check if any line has dynamic completion but NOT the cached path
+  for (const line of lines) {
+    if (isSlowDynamicCompletionLine(line, binName) && !line.includes(cachePath)) {
       return true;
     }
   }
@@ -380,6 +402,7 @@ _${rootCmd}_root_completion() {
 
   case $state in
     (args)
+      case $line[1] in
         ${program.commands.map((cmd) => `(${cmd.name()}) _${rootCmd}_${cmd.name().replace(/-/g, "_")} ;;`).join("\n        ")}
       esac
       ;;
@@ -469,6 +492,7 @@ ${funcName}() {
 
   case $state in
     (args)
+      case $line[1] in
         ${subCommands.map((sub) => `(${sub.name()}) ${funcName}_${sub.name().replace(/-/g, "_")} ;;`).join("\n        ")}
       esac
       ;;

@@ -99,6 +99,7 @@ function sanitizeArgs(args: string | undefined): string | undefined {
     return args.slice(0, MAX_ARGS_LENGTH);
   }
 
+  // Remove control characters (except newlines and tabs which may be intentional)
   let sanitized = "";
   for (const char of args) {
     const code = char.charCodeAt(0);
@@ -126,6 +127,7 @@ function parseDiscordBindingTarget(raw: string | undefined): {
   if (raw.startsWith("slash:")) {
     return null;
   }
+  const normalized = raw.startsWith("discord:") ? raw.slice("discord:".length) : raw;
   if (!normalized) {
     return null;
   }
@@ -175,18 +177,22 @@ function resolveBindingConversationFromCommand(params: {
       threadId: params.messageThreadId ?? target.threadId,
     };
   }
+  if (params.channel === "discord") {
     const source =
       params.to?.startsWith("slash:") || !params.to?.trim()
         ? (params.from ?? params.to)
         : params.to;
+    const rawTarget = source?.startsWith("discord:") ? stripPrefix(source, "discord:") : source;
     if (!rawTarget || rawTarget.startsWith("slash:")) {
       return null;
     }
     const target =
+      parseExplicitTargetForChannel("discord", rawTarget) ?? parseDiscordBindingTarget(rawTarget);
     if (!target) {
       return null;
     }
     return {
+      channel: "discord",
       accountId,
       conversationId:
         "conversationId" in target

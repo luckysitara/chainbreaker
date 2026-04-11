@@ -260,9 +260,7 @@ export function registerControlUiAndPairingSuite(): void {
     const { publicKeyRawBase64UrlFromPem } = await import("../infra/device-identity.js");
     const { rejectDevicePairing, requestDevicePairing } =
       await import("../infra/device-pairing.js");
-    const { identity } = await createOperatorIdentityFixture(
-      "chainbreaker-control-ui-trusted-proxy-",
-    );
+    const { identity } = await createOperatorIdentityFixture("chainbreaker-control-ui-trusted-proxy-");
     const pendingRequest = await requestDevicePairing({
       deviceId: identity.deviceId,
       publicKey: publicKeyRawBase64UrlFromPem(identity.publicKeyPem),
@@ -465,6 +463,7 @@ export function registerControlUiAndPairingSuite(): void {
     }
   });
 
+  test("device token auth matrix", async () => {
     const { server, ws, port, prevToken } = await startServerWithClient("secret");
     const { deviceToken, deviceIdentityPath } = await ensurePairedDeviceTokenForCurrentIdentity(ws);
     ws.close();
@@ -874,6 +873,7 @@ export function registerControlUiAndPairingSuite(): void {
     }
   });
 
+  test("requires approval for bootstrap-auth operator pairing outside the qr baseline profile", async () => {
     const { issueDeviceBootstrapToken } = await import("../infra/device-bootstrap.js");
     const { getPairedDevice, listDevicePairing } = await import("../infra/device-pairing.js");
     const { server, ws, port, prevToken } = await startServerWithClient("secret");
@@ -924,9 +924,8 @@ export function registerControlUiAndPairingSuite(): void {
       await import("../infra/device-pairing.js");
     const { server, ws, port, prevToken } = await startServerWithClient("secret");
     ws.close();
-    const { identityPath, identity, client } = await createOperatorIdentityFixture(
-      "chainbreaker-device-scope-",
-    );
+    const { identityPath, identity, client } =
+      await createOperatorIdentityFixture("chainbreaker-device-scope-");
     const connectWithNonce = async (role: "operator" | "node", scopes: string[]) => {
       const socket = new WebSocket(`ws://127.0.0.1:${port}`, {
         headers: { host: "gateway.example" },

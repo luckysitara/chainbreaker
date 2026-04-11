@@ -193,6 +193,8 @@ const readSessionMessages = async (sessionFile: string) => {
     .split(/\r?\n/)
     .filter(Boolean)
     .map(
+      (line) =>
+        JSON.parse(line) as { type?: string; message?: { role?: string; content?: unknown } },
     )
     .filter((entry) => entry.type === "message")
     .map((entry) => entry.message) as Array<{ role?: string; content?: unknown }>;

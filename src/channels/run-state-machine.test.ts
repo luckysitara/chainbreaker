@@ -30,6 +30,7 @@ describe("createRunStateMachine", () => {
     const abortController = new AbortController();
     const machine = createRunStateMachine({
       setStatus,
+      abortSignal: abortController.signal,
       now: () => 999,
     });
     machine.onRunStart();

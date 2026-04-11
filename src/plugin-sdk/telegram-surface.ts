@@ -108,8 +108,11 @@ export const resolveTelegramGroupToolPolicy: FacadeModule["resolveTelegramGroupT
   loadFacadeModule()["resolveTelegramGroupToolPolicy"](
     ...args,
   )) as FacadeModule["resolveTelegramGroupToolPolicy"];
+export const resolveTelegramInlineButtonsScope: FacadeModule["resolveTelegramInlineButtonsScope"] =
   ((...args) =>
+    loadFacadeModule()["resolveTelegramInlineButtonsScope"](
       ...args,
+    )) as FacadeModule["resolveTelegramInlineButtonsScope"];
 export const resolveTelegramPollActionGateState: FacadeModule["resolveTelegramPollActionGateState"] =
   ((...args) =>
     loadFacadeModule()["resolveTelegramPollActionGateState"](
@@ -140,5 +143,6 @@ export type ProviderInfo = FacadeEntry["types"]["ProviderInfo"];
 export type ResolvedTelegramAccount = FacadeEntry["types"]["ResolvedTelegramAccount"];
 export type StickerMetadata = FacadeEntry["types"]["StickerMetadata"];
 export type TelegramButtonStyle = FacadeEntry["types"]["TelegramButtonStyle"];
+export type TelegramInlineButtons = FacadeEntry["types"]["TelegramInlineButtons"];
 export type TelegramProbe = FacadeEntry["types"]["TelegramProbe"];
 export type TelegramTokenResolution = FacadeEntry["types"]["TelegramTokenResolution"];

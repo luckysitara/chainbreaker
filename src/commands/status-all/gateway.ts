@@ -5,6 +5,9 @@ export async function readFileTailLines(filePath: string, maxLines: number): Pro
   if (!raw.trim()) {
     return [];
   }
+  const lines = raw.replace(/\r/g, "").split("\n");
+  const out = lines.slice(Math.max(0, lines.length - maxLines));
+  return out.map((line) => line.trimEnd()).filter((line) => line.trim().length > 0);
 }
 
 function countMatches(haystack: string, needle: string): number {
@@ -22,6 +25,8 @@ function shorten(message: string, maxLen: number): string {
   return `${cleaned.slice(0, Math.max(0, maxLen - 1))}…`;
 }
 
+function normalizeGwsLine(line: string): string {
+  return line
     .replace(/\s+runId=[^\s]+/g, "")
     .replace(/\s+conn=[^\s]+/g, "")
     .replace(/\s+id=[^\s]+/g, "")
@@ -30,8 +35,10 @@ function shorten(message: string, maxLen: number): string {
 }
 
 function consumeJsonBlock(
+  lines: string[],
   startIndex: number,
 ): { json: string; endIndex: number } | null {
+  const startLine = lines[startIndex] ?? "";
   const braceAt = startLine.indexOf("{");
   if (braceAt < 0) {
     return null;
@@ -40,7 +47,9 @@ function consumeJsonBlock(
   const parts: string[] = [startLine.slice(braceAt)];
   let depth = countMatches(parts[0] ?? "", "{") - countMatches(parts[0] ?? "", "}");
   let i = startIndex;
+  while (depth > 0 && i + 1 < lines.length) {
     i += 1;
+    const next = lines[i] ?? "";
     parts.push(next);
     depth += countMatches(next, "{") - countMatches(next, "}");
   }
@@ -63,12 +72,18 @@ export function summarizeLogTail(rawLines: string[], opts?: { maxLines?: number 
     out.push(base);
   };
 
+  const addLine = (line: string) => {
+    const trimmed = line.trimEnd();
     if (!trimmed) {
       return;
     }
     out.push(trimmed);
   };
 
+  const lines = rawLines.map((line) => line.trimEnd()).filter(Boolean);
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i] ?? "";
+    const trimmedStart = line.trimStart();
     if (
       (trimmedStart.startsWith('"') ||
         trimmedStart === "}" ||
@@ -83,9 +98,11 @@ export function summarizeLogTail(rawLines: string[], opts?: { maxLines?: number 
     }
 
     // "[openai-codex] Token refresh failed: 401 { ...json... }"
+    const tokenRefresh = line.match(/^\[([^\]]+)\]\s+Token refresh failed:\s*(\d+)\s*(\{)?\s*$/);
     if (tokenRefresh) {
       const tag = tokenRefresh[1] ?? "unknown";
       const status = tokenRefresh[2] ?? "unknown";
+      const block = consumeJsonBlock(lines, i);
       if (block) {
         i = block.endIndex;
         const parsed = (() => {
@@ -111,6 +128,7 @@ export function summarizeLogTail(rawLines: string[], opts?: { maxLines?: number 
     }
 
     // "Embedded agent failed before reply: OAuth token refresh failed for openai-codex: ..."
+    const embedded = line.match(
       /^Embedded agent failed before reply:\s+OAuth token refresh failed for ([^:]+):/,
     );
     if (embedded) {
@@ -121,11 +139,16 @@ export function summarizeLogTail(rawLines: string[], opts?: { maxLines?: number 
 
     // "[gws] ⇄ res ✗ agent ... errorCode=UNAVAILABLE errorMessage=Error: OAuth token refresh failed ... runId=..."
     if (
+      line.startsWith("[gws]") &&
+      line.includes("errorCode=UNAVAILABLE") &&
+      line.includes("OAuth token refresh failed")
     ) {
+      const normalized = normalizeGwsLine(line);
       addGroup(`gws:${normalized}`, normalized);
       continue;
     }
 
+    addLine(line);
   }
 
   for (const g of groups.values()) {
@@ -136,8 +159,11 @@ export function summarizeLogTail(rawLines: string[], opts?: { maxLines?: number 
   }
 
   const deduped: string[] = [];
+  for (const line of out) {
+    if (deduped[deduped.length - 1] === line) {
       continue;
     }
+    deduped.push(line);
   }
 
   if (deduped.length <= maxLines) {
@@ -148,6 +174,7 @@ export function summarizeLogTail(rawLines: string[], opts?: { maxLines?: number 
   const tail = Math.max(1, maxLines - head - 1);
   const kept = [
     ...deduped.slice(0, head),
+    `… ${deduped.length - head - tail} lines omitted …`,
     ...deduped.slice(-tail),
   ];
   return kept;

@@ -153,6 +153,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
         },
         chunkMode: {
           type: "string",
+          enum: ["length", "newline"],
         },
         mediaMaxMb: {
           type: "integer",
@@ -360,6 +361,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
               },
               chunkMode: {
                 type: "string",
+                enum: ["length", "newline"],
               },
               mediaMaxMb: {
                 type: "integer",
@@ -505,6 +507,8 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
     },
   },
   {
+    pluginId: "discord",
+    channelId: "discord",
     label: "Discord",
     description: "very well supported right now.",
     schema: {
@@ -686,6 +690,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
         },
         chunkMode: {
           type: "string",
+          enum: ["length", "newline"],
         },
         blockStreaming: {
           type: "boolean",
@@ -747,6 +752,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
                 },
                 {
                   type: "string",
+                  const: "newline",
                 },
                 {
                   type: "string",
@@ -1615,6 +1621,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
         },
         status: {
           type: "string",
+          enum: ["online", "dnd", "idle", "invisible"],
         },
         autoPresence: {
           type: "object",
@@ -1891,6 +1898,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
               },
               chunkMode: {
                 type: "string",
+                enum: ["length", "newline"],
               },
               blockStreaming: {
                 type: "boolean",
@@ -1952,6 +1960,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
                       },
                       {
                         type: "string",
+                        const: "newline",
                       },
                       {
                         type: "string",
@@ -2820,6 +2829,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
               },
               status: {
                 type: "string",
+                enum: ["online", "dnd", "idle", "invisible"],
               },
               autoPresence: {
                 type: "object",
@@ -2932,9 +2942,11 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
       },
       dmPolicy: {
         label: "Discord DM Policy",
+        help: 'Direct message access control ("pairing" recommended). "open" requires channels.discord.allowFrom=["*"].',
       },
       "dm.policy": {
         label: "Discord DM Policy",
+        help: 'Direct message access control ("pairing" recommended). "open" requires channels.discord.allowFrom=["*"] (legacy: channels.discord.dm.allowFrom).',
       },
       configWrites: {
         label: "Discord Config Writes",
@@ -2942,6 +2954,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
       },
       proxy: {
         label: "Discord Proxy URL",
+        help: "Proxy URL for Discord gateway + API requests (app-id lookup and allowlist resolution). Set per account via channels.discord.accounts.<id>.proxy.",
       },
       "commands.native": {
         label: "Discord Native Commands",
@@ -2957,15 +2970,19 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
       },
       streamMode: {
         label: "Discord Stream Mode (Legacy)",
+        help: "Legacy Discord preview mode alias (off | partial | block); auto-migrated to channels.discord.streaming.",
       },
       "draftChunk.minChars": {
         label: "Discord Draft Chunk Min Chars",
+        help: 'Minimum chars before emitting a Discord stream preview update when channels.discord.streaming="block" (default: 200).',
       },
       "draftChunk.maxChars": {
         label: "Discord Draft Chunk Max Chars",
+        help: 'Target max size for a Discord stream preview chunk when channels.discord.streaming="block" (default: 800; clamped to channels.discord.textChunkLimit).',
       },
       "draftChunk.breakPreference": {
         label: "Discord Draft Chunk Break Preference",
+        help: "Preferred breakpoints for Discord draft chunks (paragraph | newline | sentence). Default: paragraph.",
       },
       "retry.attempts": {
         label: "Discord Retry Attempts",
@@ -2985,18 +3002,23 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
       },
       maxLinesPerMessage: {
         label: "Discord Max Lines Per Message",
+        help: "Soft max line count per Discord message (default: 17).",
       },
       "inboundWorker.runTimeoutMs": {
         label: "Discord Inbound Worker Timeout (ms)",
+        help: "Optional queued Discord inbound worker timeout in ms. This is separate from Carbon listener timeouts; defaults to 1800000 and can be disabled with 0. Set per account via channels.discord.accounts.<id>.inboundWorker.runTimeoutMs.",
       },
       "eventQueue.listenerTimeout": {
         label: "Discord EventQueue Listener Timeout (ms)",
+        help: "Canonical Discord listener timeout control in ms for gateway normalization/enqueue handlers. Default is 120000 in Chainbreaker; set per account via channels.discord.accounts.<id>.eventQueue.listenerTimeout.",
       },
       "eventQueue.maxQueueSize": {
         label: "Discord EventQueue Max Queue Size",
+        help: "Optional Discord EventQueue capacity override (max queued events before backpressure). Set per account via channels.discord.accounts.<id>.eventQueue.maxQueueSize.",
       },
       "eventQueue.maxConcurrency": {
         label: "Discord EventQueue Max Concurrency",
+        help: "Optional Discord EventQueue concurrency override (max concurrent handler executions). Set per account via channels.discord.accounts.<id>.eventQueue.maxConcurrency.",
       },
       "threadBindings.enabled": {
         label: "Discord Thread Binding Enabled",
@@ -3020,6 +3042,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
       },
       "ui.components.accentColor": {
         label: "Discord Component Accent Color",
+        help: "Accent color for Discord component containers (hex). Set per account via channels.discord.accounts.<id>.ui.components.accentColor.",
       },
       "intents.presence": {
         label: "Discord Presence Intent",
@@ -3031,6 +3054,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
       },
       "voice.enabled": {
         label: "Discord Voice Enabled",
+        help: "Enable Discord voice channel conversations (default: true). Omit channels.discord.voice to keep voice support disabled for the account.",
       },
       "voice.autoJoin": {
         label: "Discord Voice Auto-Join",
@@ -3038,9 +3062,11 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
       },
       "voice.daveEncryption": {
         label: "Discord Voice DAVE Encryption",
+        help: "Toggle DAVE end-to-end encryption for Discord voice joins (default: true in @discordjs/voice; Discord may require this).",
       },
       "voice.decryptionFailureTolerance": {
         label: "Discord Voice Decrypt Failure Tolerance",
+        help: "Consecutive decrypt failures before DAVE attempts session recovery (passed to @discordjs/voice; default: 24).",
       },
       "voice.tts": {
         label: "Discord Voice Text-to-Speech",
@@ -3060,9 +3086,11 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
       },
       status: {
         label: "Discord Presence Status",
+        help: "Discord presence status (online, dnd, idle, invisible).",
       },
       "autoPresence.enabled": {
         label: "Discord Auto Presence Enabled",
+        help: "Enable automatic Discord bot presence updates based on runtime/model availability signals. When enabled: healthy=>online, degraded/unknown=>idle, exhausted/unavailable=>dnd.",
       },
       "autoPresence.intervalMs": {
         label: "Discord Auto Presence Check Interval (ms)",
@@ -3074,6 +3102,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
       },
       "autoPresence.healthyText": {
         label: "Discord Auto Presence Healthy Text",
+        help: "Optional custom status text while runtime is healthy (online). If omitted, falls back to static channels.discord.activity when set.",
       },
       "autoPresence.degradedText": {
         label: "Discord Auto Presence Degraded Text",
@@ -3534,6 +3563,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
         },
         chunkMode: {
           type: "string",
+          enum: ["length", "newline"],
         },
         blockStreamingCoalesce: {
           type: "object",
@@ -4089,6 +4119,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
               },
               chunkMode: {
                 type: "string",
+                enum: ["length", "newline"],
               },
               blockStreamingCoalesce: {
                 type: "object",
@@ -4492,6 +4523,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
         },
         chunkMode: {
           type: "string",
+          enum: ["length", "newline"],
         },
         blockStreaming: {
           type: "boolean",
@@ -4873,6 +4905,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
               },
               chunkMode: {
                 type: "string",
+                enum: ["length", "newline"],
               },
               blockStreaming: {
                 type: "boolean",
@@ -4990,6 +5023,8 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
     },
   },
   {
+    pluginId: "imessage",
+    channelId: "imessage",
     label: "iMessage",
     description: "this is still a work in progress.",
     schema: {
@@ -5034,6 +5069,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
           anyOf: [
             {
               type: "string",
+              const: "imessage",
             },
             {
               type: "string",
@@ -5141,6 +5177,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
         },
         chunkMode: {
           type: "string",
+          enum: ["length", "newline"],
         },
         blockStreaming: {
           type: "boolean",
@@ -5308,6 +5345,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
                 anyOf: [
                   {
                     type: "string",
+                    const: "imessage",
                   },
                   {
                     type: "string",
@@ -5415,6 +5453,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
               },
               chunkMode: {
                 type: "string",
+                enum: ["length", "newline"],
               },
               blockStreaming: {
                 type: "boolean",
@@ -5555,6 +5594,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
       },
       dmPolicy: {
         label: "iMessage DM Policy",
+        help: 'Direct message access control ("pairing" recommended). "open" requires channels.imessage.allowFrom=["*"].',
       },
       configWrites: {
         label: "iMessage Config Writes",
@@ -5820,6 +5860,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
         },
         chunkMode: {
           type: "string",
+          enum: ["length", "newline"],
         },
         blockStreaming: {
           type: "boolean",
@@ -6105,6 +6146,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
               },
               chunkMode: {
                 type: "string",
+                enum: ["length", "newline"],
               },
               blockStreaming: {
                 type: "boolean",
@@ -6189,6 +6231,8 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
     },
   },
   {
+    pluginId: "line",
+    channelId: "line",
     label: "LINE",
     description: "LINE Messaging API webhook bot.",
     schema: {
@@ -6465,6 +6509,8 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
     },
   },
   {
+    pluginId: "matrix",
+    channelId: "matrix",
     label: "Matrix",
     description: "open protocol; install the plugin to enable.",
     schema: {
@@ -6698,6 +6744,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
         },
         chunkMode: {
           type: "string",
+          enum: ["length", "newline"],
         },
         responsePrefix: {
           type: "string",
@@ -7162,6 +7209,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
         },
         chunkMode: {
           type: "string",
+          enum: ["length", "newline"],
         },
         blockStreaming: {
           type: "boolean",
@@ -7442,6 +7490,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
               },
               chunkMode: {
                 type: "string",
+                enum: ["length", "newline"],
               },
               blockStreaming: {
                 type: "boolean",
@@ -7726,6 +7775,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
         },
         chunkMode: {
           type: "string",
+          enum: ["length", "newline"],
         },
         blockStreaming: {
           type: "boolean",
@@ -8314,6 +8364,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
         },
         chunkMode: {
           type: "string",
+          enum: ["length", "newline"],
         },
         blockStreaming: {
           type: "boolean",
@@ -8644,6 +8695,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
               },
               chunkMode: {
                 type: "string",
+                enum: ["length", "newline"],
               },
               blockStreaming: {
                 type: "boolean",
@@ -9203,7 +9255,10 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
     },
   },
   {
+    pluginId: "signal",
+    channelId: "signal",
     label: "Signal",
+    description: 'signal-cli linked device; more setup (David Reagans: "Hop on Discord.").',
     schema: {
       $schema: "http://json-schema.org/draft-07/schema#",
       type: "object",
@@ -9424,6 +9479,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
         },
         chunkMode: {
           type: "string",
+          enum: ["length", "newline"],
         },
         blockStreaming: {
           type: "boolean",
@@ -9735,6 +9791,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
               },
               chunkMode: {
                 type: "string",
+                enum: ["length", "newline"],
               },
               blockStreaming: {
                 type: "boolean",
@@ -9841,6 +9898,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
       },
       dmPolicy: {
         label: "Signal DM Policy",
+        help: 'Direct message access control ("pairing" recommended). "open" requires channels.signal.allowFrom=["*"].',
       },
       configWrites: {
         label: "Signal Config Writes",
@@ -9853,6 +9911,8 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
     },
   },
   {
+    pluginId: "slack",
+    channelId: "slack",
     label: "Slack",
     description: "supported (Socket Mode).",
     schema: {
@@ -9934,6 +9994,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
           ],
         },
         webhookPath: {
+          default: "/slack/events",
           type: "string",
         },
         capabilities: {
@@ -10287,6 +10348,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
         },
         chunkMode: {
           type: "string",
+          enum: ["length", "newline"],
         },
         blockStreaming: {
           type: "boolean",
@@ -11132,6 +11194,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
               },
               chunkMode: {
                 type: "string",
+                enum: ["length", "newline"],
               },
               blockStreaming: {
                 type: "boolean",
@@ -11562,9 +11625,11 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
       },
       "dm.policy": {
         label: "Slack DM Policy",
+        help: 'Direct message access control ("pairing" recommended). "open" requires channels.slack.allowFrom=["*"] (legacy: channels.slack.dm.allowFrom).',
       },
       dmPolicy: {
         label: "Slack DM Policy",
+        help: 'Direct message access control ("pairing" recommended). "open" requires channels.slack.allowFrom=["*"].',
       },
       configWrites: {
         label: "Slack Config Writes",
@@ -11600,6 +11665,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
       },
       "capabilities.interactiveReplies": {
         label: "Slack Interactive Replies",
+        help: "Enable agent-authored Slack interactive reply directives (`[[slack_buttons: ...]]`, `[[slack_select: ...]]`). Default: false.",
       },
       execApprovals: {
         label: "Slack Exec Approvals",
@@ -11631,9 +11697,11 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
       },
       nativeStreaming: {
         label: "Slack Native Streaming",
+        help: "Enable native Slack text streaming (chat.startStream/chat.appendStream/chat.stopStream) when channels.slack.streaming is partial (default: true).",
       },
       streamMode: {
         label: "Slack Stream Mode (Legacy)",
+        help: "Legacy Slack preview mode alias (replace | status_final | append); auto-migrated to channels.slack.streaming.",
       },
       "thread.historyScope": {
         label: "Slack Thread History Scope",
@@ -11691,6 +11759,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
             {
               type: "object",
               properties: {
+                inlineButtons: {
                   type: "string",
                   enum: ["off", "dm", "group", "all", "allowlist"],
                 },
@@ -12280,6 +12349,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
         },
         chunkMode: {
           type: "string",
+          enum: ["length", "newline"],
         },
         streaming: {
           anyOf: [
@@ -12316,6 +12386,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
                 },
                 {
                   type: "string",
+                  const: "newline",
                 },
                 {
                   type: "string",
@@ -12639,6 +12710,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
                   {
                     type: "object",
                     properties: {
+                      inlineButtons: {
                         type: "string",
                         enum: ["off", "dm", "group", "all", "allowlist"],
                       },
@@ -13228,6 +13300,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
               },
               chunkMode: {
                 type: "string",
+                enum: ["length", "newline"],
               },
               streaming: {
                 anyOf: [
@@ -13264,6 +13337,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
                       },
                       {
                         type: "string",
+                        const: "newline",
                       },
                       {
                         type: "string",
@@ -13654,6 +13728,9 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
         label: "Telegram Auto Topic Label Prompt",
         help: "Custom prompt for LLM-based topic naming. The user message is appended after the prompt.",
       },
+      "capabilities.inlineButtons": {
+        label: "Telegram Inline Buttons",
+        help: "Enable Telegram inline button components for supported command and interaction surfaces. Disable if your deployment needs plain-text-only compatibility behavior.",
       },
       execApprovals: {
         label: "Telegram Exec Approvals",
@@ -14166,6 +14243,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
         },
         chunkMode: {
           type: "string",
+          enum: ["length", "newline"],
         },
         blockStreaming: {
           type: "boolean",
@@ -14414,6 +14492,7 @@ export const GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA = [
               },
               chunkMode: {
                 type: "string",
+                enum: ["length", "newline"],
               },
               blockStreaming: {
                 type: "boolean",

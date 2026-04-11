@@ -14,10 +14,7 @@ import { resolveShellFromPath, sanitizeBinaryOutput } from "./shell-utils.js";
 const isWin = process.platform === "win32";
 const defaultShell = isWin
   ? undefined
-  : process.env.CHAINBREAKER_TEST_SHELL ||
-    resolveShellFromPath("bash") ||
-    process.env.SHELL ||
-    "sh";
+  : process.env.CHAINBREAKER_TEST_SHELL || resolveShellFromPath("bash") || process.env.SHELL || "sh";
 // PowerShell: Start-Sleep for delays, ; for command separation, $null for null device
 const shortDelayCmd = isWin ? "Start-Sleep -Milliseconds 4" : "sleep 0.004";
 const yieldDelayCmd = isWin ? "Start-Sleep -Milliseconds 16" : "sleep 0.016";
@@ -95,11 +92,13 @@ const withLabel = <T extends object>(label: string, fields: T): T & LabeledCase 
 // Both PowerShell and bash use ; for command separation
 const joinCommands = (commands: string[]) => commands.join("; ");
 const echoAfterDelay = (message: string) => joinCommands([shortDelayCmd, shellEcho(message)]);
+const echoLines = (lines: string[]) => joinCommands(lines.map((line) => shellEcho(line)));
 const normalizeText = (value?: string) =>
   sanitizeBinaryOutput(value ?? "")
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
     .split("\n")
+    .map((line) => line.replace(/\s+$/u, ""))
     .join("\n")
     .trim();
 type ToolTextContent = Array<{ type: string; text?: string }>;
@@ -108,6 +107,7 @@ const readTextContent = (content: ToolTextContent) =>
 const readNormalizedTextContent = (content: ToolTextContent) =>
   normalizeText(readTextContent(content));
 const readTrimmedLines = (content: ToolTextContent) =>
+  (readTextContent(content) ?? "").split("\n").map((line) => line.trim());
 const readTotalLines = (details: unknown) => (details as { totalLines?: number }).totalLines;
 const readProcessStatus = (details: unknown) => (details as { status?: string }).status;
 const readProcessStatusOrRunning = (details: unknown) =>
@@ -248,6 +248,7 @@ type LongLogExpectationCase = LabeledCase & {
   mustNotContain?: string[];
 };
 type ShortLogExpectationCase = LabeledCase & {
+  lines: string[];
   options: ProcessLogWindow;
   expectedText: string;
   expectedTotalLines: number;
@@ -255,6 +256,7 @@ type ShortLogExpectationCase = LabeledCase & {
 type ProcessLogSnapshot = {
   text: string;
   normalizedText: string;
+  lines: string[];
   totalLines: number | undefined;
 };
 const EXPECTED_TOTAL_LINES_THREE = 3;
@@ -294,10 +296,14 @@ const DISALLOWED_ELEVATION_CASES: DisallowedElevationCase[] = [
   }),
 ];
 const SHORT_LOG_EXPECTATION_CASES: ShortLogExpectationCase[] = [
+  withLabel("logs line-based slices and defaults to last lines", {
+    lines: ["one", "two", "three"],
     options: { limit: 2 },
     expectedText: "two\nthree",
     expectedTotalLines: EXPECTED_TOTAL_LINES_THREE,
   }),
+  withLabel("supports line offsets for log slices", {
+    lines: ["alpha", "beta", "gamma"],
     options: { offset: 1, limit: 1 },
     expectedText: "beta",
     expectedTotalLines: EXPECTED_TOTAL_LINES_THREE,
@@ -305,9 +311,13 @@ const SHORT_LOG_EXPECTATION_CASES: ShortLogExpectationCase[] = [
 ];
 const LONG_LOG_EXPECTATION_CASES: LongLogExpectationCase[] = [
   withLabel("applies default tail only when no explicit log window is provided", {
+    firstLine: "line-2",
+    mustContain: ["showing last 200 of 201 lines", "line-2", "line-201"],
   }),
   withLabel("keeps offset-only log requests unbounded by default tail mode", {
     options: { offset: 30 },
+    firstLine: "line-31",
+    lastLine: "line-201",
     mustNotContain: ["showing last 200"],
   }),
 ];
@@ -348,20 +358,25 @@ const runDisallowedElevationCase = async ({
   expect(readTextContent(result.content) ?? "").toContain(expectedOutputIncludes);
 };
 const runShortLogExpectationCase = async ({
+  lines,
   options,
   expectedText,
   expectedTotalLines,
 }: ShortLogExpectationCase) => {
+  const snapshot = await readBackgroundLogSnapshot(lines, options);
   expect(snapshot.normalizedText).toBe(expectedText);
   expect(snapshot.totalLines).toBe(expectedTotalLines);
 };
 const readBackgroundLogSnapshot = async (
+  lines: string[],
   options: ProcessLogWindow = {},
 ): Promise<ProcessLogSnapshot> => {
+  const { sessionId } = await runBackgroundCommandToCompletion(execTool, echoLines(lines));
   const log = await readProcessLog(sessionId, options);
   return {
     text: readTextContent(log.content) ?? "",
     normalizedText: readNormalizedTextContent(log.content),
+    lines: readTrimmedLines(log.content),
     totalLines: readTotalLines(log.details),
   };
 };
@@ -373,9 +388,12 @@ const runLongLogExpectationCase = async ({
   mustNotContain,
 }: LongLogExpectationCase) => {
   const snapshot = await readBackgroundLogSnapshot(
+    Array.from({ length: LONG_LOG_LINE_COUNT }, (_value, index) => `line-${index + 1}`),
     options,
   );
+  expect(snapshot.lines[0]).toBe(firstLine);
   if (lastLine) {
+    expect(snapshot.lines[snapshot.lines.length - 1]).toBe(lastLine);
   }
   expect(snapshot.totalLines).toBe(LONG_LOG_LINE_COUNT);
   expectTextContainsValues(snapshot.text, mustContain, true);

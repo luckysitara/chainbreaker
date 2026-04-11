@@ -77,6 +77,7 @@ function isShellCommentStart(source: string, index: number): boolean {
   return Boolean(prev && /\s/.test(prev));
 }
 
+function splitShellPipeline(command: string): { ok: boolean; reason?: string; segments: string[] } {
   type HeredocSpec = {
     delimiter: string;
     stripTabs: boolean;
@@ -152,14 +153,22 @@ function isShellCommentStart(source: string, index: number): boolean {
     buf = "";
   };
 
+  const isEscapedInHeredocLine = (line: string, index: number): boolean => {
     let slashes = 0;
+    for (let i = index - 1; i >= 0 && line[i] === "\\"; i -= 1) {
       slashes += 1;
     }
     return slashes % 2 === 1;
   };
 
+  const hasUnquotedHeredocExpansionToken = (line: string): boolean => {
+    for (let i = 0; i < line.length; i += 1) {
+      const ch = line[i];
+      if (ch === "`" && !isEscapedInHeredocLine(line, i)) {
         return true;
       }
+      if (ch === "$" && !isEscapedInHeredocLine(line, i)) {
+        const next = line[i + 1];
         if (next === "(" || next === "{") {
           return true;
         }
@@ -176,6 +185,8 @@ function isShellCommentStart(source: string, index: number): boolean {
       if (ch === "\n" || ch === "\r") {
         const current = pendingHeredocs[0];
         if (current) {
+          const line = current.stripTabs ? heredocLine.replace(/^\t+/, "") : heredocLine;
+          if (line === current.delimiter) {
             pendingHeredocs.shift();
           } else if (!current.quoted && hasUnquotedHeredocExpansionToken(heredocLine)) {
             return { ok: false, reason: "command substitution in unquoted heredoc", segments: [] };
@@ -216,6 +227,7 @@ function isShellCommentStart(source: string, index: number): boolean {
     }
     if (inDouble) {
       if (ch === "\\" && isEscapedLineContinuation(next)) {
+        return { ok: false, reason: "unsupported shell token: newline", segments: [] };
       }
       if (ch === "\\" && isDoubleQuoteEscape(next)) {
         buf += ch;
@@ -231,6 +243,7 @@ function isShellCommentStart(source: string, index: number): boolean {
         return { ok: false, reason: "unsupported shell token: `", segments: [] };
       }
       if (ch === "\n" || ch === "\r") {
+        return { ok: false, reason: "unsupported shell token: newline", segments: [] };
       }
       if (ch === '"') {
         inDouble = false;
@@ -311,6 +324,8 @@ function isShellCommentStart(source: string, index: number): boolean {
 
   if (inHeredocBody && pendingHeredocs.length > 0) {
     const current = pendingHeredocs[0];
+    const line = current.stripTabs ? heredocLine.replace(/^\t+/, "") : heredocLine;
+    if (line === current.delimiter) {
       pendingHeredocs.shift();
       if (pendingHeredocs.length === 0) {
         inHeredocBody = false;
@@ -330,6 +345,7 @@ function isShellCommentStart(source: string, index: number): boolean {
   if (emptySegment || segments.length === 0) {
     return {
       ok: false,
+      reason: segments.length === 0 ? "empty command" : "empty pipeline segment",
       segments: [],
     };
   }
@@ -340,6 +356,7 @@ function findWindowsUnsupportedToken(command: string): string | null {
   for (const ch of command) {
     if (WINDOWS_UNSUPPORTED_TOKENS.has(ch)) {
       if (ch === "\n" || ch === "\r") {
+        return "newline";
       }
       return ch;
     }
@@ -579,8 +596,12 @@ function rebuildShellCommandFromSource(params: {
   let out = "";
 
   for (const part of chainParts) {
+    const pipelineSplit = splitShellPipeline(part.part);
+    if (!pipelineSplit.ok) {
+      return { ok: false, reason: pipelineSplit.reason ?? "unable to parse pipeline" };
     }
     const renderedSegments: string[] = [];
+    for (const segmentRaw of pipelineSplit.segments) {
       const rendered = params.renderSegment(segmentRaw, segmentCount);
       if (!rendered.ok) {
         return { ok: false, reason: rendered.reason };
@@ -756,7 +777,11 @@ export function analyzeShellCommand(params: {
     const allSegments: ExecCommandSegment[] = [];
 
     for (const part of chainParts) {
+      const pipelineSplit = splitShellPipeline(part);
+      if (!pipelineSplit.ok) {
+        return { ok: false, reason: pipelineSplit.reason, segments: [] };
       }
+      const segments = parseSegmentsFromParts(pipelineSplit.segments, params.cwd, params.env);
       if (!segments) {
         return { ok: false, reason: "unable to parse shell segment", segments: [] };
       }
@@ -767,6 +792,8 @@ export function analyzeShellCommand(params: {
     return { ok: true, segments: allSegments, chains };
   }
 
+  // No chain operators, parse as simple pipeline
+  const split = splitShellPipeline(params.command);
   if (!split.ok) {
     return { ok: false, reason: split.reason, segments: [] };
   }

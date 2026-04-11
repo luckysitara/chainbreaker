@@ -46,6 +46,7 @@ export function shouldEnableWindowsGitBashPasteFallback(params?: {
   const env = params?.env ?? process.env;
   const termProgram = (env.TERM_PROGRAM ?? "").toLowerCase();
 
+  // Some macOS terminals emit multiline paste as rapid single-line submits.
   // Enable burst coalescing so pasted blocks stay as one user message.
   if (platform === "darwin") {
     if (termProgram.includes("iterm") || termProgram.includes("apple_terminal")) {

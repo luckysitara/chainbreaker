@@ -210,6 +210,7 @@ describe("secrets runtime snapshot", () => {
             },
           },
         },
+        slack: {
           mode: "http",
           signingSecret: { source: "env", provider: "default", id: "SLACK_SIGNING_SECRET_REF" },
           accounts: {
@@ -244,6 +245,9 @@ describe("secrets runtime snapshot", () => {
         TELEGRAM_BOT_TOKEN_REF: "telegram-bot-ref",
         TELEGRAM_WEBHOOK_SECRET_REF: "telegram-webhook-ref", // pragma: allowlist secret
         TELEGRAM_WORK_BOT_TOKEN_REF: "telegram-work-ref",
+        SLACK_SIGNING_SECRET_REF: "slack-signing-ref", // pragma: allowlist secret
+        SLACK_WORK_BOT_TOKEN_REF: "slack-work-bot-ref",
+        SLACK_WORK_APP_TOKEN_REF: "slack-work-app-ref",
         WEB_SEARCH_API_KEY: "web-search-ref", // pragma: allowlist secret
       },
       agentDirs: ["/tmp/chainbreaker-agent-main"],
@@ -261,6 +265,7 @@ describe("secrets runtime snapshot", () => {
             token: "old-gh",
             tokenRef: { source: "env", provider: "default", id: "GITHUB_TOKEN" },
           },
+          "openai:inline": {
             type: "api_key",
             provider: "openai",
             key: "${OPENAI_API_KEY}",
@@ -285,12 +290,16 @@ describe("secrets runtime snapshot", () => {
     });
     expect(snapshot.config.channels?.telegram?.webhookSecret).toBe("telegram-webhook-ref");
     expect(snapshot.config.channels?.telegram?.accounts?.work?.botToken).toBe("telegram-work-ref");
+    expect(snapshot.config.channels?.slack?.signingSecret).toBe("slack-signing-ref");
+    expect(snapshot.config.channels?.slack?.accounts?.work?.botToken).toBe("slack-work-bot-ref");
+    expect(snapshot.config.channels?.slack?.accounts?.work?.appToken).toEqual({
       source: "env",
       provider: "default",
       id: "SLACK_WORK_APP_TOKEN_REF",
     });
     expect(snapshot.config.tools?.web?.search?.apiKey).toBe("web-search-ref");
     expect(snapshot.warnings.map((warning) => warning.path)).toEqual(
+      expect.arrayContaining(["channels.slack.accounts.work.appToken"]),
     );
     expect(snapshot.authStores[0]?.store.profiles["openai:default"]).toMatchObject({
       type: "api_key",
@@ -300,10 +309,13 @@ describe("secrets runtime snapshot", () => {
       type: "token",
       token: "ghp-env-token",
     });
+    expect(snapshot.authStores[0]?.store.profiles["openai:inline"]).toMatchObject({
       type: "api_key",
       key: "sk-env-openai",
     });
+    // After normalization, inline SecretRef string should be promoted to keyRef
     expect(
+      (snapshot.authStores[0].store.profiles["openai:inline"] as Record<string, unknown>).keyRef,
     ).toEqual({ source: "env", provider: "default", id: "OPENAI_API_KEY" });
   });
 
@@ -311,6 +323,7 @@ describe("secrets runtime snapshot", () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({
         channels: {
+          matrix: {
             accessToken: {
               source: "env",
               provider: "default",
@@ -318,6 +331,7 @@ describe("secrets runtime snapshot", () => {
             },
             accounts: {
               ops: {
+                homeserver: "https://matrix.example.org",
                 accessToken: "ops-token",
               },
             },
@@ -325,11 +339,13 @@ describe("secrets runtime snapshot", () => {
         },
       }),
       env: {
+        MATRIX_ACCESS_TOKEN: "default-matrix-token",
       },
       agentDirs: ["/tmp/chainbreaker-agent-main"],
       loadAuthStore: () => ({ version: 1, profiles: {} }),
     });
 
+    expect(snapshot.config.channels?.matrix?.accessToken).toBe("default-matrix-token");
   });
 
   it("can skip auth-profile SecretRef resolution when includeAuthStoreRefs is false", async () => {
@@ -369,6 +385,7 @@ describe("secrets runtime snapshot", () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({
         channels: {
+          matrix: {
             accounts: {
               ops: {
                 password: {
@@ -388,6 +405,7 @@ describe("secrets runtime snapshot", () => {
       loadAuthStore: () => ({ version: 1, profiles: {} }),
     });
 
+    expect(snapshot.config.channels?.matrix?.accounts?.ops?.password).toEqual({
       source: "env",
       provider: "default",
       id: "MATRIX_OPS_PASSWORD",
@@ -395,14 +413,17 @@ describe("secrets runtime snapshot", () => {
     expect(snapshot.warnings).toContainEqual(
       expect.objectContaining({
         code: "SECRETS_REF_IGNORED_INACTIVE_SURFACE",
+        path: "channels.matrix.accounts.ops.password",
       }),
     );
   });
 
   it.each([
     {
+      name: "channels.matrix.accounts.default.accessToken config",
       config: {
         channels: {
+          matrix: {
             password: {
               source: "env",
               provider: "default",
@@ -419,8 +440,10 @@ describe("secrets runtime snapshot", () => {
       env: {},
     },
     {
+      name: "channels.matrix.accounts.default.accessToken SecretRef config",
       config: {
         channels: {
+          matrix: {
             password: {
               source: "env",
               provider: "default",
@@ -446,6 +469,7 @@ describe("secrets runtime snapshot", () => {
       name: "MATRIX_DEFAULT_ACCESS_TOKEN env auth",
       config: {
         channels: {
+          matrix: {
             password: {
               source: "env",
               provider: "default",
@@ -466,6 +490,7 @@ describe("secrets runtime snapshot", () => {
       loadAuthStore: () => ({ version: 1, profiles: {} }),
     });
 
+    expect(snapshot.config.channels?.matrix?.password).toEqual({
       source: "env",
       provider: "default",
       id: "MATRIX_PASSWORD",
@@ -473,6 +498,7 @@ describe("secrets runtime snapshot", () => {
     expect(snapshot.warnings).toContainEqual(
       expect.objectContaining({
         code: "SECRETS_REF_IGNORED_INACTIVE_SURFACE",
+        path: "channels.matrix.password",
       }),
     );
   });
@@ -482,6 +508,7 @@ describe("secrets runtime snapshot", () => {
       name: "top-level Matrix accessToken config",
       config: {
         channels: {
+          matrix: {
             accessToken: "default-token",
             accounts: {
               default: {
@@ -501,6 +528,7 @@ describe("secrets runtime snapshot", () => {
       name: "top-level Matrix accessToken SecretRef config",
       config: {
         channels: {
+          matrix: {
             accessToken: {
               source: "env",
               provider: "default",
@@ -526,6 +554,7 @@ describe("secrets runtime snapshot", () => {
       name: "MATRIX_ACCESS_TOKEN env auth",
       config: {
         channels: {
+          matrix: {
             accounts: {
               default: {
                 password: {
@@ -550,6 +579,7 @@ describe("secrets runtime snapshot", () => {
       loadAuthStore: () => ({ version: 1, profiles: {} }),
     });
 
+    expect(snapshot.config.channels?.matrix?.accounts?.default?.password).toEqual({
       source: "env",
       provider: "default",
       id: "MATRIX_DEFAULT_PASSWORD",
@@ -557,6 +587,7 @@ describe("secrets runtime snapshot", () => {
     expect(snapshot.warnings).toContainEqual(
       expect.objectContaining({
         code: "SECRETS_REF_IGNORED_INACTIVE_SURFACE",
+        path: "channels.matrix.accounts.default.password",
       }),
     );
   });
@@ -634,6 +665,7 @@ describe("secrets runtime snapshot", () => {
     );
   });
 
+  it("normalizes inline SecretRef object on token to tokenRef", async () => {
     const config: ChainbreakerConfig = { models: {}, secrets: {} };
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config,
@@ -641,6 +673,7 @@ describe("secrets runtime snapshot", () => {
       agentDirs: ["/tmp/chainbreaker-agent-main"],
       loadAuthStore: () =>
         loadAuthStoreWithProfiles({
+          "custom:inline-token": {
             type: "token",
             provider: "custom",
             token: { source: "env", provider: "default", id: "MY_TOKEN" } as unknown as string,
@@ -648,15 +681,18 @@ describe("secrets runtime snapshot", () => {
         }),
     });
 
+    const profile = snapshot.authStores[0]?.store.profiles["custom:inline-token"] as Record<
       string,
       unknown
     >;
+    // tokenRef should be set from the inline SecretRef
     expect(profile.tokenRef).toEqual({ source: "env", provider: "default", id: "MY_TOKEN" });
     // token should be resolved to the actual value after activation
     activateSecretsRuntimeSnapshot(snapshot);
     expect(profile.token).toBe("resolved-token-value");
   });
 
+  it("normalizes inline SecretRef object on key to keyRef", async () => {
     const config: ChainbreakerConfig = { models: {}, secrets: {} };
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config,
@@ -664,6 +700,7 @@ describe("secrets runtime snapshot", () => {
       agentDirs: ["/tmp/chainbreaker-agent-main"],
       loadAuthStore: () =>
         loadAuthStoreWithProfiles({
+          "custom:inline-key": {
             type: "api_key",
             provider: "custom",
             key: { source: "env", provider: "default", id: "MY_KEY" } as unknown as string,
@@ -671,15 +708,18 @@ describe("secrets runtime snapshot", () => {
         }),
     });
 
+    const profile = snapshot.authStores[0]?.store.profiles["custom:inline-key"] as Record<
       string,
       unknown
     >;
+    // keyRef should be set from the inline SecretRef
     expect(profile.keyRef).toEqual({ source: "env", provider: "default", id: "MY_KEY" });
     // key should be resolved to the actual value after activation
     activateSecretsRuntimeSnapshot(snapshot);
     expect(profile.key).toBe("resolved-key-value");
   });
 
+  it("keeps explicit keyRef when inline key SecretRef is also present", async () => {
     const config: ChainbreakerConfig = { models: {}, secrets: {} };
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config,
@@ -1005,9 +1045,7 @@ describe("secrets runtime snapshot", () => {
     if (process.platform === "win32") {
       return;
     }
-    const root = await fs.mkdtemp(
-      path.join(os.tmpdir(), "chainbreaker-secrets-file-provider-bad-"),
-    );
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "chainbreaker-secrets-file-provider-bad-"));
     const secretsPath = path.join(root, "secrets.json");
     try {
       await fs.writeFile(secretsPath, JSON.stringify(["not-an-object"]), "utf8");
@@ -1991,6 +2029,7 @@ describe("secrets runtime snapshot", () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({
         channels: {
+          slack: {
             mode: "socket",
             signingSecret: {
               source: "env",
@@ -2011,11 +2050,13 @@ describe("secrets runtime snapshot", () => {
       loadAuthStore: () => ({ version: 1, profiles: {} }),
     });
 
+    expect(snapshot.config.channels?.slack?.signingSecret).toEqual({
       source: "env",
       provider: "default",
       id: "MISSING_SLACK_SIGNING_SECRET",
     });
     expect(snapshot.warnings.map((warning) => warning.path)).toContain(
+      "channels.slack.signingSecret",
     );
   });
 
@@ -2023,6 +2064,7 @@ describe("secrets runtime snapshot", () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({
         channels: {
+          slack: {
             mode: "http",
             appToken: {
               source: "env",
@@ -2048,15 +2090,18 @@ describe("secrets runtime snapshot", () => {
       loadAuthStore: () => ({ version: 1, profiles: {} }),
     });
 
+    expect(snapshot.config.channels?.slack?.appToken).toEqual({
       source: "env",
       provider: "default",
       id: "MISSING_SLACK_APP_TOKEN",
     });
+    expect(snapshot.config.channels?.slack?.accounts?.work?.appToken).toEqual({
       source: "env",
       provider: "default",
       id: "MISSING_SLACK_WORK_APP_TOKEN",
     });
     expect(snapshot.warnings.map((warning) => warning.path)).toEqual(
+      expect.arrayContaining(["channels.slack.appToken", "channels.slack.accounts.work.appToken"]),
     );
   });
 
@@ -2108,6 +2153,7 @@ describe("secrets runtime snapshot", () => {
       prepareSecretsRuntimeSnapshot({
         config: asConfig({
           channels: {
+            discord: {
               token: {
                 source: "env",
                 provider: "default",
@@ -2132,6 +2178,7 @@ describe("secrets runtime snapshot", () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({
         channels: {
+          discord: {
             token: {
               source: "env",
               provider: "default",
@@ -2151,16 +2198,19 @@ describe("secrets runtime snapshot", () => {
       loadAuthStore: () => ({ version: 1, profiles: {} }),
     });
 
+    expect(snapshot.config.channels?.discord?.token).toEqual({
       source: "env",
       provider: "default",
       id: "MISSING_DISCORD_DEFAULT_TOKEN",
     });
+    expect(snapshot.warnings.map((warning) => warning.path)).toContain("channels.discord.token");
   });
 
   it("treats Discord PluralKit token refs as inactive when PluralKit is disabled", async () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({
         channels: {
+          discord: {
             pluralkit: {
               enabled: false,
               token: {
@@ -2177,11 +2227,13 @@ describe("secrets runtime snapshot", () => {
       loadAuthStore: () => ({ version: 1, profiles: {} }),
     });
 
+    expect(snapshot.config.channels?.discord?.pluralkit?.token).toEqual({
       source: "env",
       provider: "default",
       id: "MISSING_DISCORD_PLURALKIT_TOKEN",
     });
     expect(snapshot.warnings.map((warning) => warning.path)).toContain(
+      "channels.discord.pluralkit.token",
     );
   });
 
@@ -2189,6 +2241,7 @@ describe("secrets runtime snapshot", () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({
         channels: {
+          discord: {
             voice: {
               enabled: false,
               tts: {
@@ -2226,11 +2279,13 @@ describe("secrets runtime snapshot", () => {
       loadAuthStore: () => ({ version: 1, profiles: {} }),
     });
 
+    expect(snapshot.config.channels?.discord?.voice?.tts?.providers?.openai?.apiKey).toEqual({
       source: "env",
       provider: "default",
       id: "MISSING_DISCORD_VOICE_TTS_OPENAI",
     });
     expect(
+      snapshot.config.channels?.discord?.accounts?.work?.voice?.tts?.providers?.openai?.apiKey,
     ).toEqual({
       source: "env",
       provider: "default",
@@ -2238,6 +2293,8 @@ describe("secrets runtime snapshot", () => {
     });
     expect(snapshot.warnings.map((warning) => warning.path)).toEqual(
       expect.arrayContaining([
+        "channels.discord.voice.tts.providers.openai.apiKey",
+        "channels.discord.accounts.work.voice.tts.providers.openai.apiKey",
       ]),
     );
   });
@@ -2246,6 +2303,7 @@ describe("secrets runtime snapshot", () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({
         channels: {
+          discord: {
             voice: {
               tts: {
                 providers: {
@@ -2314,18 +2372,23 @@ describe("secrets runtime snapshot", () => {
       loadAuthStore: () => ({ version: 1, profiles: {} }),
     });
 
+    expect(snapshot.config.channels?.discord?.voice?.tts?.providers?.openai?.apiKey).toBe(
       "base-tts-openai",
     );
+    expect(snapshot.config.channels?.discord?.pluralkit?.token).toBe("base-pk-token");
     expect(
+      snapshot.config.channels?.discord?.accounts?.enabledOverride?.voice?.tts?.providers?.openai
         ?.apiKey,
     ).toBe("enabled-override-tts-openai");
     expect(
+      snapshot.config.channels?.discord?.accounts?.disabledOverride?.voice?.tts?.providers?.openai
         ?.apiKey,
     ).toEqual({
       source: "env",
       provider: "default",
       id: "DISCORD_DISABLED_OVERRIDE_TTS_OPENAI",
     });
+    expect(snapshot.config.channels?.discord?.accounts?.disabledOverride?.pluralkit?.token).toEqual(
       {
         source: "env",
         provider: "default",
@@ -2334,6 +2397,8 @@ describe("secrets runtime snapshot", () => {
     );
     expect(snapshot.warnings.map((warning) => warning.path)).toEqual(
       expect.arrayContaining([
+        "channels.discord.accounts.disabledOverride.voice.tts.providers.openai.apiKey",
+        "channels.discord.accounts.disabledOverride.pluralkit.token",
       ]),
     );
   });
@@ -2342,6 +2407,7 @@ describe("secrets runtime snapshot", () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config: asConfig({
         channels: {
+          discord: {
             voice: {
               tts: {
                 providers: {
@@ -2387,13 +2453,16 @@ describe("secrets runtime snapshot", () => {
     });
 
     expect(
+      snapshot.config.channels?.discord?.accounts?.enabledOverride?.voice?.tts?.providers?.openai
         ?.apiKey,
     ).toBe("enabled-only-tts-openai");
+    expect(snapshot.config.channels?.discord?.voice?.tts?.providers?.openai?.apiKey).toEqual({
       source: "env",
       provider: "default",
       id: "DISCORD_UNUSED_BASE_TTS_OPENAI",
     });
     expect(snapshot.warnings.map((warning) => warning.path)).toContain(
+      "channels.discord.voice.tts.providers.openai.apiKey",
     );
   });
 
@@ -2402,6 +2471,7 @@ describe("secrets runtime snapshot", () => {
       prepareSecretsRuntimeSnapshot({
         config: asConfig({
           channels: {
+            discord: {
               voice: {
                 tts: {
                   providers: {
@@ -2502,6 +2572,7 @@ describe("secrets runtime snapshot", () => {
     });
   });
 
+  it("resolves inline env-template refs for active acpx MCP env vars", async () => {
     const config = asConfig({
       plugins: {
         entries: {
@@ -2527,6 +2598,7 @@ describe("secrets runtime snapshot", () => {
     const snapshot = await prepareSecretsRuntimeSnapshot({
       config,
       env: {
+        GH_TOKEN_SECRET: "ghp-inline-token",
         SECOND_SECRET: "ghp-second-token",
       },
       agentDirs: ["/tmp/chainbreaker-agent-main"],
@@ -2541,6 +2613,7 @@ describe("secrets runtime snapshot", () => {
       string,
       { env?: Record<string, unknown> }
     >;
+    expect(mcpServers?.github?.env?.GITHUB_TOKEN).toBe("ghp-inline-token");
     expect(mcpServers?.github?.env?.SECOND_TOKEN).toBe("ghp-second-token");
     expect(mcpServers?.github?.env?.LITERAL).toBe("literal-value");
   });

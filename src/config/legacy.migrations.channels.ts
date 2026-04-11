@@ -1,10 +1,17 @@
 import {
+  formatSlackStreamingBooleanMigrationMessage,
+  formatSlackStreamModeMigrationMessage,
+  resolveDiscordPreviewStreamMode,
+  resolveSlackNativeStreaming,
+  resolveSlackStreamingMode,
+  resolveTelegramPreviewStreamMode,
+} from "./streaming.js";
+import {
   defineLegacyConfigMigration,
   getRecord,
   type LegacyConfigMigrationSpec,
   type LegacyConfigRule,
 } from "./legacy.shared.js";
-import { resolveTelegramPreviewStreamMode } from "./streaming.js";
 
 function hasOwnKey(target: Record<string, unknown>, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(target, key);
@@ -13,6 +20,16 @@ function hasOwnKey(target: Record<string, unknown>, key: string): boolean {
 function hasLegacyThreadBindingTtl(value: unknown): boolean {
   const threadBindings = getRecord(value);
   return Boolean(threadBindings && hasOwnKey(threadBindings, "ttlHours"));
+}
+
+function hasLegacyThreadBindingTtlInAccounts(value: unknown): boolean {
+  const accounts = getRecord(value);
+  if (!accounts) {
+    return false;
+  }
+  return Object.values(accounts).some((entry) =>
+    hasLegacyThreadBindingTtl(getRecord(entry)?.threadBindings),
+  );
 }
 
 function migrateThreadBindingsTtlHoursForPath(params: {
@@ -51,12 +68,25 @@ const THREAD_BINDING_RULES: LegacyConfigRule[] = [
       "session.threadBindings.ttlHours was renamed to session.threadBindings.idleHours (auto-migrated on load).",
     match: (value) => hasLegacyThreadBindingTtl(value),
   },
+  {
+    path: ["channels", "discord", "threadBindings"],
+    message:
+      "channels.discord.threadBindings.ttlHours was renamed to channels.discord.threadBindings.idleHours (auto-migrated on load).",
+    match: (value) => hasLegacyThreadBindingTtl(value),
+  },
+  {
+    path: ["channels", "discord", "accounts"],
+    message:
+      "channels.discord.accounts.<id>.threadBindings.ttlHours was renamed to channels.discord.accounts.<id>.threadBindings.idleHours (auto-migrated on load).",
+    match: (value) => hasLegacyThreadBindingTtlInAccounts(value),
+  },
 ];
 
 export const LEGACY_CONFIG_MIGRATIONS_CHANNELS: LegacyConfigMigrationSpec[] = [
   defineLegacyConfigMigration({
     id: "thread-bindings.ttlHours->idleHours",
-    describe: "Move legacy threadBindings.ttlHours keys to threadBindings.idleHours (session)",
+    describe:
+      "Move legacy threadBindings.ttlHours keys to threadBindings.idleHours (session + channels.discord)",
     legacyRules: THREAD_BINDING_RULES,
     apply: (raw, changes) => {
       const session = getRecord(raw.session);
@@ -68,11 +98,44 @@ export const LEGACY_CONFIG_MIGRATIONS_CHANNELS: LegacyConfigMigrationSpec[] = [
         });
         raw.session = session;
       }
+
+      const channels = getRecord(raw.channels);
+      const discord = getRecord(channels?.discord);
+      if (!channels || !discord) {
+        return;
+      }
+
+      migrateThreadBindingsTtlHoursForPath({
+        owner: discord,
+        pathPrefix: "channels.discord",
+        changes,
+      });
+
+      const accounts = getRecord(discord.accounts);
+      if (accounts) {
+        for (const [accountId, accountRaw] of Object.entries(accounts)) {
+          const account = getRecord(accountRaw);
+          if (!account) {
+            continue;
+          }
+          migrateThreadBindingsTtlHoursForPath({
+            owner: account,
+            pathPrefix: `channels.discord.accounts.${accountId}`,
+            changes,
+          });
+          accounts[accountId] = account;
+        }
+        discord.accounts = accounts;
+      }
+
+      channels.discord = discord;
+      raw.channels = channels;
     },
   }),
   defineLegacyConfigMigration({
     id: "channels.streaming-keys->channels.streaming",
-    describe: "Normalize legacy streaming keys to channels.<provider>.streaming (Telegram)",
+    describe:
+      "Normalize legacy streaming keys to channels.<provider>.streaming (Telegram/Discord/Slack)",
     apply: (raw, changes) => {
       const channels = getRecord(raw.channels);
       if (!channels) {
@@ -80,7 +143,7 @@ export const LEGACY_CONFIG_MIGRATIONS_CHANNELS: LegacyConfigMigrationSpec[] = [
       }
 
       const migrateProviderEntry = (params: {
-        provider: "telegram";
+        provider: "telegram" | "discord" | "slack";
         entry: Record<string, unknown>;
         pathPrefix: string;
       }) => {
@@ -106,13 +169,41 @@ export const LEGACY_CONFIG_MIGRATIONS_CHANNELS: LegacyConfigMigrationSpec[] = [
           return true;
         };
 
+        const hasLegacyStreamMode = params.entry.streamMode !== undefined;
+        const legacyStreaming = params.entry.streaming;
+        const legacyNativeStreaming = params.entry.nativeStreaming;
+
         if (params.provider === "telegram") {
           migrateCommonStreamingMode(resolveTelegramPreviewStreamMode);
           return;
         }
+
+        if (params.provider === "discord") {
+          migrateCommonStreamingMode(resolveDiscordPreviewStreamMode);
+          return;
+        }
+
+        if (!hasLegacyStreamMode && typeof legacyStreaming !== "boolean") {
+          return;
+        }
+        const resolvedStreaming = resolveSlackStreamingMode(params.entry);
+        const resolvedNativeStreaming = resolveSlackNativeStreaming(params.entry);
+        params.entry.streaming = resolvedStreaming;
+        params.entry.nativeStreaming = resolvedNativeStreaming;
+        if (hasLegacyStreamMode) {
+          delete params.entry.streamMode;
+          changes.push(formatSlackStreamModeMigrationMessage(params.pathPrefix, resolvedStreaming));
+        }
+        if (typeof legacyStreaming === "boolean") {
+          changes.push(
+            formatSlackStreamingBooleanMigrationMessage(params.pathPrefix, resolvedNativeStreaming),
+          );
+        } else if (typeof legacyNativeStreaming !== "boolean" && hasLegacyStreamMode) {
+          changes.push(`Set ${params.pathPrefix}.nativeStreaming → ${resolvedNativeStreaming}.`);
+        }
       };
 
-      const migrateProvider = (provider: "telegram") => {
+      const migrateProvider = (provider: "telegram" | "discord" | "slack") => {
         const providerEntry = getRecord(channels[provider]);
         if (!providerEntry) {
           return;
@@ -140,6 +231,8 @@ export const LEGACY_CONFIG_MIGRATIONS_CHANNELS: LegacyConfigMigrationSpec[] = [
       };
 
       migrateProvider("telegram");
+      migrateProvider("discord");
+      migrateProvider("slack");
     },
   }),
 ];

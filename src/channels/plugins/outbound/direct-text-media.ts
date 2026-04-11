@@ -41,10 +41,7 @@ export {
 export function resolveScopedChannelMediaMaxBytes(params: {
   cfg: ChainbreakerConfig;
   accountId?: string | null;
-  resolveChannelLimitMb: (params: {
-    cfg: ChainbreakerConfig;
-    accountId: string;
-  }) => number | undefined;
+  resolveChannelLimitMb: (params: { cfg: ChainbreakerConfig; accountId: string }) => number | undefined;
 }): number | undefined {
   return resolveChannelMediaMaxBytes({
     cfg: params.cfg,
@@ -53,6 +50,7 @@ export function resolveScopedChannelMediaMaxBytes(params: {
   });
 }
 
+export function createScopedChannelMediaMaxBytesResolver(channel: "imessage" | "signal") {
   return (params: { cfg: ChainbreakerConfig; accountId?: string | null }) =>
     resolveScopedChannelMediaMaxBytes({
       cfg: params.cfg,
@@ -67,6 +65,7 @@ export function createDirectTextMediaOutbound<
   TOpts extends Record<string, unknown>,
   TResult extends DirectSendResult,
 >(params: {
+  channel: "imessage" | "signal";
   resolveSender: (deps: OutboundSendDeps | undefined) => DirectSendFn<TOpts, TResult>;
   resolveMaxBytes: (params: {
     cfg: ChainbreakerConfig;

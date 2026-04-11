@@ -122,9 +122,11 @@ describe("plugin-sdk/approval-renderers", () => {
         resolved: {
           id: "plugin-approval-123",
           decision: "allow-once",
+          resolvedBy: "discord:user:1",
           ts: 2_000,
         },
         channelData: {
+          discord: {
             components: [{ type: "container" }],
           },
         },
@@ -137,6 +139,7 @@ describe("plugin-sdk/approval-renderers", () => {
           approvalSlug: "plugin-a",
           state: "resolved",
         },
+        discord: {
           components: [{ type: "container" }],
         },
       },

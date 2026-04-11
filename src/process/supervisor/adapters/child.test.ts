@@ -27,6 +27,8 @@ function createStubChild(pid = 1234) {
   Object.defineProperty(child, "killed", { value: false, configurable: true, writable: true });
   const killMock = vi.fn(() => true);
   child.kill = killMock as ChildProcess["kill"];
+  const emitClose = (code: number | null, signal: NodeJS.Signals | null = null) => {
+    child.emit("close", code, signal);
   };
   return { child, killMock, emitClose };
 }
@@ -98,6 +100,7 @@ describe("createChildAdapter", () => {
     expect(killMock).toHaveBeenCalledWith("SIGKILL");
   });
 
+  it("uses direct child.kill for non-SIGKILL signals", async () => {
     const { adapter, killMock } = await createAdapterHarness({ pid: 7654 });
 
     adapter.kill("SIGTERM");
@@ -123,6 +126,7 @@ describe("createChildAdapter", () => {
     expect(settled).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(1);
+    await expect(waitPromise).resolves.toEqual({ code: null, signal: "SIGKILL" });
   });
 
   it("prefers real child close over the SIGKILL fallback settle", async () => {
@@ -144,8 +148,10 @@ describe("createChildAdapter", () => {
     adapter.kill();
     emitClose(0, "SIGKILL");
 
+    await expect(waitPromise).resolves.toEqual({ code: 0, signal: "SIGKILL" });
 
     await vi.advanceTimersByTimeAsync(4_001);
+    await expect(adapter.wait()).resolves.toEqual({ code: 0, signal: "SIGKILL" });
     expect(killMock).toHaveBeenCalledWith("SIGKILL");
   });
 

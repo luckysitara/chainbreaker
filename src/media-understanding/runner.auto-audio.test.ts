@@ -128,55 +128,52 @@ describe("runCapability auto audio entries", () => {
           PI_CODING_AGENT_DIR: isolatedAgentDir,
         },
         async () => {
-          await withAudioFixture(
-            "chainbreaker-auto-audio-mistral",
-            async ({ ctx, media, cache }) => {
-              const providerRegistry = buildProviderRegistry({
-                openai: {
-                  id: "openai",
-                  capabilities: ["audio"],
-                  transcribeAudio: async () => ({
-                    text: "openai",
-                    model: "gpt-4o-mini-transcribe",
-                  }),
-                },
-                mistral: {
-                  id: "mistral",
-                  capabilities: ["audio"],
-                  transcribeAudio: async (req) => ({
-                    text: "mistral",
-                    model: req.model ?? "unknown",
-                  }),
-                },
-              });
-              const cfg = {
-                models: {
-                  providers: {
-                    mistral: {
-                      apiKey: "mistral-test-key", // pragma: allowlist secret
-                      models: [],
-                    },
+          await withAudioFixture("chainbreaker-auto-audio-mistral", async ({ ctx, media, cache }) => {
+            const providerRegistry = buildProviderRegistry({
+              openai: {
+                id: "openai",
+                capabilities: ["audio"],
+                transcribeAudio: async () => ({
+                  text: "openai",
+                  model: "gpt-4o-mini-transcribe",
+                }),
+              },
+              mistral: {
+                id: "mistral",
+                capabilities: ["audio"],
+                transcribeAudio: async (req) => ({
+                  text: "mistral",
+                  model: req.model ?? "unknown",
+                }),
+              },
+            });
+            const cfg = {
+              models: {
+                providers: {
+                  mistral: {
+                    apiKey: "mistral-test-key", // pragma: allowlist secret
+                    models: [],
                   },
                 },
-                tools: {
-                  media: {
-                    audio: {
-                      enabled: true,
-                    },
+              },
+              tools: {
+                media: {
+                  audio: {
+                    enabled: true,
                   },
                 },
-              } as unknown as ChainbreakerConfig;
+              },
+            } as unknown as ChainbreakerConfig;
 
-              runResult = await runCapability({
-                capability: "audio",
-                cfg,
-                ctx,
-                attachments: cache,
-                media,
-                providerRegistry,
-              });
-            },
-          );
+            runResult = await runCapability({
+              capability: "audio",
+              cfg,
+              ctx,
+              attachments: cache,
+              media,
+              providerRegistry,
+            });
+          });
         },
       );
     } finally {

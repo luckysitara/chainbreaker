@@ -107,6 +107,7 @@ describe("channelsCapabilitiesCommand", () => {
 
   it("prints Slack bot + user scopes when user token is configured", async () => {
     const plugin = buildPlugin({
+      id: "slack",
       account: {
         accountId: "default",
         botToken: "xoxb-bot",
@@ -119,6 +120,7 @@ describe("channelsCapabilitiesCommand", () => {
       ...plugin.status,
       formatCapabilitiesProbe: () => [{ text: "Bot: @chainbreaker" }, { text: "Team: team" }],
       buildCapabilitiesDiagnostics: async () => ({
+        lines: [
           { text: "Bot scopes (auth.scopes): chat:write" },
           { text: "User scopes (auth.scopes): users:read" },
         ],
@@ -132,10 +134,12 @@ describe("channelsCapabilitiesCommand", () => {
     vi.mocked(getChannelPlugin).mockReturnValue(plugin);
     mocks.resolveInstallableChannelPlugin.mockResolvedValue({
       cfg: { channels: {} },
+      channelId: "slack",
       plugin,
       configChanged: false,
     });
 
+    await channelsCapabilitiesCommand({ channel: "slack" }, runtime);
 
     const output = logs.join("\n");
     expect(output).toContain("Bot scopes");

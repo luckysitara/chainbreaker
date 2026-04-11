@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { isGatewayArgv, parseProcCmdline } from "./gateway-process-argv.js";
 
+describe("parseProcCmdline", () => {
   it("splits null-delimited argv and trims empty entries", () => {
+    expect(parseProcCmdline(" node \0 gateway \0\0 --port \0 18789 \0")).toEqual([
       "node",
       "gateway",
       "--port",
@@ -9,6 +12,8 @@ import { describe, expect, it } from "vitest";
   });
 
   it("keeps non-delimited single arguments and drops whitespace-only entries", () => {
+    expect(parseProcCmdline(" gateway ")).toEqual(["gateway"]);
+    expect(parseProcCmdline(" \0\t\0 ")).toEqual([]);
   });
 });
 

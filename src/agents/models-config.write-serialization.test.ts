@@ -40,10 +40,7 @@ describe("models-config write serialization", () => {
       });
 
       try {
-        await Promise.all([
-          ensureChainbreakerModelsJson(first),
-          ensureChainbreakerModelsJson(second),
-        ]);
+        await Promise.all([ensureChainbreakerModelsJson(first), ensureChainbreakerModelsJson(second)]);
       } finally {
         writeSpy.mockRestore();
       }

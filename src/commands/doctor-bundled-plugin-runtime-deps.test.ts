@@ -15,6 +15,7 @@ describe("doctor bundled plugin runtime deps", () => {
     fs.mkdirSync(path.join(root, ".git"));
     fs.mkdirSync(path.join(root, "src"));
     fs.mkdirSync(path.join(root, "extensions"));
+    writeJson(path.join(root, "dist", "extensions", "discord", "package.json"), {
       dependencies: {
         "dep-one": "1.0.0",
       },

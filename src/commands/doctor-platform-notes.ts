@@ -26,9 +26,12 @@ export async function noteMacLaunchAgentOverrides() {
   }
 
   const displayMarkerPath = shortenHomePath(markerPath);
+  const lines = [
     `- LaunchAgent writes are disabled via ${displayMarkerPath}.`,
     "- To restore default behavior:",
     `  rm ${displayMarkerPath}`,
+  ].filter((line): line is string => Boolean(line));
+  note(lines.join("\n"), "Gateway (macOS)");
 }
 
 async function launchctlGetenv(name: string): Promise<string | undefined> {
@@ -86,6 +89,7 @@ export async function noteMacLaunchctlGatewayEnvOverrides(
     return;
   }
 
+  const lines = [
     "- launchctl environment overrides detected (can cause confusing unauthorized errors).",
     envToken && envTokenKey
       ? `- \`${envTokenKey}\` is set; it overrides config tokens.`
@@ -96,7 +100,9 @@ export async function noteMacLaunchctlGatewayEnvOverrides(
     "- Clear overrides and restart the app/gateway:",
     envTokenKey ? `  launchctl unsetenv ${envTokenKey}` : undefined,
     envPasswordKey ? `  launchctl unsetenv ${envPasswordKey}` : undefined,
+  ].filter((line): line is string => Boolean(line));
 
+  (deps?.noteFn ?? note)(lines.join("\n"), "Gateway (macOS)");
 }
 
 function isTruthyEnvValue(value: string | undefined): boolean {
@@ -140,23 +146,29 @@ export function noteStartupOptimizationHints(
   const compileCache = env.NODE_COMPILE_CACHE?.trim() ?? "";
   const disableCompileCache = env.NODE_DISABLE_COMPILE_CACHE?.trim() ?? "";
   const noRespawn = env.CHAINBREAKER_NO_RESPAWN?.trim() ?? "";
+  const lines: string[] = [];
 
   if (!compileCache) {
+    lines.push(
       "- NODE_COMPILE_CACHE is not set; repeated CLI runs can be slower on small hosts (Pi/VM).",
     );
   } else if (isTmpCompileCachePath(compileCache)) {
+    lines.push(
       "- NODE_COMPILE_CACHE points to /tmp; use /var/tmp so cache survives reboots and warms startup reliably.",
     );
   }
 
   if (isTruthyEnvValue(disableCompileCache)) {
+    lines.push("- NODE_DISABLE_COMPILE_CACHE is set; startup compile cache is disabled.");
   }
 
   if (noRespawn !== "1") {
+    lines.push(
       "- CHAINBREAKER_NO_RESPAWN is not set to 1; set it to avoid extra startup overhead from self-respawn.",
     );
   }
 
+  if (lines.length === 0) {
     return;
   }
 
@@ -166,5 +178,7 @@ export function noteStartupOptimizationHints(
     "  mkdir -p /var/tmp/chainbreaker-compile-cache",
     "  export CHAINBREAKER_NO_RESPAWN=1",
     isTruthyEnvValue(disableCompileCache) ? "  unset NODE_DISABLE_COMPILE_CACHE" : undefined,
+  ].filter((line): line is string => Boolean(line));
 
+  noteFn([...lines, ...suggestions].join("\n"), "Startup optimization");
 }

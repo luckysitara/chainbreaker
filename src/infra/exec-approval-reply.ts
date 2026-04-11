@@ -218,9 +218,18 @@ export function buildExecApprovalPendingReplyPayload(
   params: ExecApprovalPendingReplyParams,
 ): ReplyPayload {
   const approvalCommandId = params.approvalCommandId?.trim() || params.approvalSlug;
+  const lines: string[] = [];
   const warningText = params.warningText?.trim();
   if (warningText) {
+    lines.push(warningText);
   }
+  lines.push("Approval required.");
+  lines.push("Run:");
+  lines.push(buildFence(`/approve ${approvalCommandId} allow-once`, "txt"));
+  lines.push("Pending command:");
+  lines.push(buildFence(params.command, "sh"));
+  lines.push("Other options:");
+  lines.push(
     buildFence(
       `/approve ${approvalCommandId} allow-always\n/approve ${approvalCommandId} deny`,
       "txt",
@@ -240,8 +249,10 @@ export function buildExecApprovalPendingReplyPayload(
     );
   }
   info.push(`Full id: \`${params.approvalId}\``);
+  lines.push(info.join("\n"));
 
   return {
+    text: lines.join("\n\n"),
     interactive: buildApprovalInteractiveReply({ approvalId: params.approvalId }),
     channelData: {
       execApproval: {
@@ -256,32 +267,43 @@ export function buildExecApprovalPendingReplyPayload(
 export function buildExecApprovalUnavailableReplyPayload(
   params: ExecApprovalUnavailableReplyParams,
 ): ReplyPayload {
+  const lines: string[] = [];
   const warningText = params.warningText?.trim();
   if (warningText) {
+    lines.push(warningText);
   }
 
   if (params.sentApproverDms) {
+    lines.push(getExecApprovalApproverDmNoticeText());
     return {
+      text: lines.join("\n\n"),
     };
   }
 
   if (params.reason === "initiating-platform-disabled") {
+    lines.push(
       `Exec approval is required, but chat exec approvals are not enabled on ${params.channelLabel ?? "this platform"}.`,
     );
+    lines.push(
       "Approve it from the Web UI or terminal UI, or enable Discord, Slack, or Telegram exec approvals. If those accounts already know your owner ID via allowFrom, Chainbreaker can infer approvers automatically.",
     );
   } else if (params.reason === "initiating-platform-unsupported") {
+    lines.push(
       `Exec approval is required, but ${params.channelLabel ?? "this platform"} does not support chat exec approvals.`,
     );
+    lines.push(
       "Approve it from the Web UI or terminal UI, or enable Discord, Slack, or Telegram exec approvals. If those accounts already know your owner ID via allowFrom, Chainbreaker can infer approvers automatically.",
     );
   } else {
+    lines.push(
       "Exec approval is required, but no interactive approval client is currently available.",
     );
+    lines.push(
       "Open the Web UI or terminal UI, or enable Discord, Slack, or Telegram exec approvals, then retry the command. If those accounts already know your owner ID via allowFrom, you can usually leave execApprovals.approvers unset.",
     );
   }
 
   return {
+    text: lines.join("\n\n"),
   };
 }

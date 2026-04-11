@@ -8,12 +8,15 @@ import {
 } from "../../infra/format-time/format-datetime.ts";
 import { drainSystemEventEntries } from "../../infra/system-events.js";
 
+/** Drain queued system events, format as `System:` lines, return the block (or undefined). */
 export async function drainFormattedSystemEvents(params: {
   cfg: ChainbreakerConfig;
   sessionKey: string;
   isMainSession: boolean;
   isNewSession: boolean;
 }): Promise<string | undefined> {
+  const compactSystemEvent = (line: string): string | null => {
+    const trimmed = line.trim();
     if (!trimmed) {
       return null;
     }
@@ -87,12 +90,14 @@ export async function drainFormattedSystemEvents(params: {
       const timestamp = `[${formatSystemEventTimestamp(event.ts, params.cfg)}]`;
       return compacted
         .split("\n")
+        .map((subline, index) => `${prefix}: ${index === 0 ? `${timestamp} ` : ""}${subline}`);
     }),
   );
   if (params.isMainSession && params.isNewSession) {
     const summary = await buildChannelSummary(params.cfg);
     if (summary.length > 0) {
       systemLines.unshift(
+        ...summary.flatMap((line) => line.split("\n").map((subline) => `System: ${subline}`)),
       );
     }
   }
@@ -100,6 +105,7 @@ export async function drainFormattedSystemEvents(params: {
     return undefined;
   }
 
+  // Each sub-line gets its own prefix so continuation lines can't be mistaken
   // for regular user content.
   return systemLines.join("\n");
 }

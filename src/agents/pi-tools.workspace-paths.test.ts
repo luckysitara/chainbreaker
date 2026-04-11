@@ -171,10 +171,7 @@ describe("workspace path resolution", () => {
       const tools = createChainbreakerCodingTools({ workspaceDir, config: cfg });
       const { readTool } = expectReadWriteEditTools(tools);
 
-      const outsideAbsolute = path.resolve(
-        path.parse(workspaceDir).root,
-        "outside-chainbreaker.txt",
-      );
+      const outsideAbsolute = path.resolve(path.parse(workspaceDir).root, "outside-chainbreaker.txt");
       await expect(
         readTool.execute("ws-read-at-prefix", { path: `@${outsideAbsolute}` }),
       ).rejects.toThrow(/Path escapes sandbox root/i);

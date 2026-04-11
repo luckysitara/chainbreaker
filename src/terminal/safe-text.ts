@@ -1,6 +1,7 @@
 import { stripAnsi } from "./ansi.js";
 
 /**
+ * Normalize untrusted text for single-line terminal/log rendering.
  */
 export function sanitizeTerminalText(input: string): string {
   const normalized = stripAnsi(input)

@@ -26,6 +26,7 @@ export function decodeStrictBase64(value: string, maxDecodedBytes: number): Buff
   return decoded;
 }
 
+export type SubagentInlineAttachment = {
   name: string;
   content: string;
   encoding?: "utf8" | "base64";
@@ -94,6 +95,7 @@ function resolveAttachmentLimits(config: ChainbreakerConfig): AttachmentLimits {
 export async function materializeSubagentAttachments(params: {
   config: ChainbreakerConfig;
   targetAgentId: string;
+  attachments?: SubagentInlineAttachment[];
   mountPathHint?: string;
 }): Promise<MaterializeSubagentAttachmentsResult | null> {
   const requestedAttachments = Array.isArray(params.attachments) ? params.attachments : [];
@@ -146,6 +148,7 @@ export async function materializeSubagentAttachments(params: {
       if (name.includes("/") || name.includes("\\") || name.includes("\u0000")) {
         fail(`attachments_invalid_name (${name})`);
       }
+      // eslint-disable-next-line no-control-regex
       if (/[\r\n\t\u0000-\u001F\u007F]/.test(name)) {
         fail(`attachments_invalid_name (${name})`);
       }

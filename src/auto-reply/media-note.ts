@@ -138,7 +138,9 @@ export function buildInboundMediaNote(ctx: MsgContext): string | undefined {
   }
 
   const count = entries.length;
+  const lines: string[] = [`[media attached: ${count} files]`];
   for (const [idx, entry] of entries.entries()) {
+    lines.push(
       formatMediaAttachedLine({
         path: entry.path,
         index: idx + 1,
@@ -148,4 +150,5 @@ export function buildInboundMediaNote(ctx: MsgContext): string | undefined {
       }),
     );
   }
+  return lines.join("\n");
 }

@@ -43,6 +43,7 @@ describe("gateway startup log", () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
+  it("logs all listen endpoints on a single line", () => {
     const info = vi.fn();
     const warn = vi.fn();
 

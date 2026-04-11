@@ -12,9 +12,7 @@ import {
 } from "./exec-approvals.js";
 
 function buildConfig(
-  execApprovals?: NonNullable<
-    NonNullable<ChainbreakerConfig["channels"]>["telegram"]
-  >["execApprovals"],
+  execApprovals?: NonNullable<NonNullable<ChainbreakerConfig["channels"]>["telegram"]>["execApprovals"],
   channelOverrides?: Partial<NonNullable<NonNullable<ChainbreakerConfig["channels"]>["telegram"]>>,
 ): ChainbreakerConfig {
   return {
@@ -88,6 +86,7 @@ describe("telegram exec approvals", () => {
     expect(shouldInjectTelegramExecApprovalButtons({ cfg: bothCfg, to: "-100123" })).toBe(true);
   });
 
+  it("does not require generic inlineButtons capability to enable exec approval buttons", () => {
     const cfg = {
       channels: {
         telegram: {
@@ -101,10 +100,12 @@ describe("telegram exec approvals", () => {
     expect(shouldEnableTelegramExecApprovalButtons({ cfg, to: "123" })).toBe(true);
   });
 
+  it("still respects explicit inlineButtons off for exec approval buttons", () => {
     const cfg = {
       channels: {
         telegram: {
           botToken: "tok",
+          capabilities: { inlineButtons: "off" },
           execApprovals: { enabled: true, approvers: ["123"], target: "dm" },
         },
       },
@@ -139,6 +140,7 @@ describe("telegram exec approvals", () => {
     });
 
     it("ignores non-telegram targets", () => {
+      const cfg = buildTargetConfig([{ channel: "discord", to: "12345" }]);
       expect(isTelegramExecApprovalTargetRecipient({ cfg, senderId: "12345" })).toBe(false);
     });
 
@@ -156,6 +158,7 @@ describe("telegram exec approvals", () => {
 
     it("matches across multiple targets", () => {
       const cfg = buildTargetConfig([
+        { channel: "slack", to: "U12345" },
         { channel: "telegram", to: "67890" },
         { channel: "telegram", to: "11111" },
       ]);

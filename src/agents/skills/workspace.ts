@@ -544,6 +544,7 @@ function escapeXml(str: string): string {
 export function formatSkillsCompact(skills: Skill[]): string {
   const visible = skills.filter((s) => !s.disableModelInvocation);
   if (visible.length === 0) return "";
+  const lines = [
     "\n\nThe following skills provide specialized instructions for specific tasks.",
     "Use the read tool to load a skill's file when the task matches its name.",
     "When a skill file references a relative path, resolve it against the skill directory (parent of SKILL.md / dirname of the path) and use that absolute path in tool commands.",
@@ -551,9 +552,16 @@ export function formatSkillsCompact(skills: Skill[]): string {
     "<available_skills>",
   ];
   for (const skill of visible) {
+    lines.push("  <skill>");
+    lines.push(`    <name>${escapeXml(skill.name)}</name>`);
+    lines.push(`    <location>${escapeXml(skill.filePath)}</location>`);
+    lines.push("  </skill>");
   }
+  lines.push("</available_skills>");
+  return lines.join("\n");
 }
 
+// Budget reserved for the compact-mode warning line prepended by the caller.
 const COMPACT_WARNING_OVERHEAD = 150;
 
 function applySkillsPromptLimits(params: { skills: Skill[]; config?: ChainbreakerConfig }): {
@@ -572,6 +580,7 @@ function applySkillsPromptLimits(params: { skills: Skill[]; config?: Chainbreake
   const fitsFull = (skills: Skill[]): boolean =>
     formatSkillsForPrompt(skills).length <= limits.maxSkillsPromptChars;
 
+  // Reserve space for the warning line the caller prepends in compact mode.
   const compactBudget = limits.maxSkillsPromptChars - COMPACT_WARNING_OVERHEAD;
   const fitsCompact = (skills: Skill[]): boolean =>
     formatSkillsCompact(skills).length <= compactBudget;

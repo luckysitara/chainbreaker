@@ -13,8 +13,12 @@ import {
   type TelegramActionConfig,
 } from "chainbreaker/plugin-sdk/telegram-core";
 import { createTelegramActionGate, resolveTelegramPollActionGateState } from "./accounts.js";
+import type { TelegramButtonStyle, TelegramInlineButtons } from "./button-types.js";
+import { resolveTelegramInlineButtons } from "./button-types.js";
 import {
+  resolveTelegramInlineButtonsScope,
   resolveTelegramTargetChatType,
+} from "./inline-buttons.js";
 import { resolveTelegramReactionLevel } from "./reaction-level.js";
 import {
   createForumTopicTelegram,
@@ -104,6 +108,7 @@ function resolveTelegramPollVisibility(params: {
 
 export function readTelegramButtons(
   params: Record<string, unknown>,
+): TelegramInlineButtons | undefined {
   const raw = params.buttons;
   if (raw == null) {
     return undefined;
@@ -183,6 +188,7 @@ function readTelegramReplyToMessageId(params: Record<string, unknown>) {
 }
 
 function resolveTelegramButtonsFromParams(params: Record<string, unknown>) {
+  return resolveTelegramInlineButtons({
     buttons: readTelegramButtons(params),
     interactive: params.interactive,
   });
@@ -318,19 +324,28 @@ export async function handleTelegramAction(
       hasButtons: Array.isArray(buttons) && buttons.length > 0,
     });
     if (buttons) {
+      const inlineButtonsScope = resolveTelegramInlineButtonsScope({
         cfg,
         accountId: accountId ?? undefined,
       });
+      if (inlineButtonsScope === "off") {
         throw new Error(
+          'Telegram inline buttons are disabled. Set channels.telegram.capabilities.inlineButtons to "dm", "group", "all", or "allowlist".',
         );
       }
+      if (inlineButtonsScope === "dm" || inlineButtonsScope === "group") {
         const targetType = resolveTelegramTargetChatType(to);
         if (targetType === "unknown") {
           throw new Error(
+            `Telegram inline buttons require a numeric chat id when inlineButtons="${inlineButtonsScope}".`,
           );
         }
+        if (inlineButtonsScope === "dm" && targetType !== "direct") {
+          throw new Error('Telegram inline buttons are limited to DMs when inlineButtons="dm".');
         }
+        if (inlineButtonsScope === "group" && targetType !== "group") {
           throw new Error(
+            'Telegram inline buttons are limited to groups when inlineButtons="group".',
           );
         }
       }
@@ -478,10 +493,13 @@ export async function handleTelegramAction(
       readStringParam(params, "message", { required: true, allowEmpty: false });
     const buttons = resolveTelegramButtonsFromParams(params);
     if (buttons) {
+      const inlineButtonsScope = resolveTelegramInlineButtonsScope({
         cfg,
         accountId: accountId ?? undefined,
       });
+      if (inlineButtonsScope === "off") {
         throw new Error(
+          'Telegram inline buttons are disabled. Set channels.telegram.capabilities.inlineButtons to "dm", "group", "all", or "allowlist".',
         );
       }
     }

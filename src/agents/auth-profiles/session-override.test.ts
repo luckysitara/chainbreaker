@@ -11,8 +11,10 @@ async function writeAuthStore(agentDir: string) {
   const payload = {
     version: 1,
     profiles: {
+      "zai:work": { type: "api_key", provider: "zai", key: "sk-test" },
     },
     order: {
+      zai: ["zai:work"],
     },
   };
   await fs.writeFile(authPath, JSON.stringify(payload), "utf-8");
@@ -28,6 +30,7 @@ describe("resolveSessionAuthProfileOverride", () => {
       const sessionEntry: SessionEntry = {
         sessionId: "s1",
         updatedAt: Date.now(),
+        authProfileOverride: "zai:work",
         authProfileOverrideSource: "user",
       };
       const sessionStore = { "agent:main:main": sessionEntry };
@@ -43,6 +46,8 @@ describe("resolveSessionAuthProfileOverride", () => {
         isNewSession: false,
       });
 
+      expect(resolved).toBe("zai:work");
+      expect(sessionEntry.authProfileOverride).toBe("zai:work");
     });
   });
 });

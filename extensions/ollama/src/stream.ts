@@ -625,13 +625,18 @@ export async function* parseNdjsonStream(
       break;
     }
     buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
 
+    for (const line of lines) {
+      const trimmed = line.trim();
       if (!trimmed) {
         continue;
       }
       try {
         yield parseJsonPreservingUnsafeIntegers(trimmed) as OllamaChatResponse;
       } catch {
+        log.warn(`Skipping malformed NDJSON line: ${trimmed.slice(0, 120)}`);
       }
     }
   }
@@ -709,6 +714,7 @@ export function createOllamaStreamFn(
           method: "POST",
           headers,
           body: JSON.stringify(body),
+          signal: options?.signal,
         });
 
         if (!response.ok) {

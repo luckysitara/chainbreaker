@@ -253,9 +253,7 @@ describe("channel plugin catalog", () => {
     {
       name: "preserves plugin ids when they differ from channel ids",
       setup: () => {
-        const stateDir = fs.mkdtempSync(
-          path.join(os.tmpdir(), "chainbreaker-channel-catalog-state-"),
-        );
+        const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "chainbreaker-channel-catalog-state-"));
         writeDiscoveredChannelPlugin({
           stateDir,
           packageName: "@vendor/demo-channel-plugin",

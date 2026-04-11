@@ -142,6 +142,7 @@ describe("detectImageReferences", () => {
   });
 
   it("detects multiple images in [media attached: ...] format", () => {
+    // Multi-file format uses separate brackets on separate lines
     const refs = expectImageReferenceCount(
       `[media attached: 2 files]
 [media attached 1/2: /Users/tyleryust/.chainbreaker/media/IMG_6430.jpeg (image/jpeg)]
@@ -290,7 +291,9 @@ describe("detectAndLoadPromptImages", () => {
     expectNoPromptImages(result);
   });
 
+  it("preserves attachment order when offloaded refs and inline images are mixed", async () => {
     const merged = mergePromptAttachmentImages({
+      imageOrder: ["offloaded", "inline"],
       existingImages: [{ type: "image", data: "small-b", mimeType: "image/png" }],
       offloadedImages: [{ type: "image", data: "large-a", mimeType: "image/jpeg" }],
     });
@@ -309,6 +312,7 @@ describe("detectAndLoadPromptImages", () => {
     const split = splitPromptAndAttachmentRefs({
       prompt,
       refs,
+      imageOrder: ["inline", "offloaded"],
     });
 
     expect(split.promptRefs).toEqual([

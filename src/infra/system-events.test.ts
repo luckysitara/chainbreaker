@@ -45,16 +45,23 @@ describe("system events (session routing)", () => {
 
   it("does not leak session-scoped events into main", async () => {
     enqueueSystemEvent("Discord reaction added: ✅", {
+      sessionKey: "discord:group:123",
+      contextKey: "discord:reaction:added:msg:user:✅",
     });
 
     expect(peekSystemEvents(mainKey)).toEqual([]);
+    expect(peekSystemEvents("discord:group:123")).toEqual(["Discord reaction added: ✅"]);
 
     // Main session gets no events — undefined returned
     const main = await drainFormattedEvents(mainKey, { isMainSession: true });
     expect(main).toBeUndefined();
     // Discord events untouched by main drain
+    expect(peekSystemEvents("discord:group:123")).toEqual(["Discord reaction added: ✅"]);
 
     // Discord session gets its own events block
+    const discord = await drainFormattedEvents("discord:group:123");
+    expect(discord).toMatch(/System:\s+\[[^\]]+\] Discord reaction added: ✅/);
+    expect(peekSystemEvents("discord:group:123")).toEqual([]);
   });
 
   it("requires an explicit session key", () => {
@@ -165,6 +172,7 @@ describe("system events (session routing)", () => {
     first.resetSystemEventsForTest();
   });
 
+  it("filters heartbeat/noise lines, returning undefined", async () => {
     const key = "agent:main:test-heartbeat-filter";
     enqueueSystemEvent("Read HEARTBEAT.md before continuing", { sessionKey: key });
     enqueueSystemEvent("heartbeat poll: pending", { sessionKey: key });
@@ -175,9 +183,16 @@ describe("system events (session routing)", () => {
     expect(peekSystemEvents(key)).toEqual([]);
   });
 
+  it("prefixes every line of a multi-line event", async () => {
+    const key = "agent:main:test-multiline";
+    enqueueSystemEvent("Post-compaction context:\nline one\nline two", { sessionKey: key });
 
     const result = await drainFormattedEvents(key);
     expect(result).toBeDefined();
+    const lines = result!.split("\n");
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      expect(line).toMatch(/^System:/);
     }
   });
 

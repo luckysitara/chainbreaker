@@ -947,6 +947,7 @@ export const agentHandlers: GatewayRequestHandlers = {
     const lifecyclePromise = waitForAgentJob({
       runId,
       timeoutMs,
+      signal: lifecycleAbortController.signal,
       // When chat.send is active with the same runId, ignore cached lifecycle
       // snapshots so stale agent results do not preempt the active chat run.
       ignoreCachedSnapshot: hasActiveChatRun,
@@ -955,6 +956,7 @@ export const agentHandlers: GatewayRequestHandlers = {
       dedupe: context.dedupe,
       runId,
       timeoutMs,
+      signal: dedupeAbortController.signal,
       ignoreAgentTerminalSnapshot: hasActiveChatRun,
     });
 

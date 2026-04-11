@@ -19,11 +19,18 @@ import type {
   MediaUnderstandingModelConfig,
 } from "../config/types.tools.js";
 import { logVerbose, shouldLogVerbose } from "../globals.js";
-import { mergeInboundPathRoots } from "../media/inbound-path-policy.js";
+import {
+  mergeInboundPathRoots,
+  resolveIMessageAttachmentRoots,
+} from "../media/inbound-path-policy.js";
 import { getDefaultMediaLocalRoots } from "../media/local-roots.js";
 import { runExec } from "../process/exec.js";
-import { MediaAttachmentCache, type MediaAttachmentCacheOptions } from "./attachments.cache.js";
-import { normalizeAttachments, selectAttachments } from "./attachments.js";
+import {
+  MediaAttachmentCache,
+  type MediaAttachmentCacheOptions,
+  normalizeAttachments,
+  selectAttachments,
+} from "./attachments.js";
 import {
   AUTO_AUDIO_KEY_PROVIDERS,
   AUTO_IMAGE_KEY_PROVIDERS,
@@ -77,11 +84,17 @@ export function normalizeMediaAttachments(ctx: MsgContext): MediaAttachment[] {
   return normalizeAttachments(ctx);
 }
 
-export function resolveMediaAttachmentLocalRoots(_params: {
+export function resolveMediaAttachmentLocalRoots(params: {
   cfg: ChainbreakerConfig;
   ctx: MsgContext;
 }): readonly string[] {
-  return mergeInboundPathRoots(getDefaultMediaLocalRoots());
+  return mergeInboundPathRoots(
+    getDefaultMediaLocalRoots(),
+    resolveIMessageAttachmentRoots({
+      cfg: params.cfg,
+      accountId: params.ctx.AccountId,
+    }),
+  );
 }
 
 export function createMediaAttachmentCache(
@@ -255,6 +268,7 @@ async function resolveLocalWhisperEntry(): Promise<MediaUnderstandingModelConfig
 }
 
 async function resolveSherpaOnnxEntry(): Promise<MediaUnderstandingModelConfig | null> {
+  if (!(await hasBinary("sherpa-onnx-offline"))) {
     return null;
   }
   const modelDir = process.env.SHERPA_ONNX_MODEL_DIR?.trim();
@@ -279,6 +293,7 @@ async function resolveSherpaOnnxEntry(): Promise<MediaUnderstandingModelConfig |
   }
   return {
     type: "cli",
+    command: "sherpa-onnx-offline",
     args: [
       `--tokens=${tokens}`,
       `--encoder=${encoder}`,
@@ -411,9 +426,7 @@ async function resolveKeyEntry(params: {
   return null;
 }
 
-function resolveImageModelFromAgentDefaults(
-  cfg: ChainbreakerConfig,
-): MediaUnderstandingModelConfig[] {
+function resolveImageModelFromAgentDefaults(cfg: ChainbreakerConfig): MediaUnderstandingModelConfig[] {
   const refs: string[] = [];
   const primary = resolveAgentModelPrimaryValue(cfg.agents?.defaults?.imageModel);
   if (primary?.trim()) {

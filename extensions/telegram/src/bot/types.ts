@@ -13,6 +13,7 @@ export type TelegramGetChat = (chatId: number | string) => Promise<TelegramChatD
 
 /**
  * Minimal context projection from Grammy's Context class.
+ * Decouples the message processing pipeline from Grammy's full Context,
  * and allows constructing synthetic contexts for debounced/combined messages.
  */
 export type TelegramContext = {

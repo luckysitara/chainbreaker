@@ -88,10 +88,8 @@ function resolveCacheTraceConfig(params: CacheTraceInit): CacheTraceConfig {
 
   const includeMessages =
     parseBooleanValue(env.CHAINBREAKER_CACHE_TRACE_MESSAGES) ?? config?.includeMessages;
-  const includePrompt =
-    parseBooleanValue(env.CHAINBREAKER_CACHE_TRACE_PROMPT) ?? config?.includePrompt;
-  const includeSystem =
-    parseBooleanValue(env.CHAINBREAKER_CACHE_TRACE_SYSTEM) ?? config?.includeSystem;
+  const includePrompt = parseBooleanValue(env.CHAINBREAKER_CACHE_TRACE_PROMPT) ?? config?.includePrompt;
+  const includeSystem = parseBooleanValue(env.CHAINBREAKER_CACHE_TRACE_SYSTEM) ?? config?.includeSystem;
 
   return {
     enabled,
@@ -229,8 +227,11 @@ export function createCacheTrace(params: CacheTraceInit): CacheTrace | null {
       event.error = payload.error;
     }
 
+    const line = safeJsonStringify(event);
+    if (!line) {
       return;
     }
+    writer.write(`${line}\n`);
   };
 
   const wrapStreamFn: CacheTrace["wrapStreamFn"] = (streamFn) => {

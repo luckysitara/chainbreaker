@@ -118,6 +118,7 @@ beforeAll(async () => {
   } = await import("../logging/logger.js"));
 });
 
+async function runEmbeddedPiAgentInline(
   params: Parameters<typeof runEmbeddedPiAgent>[0],
 ): Promise<Awaited<ReturnType<typeof runEmbeddedPiAgent>>> {
   return await runEmbeddedPiAgent({
@@ -403,6 +404,7 @@ async function runAutoPinnedOpenAiTurn(params: {
   authProfileId?: string;
   config?: ChainbreakerConfig;
 }) {
+  await runEmbeddedPiAgentInline({
     sessionId: "session:test",
     sessionKey: params.sessionKey,
     sessionFile: path.join(params.workspaceDir, "session.jsonl"),
@@ -568,6 +570,7 @@ async function runTurnWithCooldownSeed(params: {
     });
     mockSingleSuccessfulAttempt();
 
+    await runEmbeddedPiAgentInline({
       sessionId: "session:test",
       sessionKey: params.sessionKey,
       sessionFile: path.join(workspaceDir, "session.jsonl"),
@@ -632,6 +635,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
           }),
         );
 
+      await runEmbeddedPiAgentInline({
         sessionId: "session:test",
         sessionKey: "agent:test:copilot-auth-error",
         sessionFile: path.join(workspaceDir, "session.jsonl"),
@@ -716,6 +720,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
           }),
         );
 
+      await runEmbeddedPiAgentInline({
         sessionId: "session:test",
         sessionKey: "agent:test:copilot-auth-repeat",
         sessionFile: path.join(workspaceDir, "session.jsonl"),
@@ -763,6 +768,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
         }),
       );
 
+      const runPromise = runEmbeddedPiAgentInline({
         sessionId: "session:test",
         sessionKey: "agent:test:copilot-shutdown",
         sessionFile: path.join(workspaceDir, "session.jsonl"),
@@ -931,6 +937,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
         }),
       );
 
+      const result = await runEmbeddedPiAgentInline({
         sessionId: "session:test",
         sessionKey: "agent:test:compaction-timeout",
         sessionFile: path.join(workspaceDir, "session.jsonl"),
@@ -959,6 +966,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
 
       mockSingleErrorAttempt({ errorMessage: "rate limit" });
 
+      await runEmbeddedPiAgentInline({
         sessionId: "session:test",
         sessionKey: "agent:test:user",
         sessionFile: path.join(workspaceDir, "session.jsonl"),
@@ -1006,6 +1014,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
         }),
       );
 
+      await runEmbeddedPiAgentInline({
         sessionId: "session:test",
         sessionKey: "agent:test:mismatch",
         sessionFile: path.join(workspaceDir, "session.jsonl"),
@@ -1047,6 +1056,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
       });
 
       await expect(
+        runEmbeddedPiAgentInline({
           sessionId: "session:test",
           sessionKey: "agent:test:cooldown-failover",
           sessionFile: path.join(workspaceDir, "session.jsonl"),
@@ -1090,6 +1100,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
         }),
       );
 
+      const result = await runEmbeddedPiAgentInline({
         sessionId: "session:test",
         sessionKey: "agent:test:cooldown-probe",
         sessionFile: path.join(workspaceDir, "session.jsonl"),
@@ -1137,6 +1148,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
         }),
       );
 
+      const result = await runEmbeddedPiAgentInline({
         sessionId: "session:test",
         sessionKey: "agent:test:overloaded-cooldown-probe",
         sessionFile: path.join(workspaceDir, "session.jsonl"),
@@ -1184,6 +1196,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
         }),
       );
 
+      const result = await runEmbeddedPiAgentInline({
         sessionId: "session:test",
         sessionKey: "agent:test:billing-cooldown-probe-no-fallbacks",
         sessionFile: path.join(workspaceDir, "session.jsonl"),
@@ -1214,6 +1227,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
       });
 
       await expect(
+        runEmbeddedPiAgentInline({
           sessionId: "session:test",
           sessionKey: "agent:support:cooldown-failover",
           sessionFile: path.join(workspaceDir, "session.jsonl"),
@@ -1258,6 +1272,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
       });
 
       await expect(
+        runEmbeddedPiAgentInline({
           sessionId: "session:test",
           sessionKey: "agent:test:disabled-failover",
           sessionFile: path.join(workspaceDir, "session.jsonl"),
@@ -1291,6 +1306,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
         await fs.writeFile(authPath, JSON.stringify({ version: 1, profiles: {}, usageStats: {} }));
 
         await expect(
+          runEmbeddedPiAgentInline({
             sessionId: "session:test",
             sessionKey: "agent:test:auth-unavailable",
             sessionFile: path.join(workspaceDir, "session.jsonl"),
@@ -1328,6 +1344,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
 
       let thrown: unknown;
       try {
+        await runEmbeddedPiAgentInline({
           sessionId: "session:test",
           sessionKey: "agent:test:billing-failover-active-model",
           sessionFile: path.join(workspaceDir, "session.jsonl"),

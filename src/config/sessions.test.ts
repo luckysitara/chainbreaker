@@ -142,19 +142,25 @@ describe("sessions", () => {
     });
   }
 
+  it("builds discord display name with guild+channel slugs", () => {
     expect(
       buildGroupDisplayName({
+        provider: "discord",
         groupChannel: "#general",
         space: "friends-of-chainbreaker",
         id: "123",
+        key: "discord:group:123",
       }),
+    ).toBe("discord:friends-of-chainbreaker#general");
   });
 
   const resolveSessionKeyCases = [
     {
       name: "keeps explicit provider when provided in group key",
       scope: "per-sender" as const,
+      ctx: { From: "discord:group:12345", ChatType: "group" },
       mainKey: "main",
+      expected: "agent:main:discord:group:12345",
     },
     {
       name: "collapses direct chats to main by default",
@@ -514,6 +520,7 @@ describe("sessions", () => {
           [mainSessionKey]: {
             sessionId: "sess-legacy",
             updatedAt: 123,
+            provider: "slack",
             lastProvider: "telegram",
             lastTo: "user:U123",
           },
@@ -526,6 +533,7 @@ describe("sessions", () => {
 
     const store = loadSessionStore(storePath) as unknown as Record<string, Record<string, unknown>>;
     const entry = store[mainSessionKey] ?? {};
+    expect(entry.channel).toBe("slack");
     expect(entry.provider).toBeUndefined();
     expect(entry.lastChannel).toBe("telegram");
     expect(entry.lastProvider).toBeUndefined();

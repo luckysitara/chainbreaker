@@ -26,13 +26,17 @@ describe("resolveProviderAuths plugin boundary", () => {
 
   it("prefers plugin-owned usage auth when available", async () => {
     resolveProviderUsageAuthWithPluginMock.mockResolvedValueOnce({
+      token: "plugin-zai-token",
     });
 
     await expect(
       resolveProviderAuths({
+        providers: ["zai"],
       }),
     ).resolves.toEqual([
       {
+        provider: "zai",
+        token: "plugin-zai-token",
       },
     ]);
   });

@@ -173,6 +173,7 @@ describe("spawnSubagentDirect filename validation", () => {
     expect(result.error).toMatch(/attachments_invalid_name/);
   });
 
+  it("name with newline returns attachments_invalid_name", async () => {
     const result = await spawnWithName("foo\nbar");
     expect(result.status).toBe("error");
     expect(result.error).toMatch(/attachments_invalid_name/);
@@ -204,11 +205,13 @@ describe("spawnSubagentDirect filename validation", () => {
     expect(result.error).toMatch(/attachments_invalid_name/);
   });
 
+  it("removes materialized attachments when lineage patching fails", async () => {
     const calls: Array<{ method?: string; params?: Record<string, unknown> }> = [];
     callGatewayMock.mockImplementation(async (opts: unknown) => {
       const request = opts as { method?: string; params?: Record<string, unknown> };
       calls.push(request);
       if (request.method === "sessions.patch" && typeof request.params?.spawnedBy === "string") {
+        throw new Error("lineage patch failed");
       }
       if (request.method === "sessions.delete") {
         return { ok: true };
@@ -231,6 +234,7 @@ describe("spawnSubagentDirect filename validation", () => {
 
     expect(result).toMatchObject({
       status: "error",
+      error: "lineage patch failed",
     });
     const attachmentsRoot = path.join(workspaceDirOverride, ".chainbreaker", "attachments");
     const retainedDirs = fs.existsSync(attachmentsRoot)

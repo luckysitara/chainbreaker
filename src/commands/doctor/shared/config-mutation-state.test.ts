@@ -11,6 +11,8 @@ describe("doctor config mutation state", () => {
         fixHints: [],
       },
       mutation: {
+        config: { channels: { signal: { enabled: true } } },
+        changes: ["enabled signal"],
       },
       shouldRepair: false,
       fixHint: 'Run "chainbreaker doctor --fix" to apply these changes.',
@@ -18,6 +20,7 @@ describe("doctor config mutation state", () => {
 
     expect(next).toEqual({
       cfg: { channels: {} },
+      candidate: { channels: { signal: { enabled: true } } },
       pendingChanges: true,
       fixHints: ['Run "chainbreaker doctor --fix" to apply these changes.'],
     });
@@ -32,12 +35,16 @@ describe("doctor config mutation state", () => {
         fixHints: [],
       },
       mutation: {
+        config: { channels: { signal: { enabled: true } } },
+        changes: ["enabled signal"],
       },
       shouldRepair: true,
       fixHint: 'Run "chainbreaker doctor --fix" to apply these changes.',
     });
 
     expect(next).toEqual({
+      cfg: { channels: { signal: { enabled: true } } },
+      candidate: { channels: { signal: { enabled: true } } },
       pendingChanges: true,
       fixHints: [],
     });
@@ -54,6 +61,7 @@ describe("doctor config mutation state", () => {
     expect(
       applyDoctorConfigMutation({
         state,
+        mutation: { config: { channels: { signal: { enabled: true } } }, changes: [] },
         shouldRepair: false,
       }),
     ).toBe(state);

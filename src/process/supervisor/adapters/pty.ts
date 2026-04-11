@@ -4,12 +4,14 @@ import { toStringEnv } from "./env.js";
 
 const FORCE_KILL_WAIT_FALLBACK_MS = 4000;
 
+type PtyExitEvent = { exitCode: number; signal?: number };
 type PtyDisposable = { dispose: () => void };
 type PtySpawnHandle = {
   pid: number;
   write: (data: string | Buffer) => void;
   onData: (listener: (value: string) => void) => PtyDisposable | void;
   onExit: (listener: (event: PtyExitEvent) => void) => PtyDisposable | void;
+  kill: (signal?: string) => void;
 };
 type PtySpawn = (
   file: string,
@@ -56,8 +58,11 @@ export async function createPtyAdapter(params: {
 
   let dataListener: PtyDisposable | null = null;
   let exitListener: PtyDisposable | null = null;
+  let waitResult: { code: number | null; signal: NodeJS.Signals | number | null } | null = null;
   let resolveWait:
+    | ((value: { code: number | null; signal: NodeJS.Signals | number | null }) => void)
     | null = null;
+  let waitPromise: Promise<{ code: number | null; signal: NodeJS.Signals | number | null }> | null =
     null;
   let forceKillWaitFallbackTimer: NodeJS.Timeout | null = null;
 
@@ -69,6 +74,7 @@ export async function createPtyAdapter(params: {
     forceKillWaitFallbackTimer = null;
   };
 
+  const settleWait = (value: { code: number | null; signal: NodeJS.Signals | number | null }) => {
     if (waitResult) {
       return;
     }
@@ -81,16 +87,20 @@ export async function createPtyAdapter(params: {
     }
   };
 
+  const scheduleForceKillWaitFallback = (signal: NodeJS.Signals) => {
     clearForceKillWaitFallback();
     // Some PTY hosts fail to emit onExit after kill; use a delayed fallback
     // so callers can still unblock without marking termination immediately.
     forceKillWaitFallbackTimer = setTimeout(() => {
+      settleWait({ code: null, signal });
     }, FORCE_KILL_WAIT_FALLBACK_MS);
     forceKillWaitFallbackTimer.unref();
   };
 
   exitListener =
     pty.onExit((event) => {
+      const signal = event.signal && event.signal !== 0 ? event.signal : null;
+      settleWait({ code: event.exitCode ?? null, signal });
     }) ?? null;
 
   const stdin: ManagedRunStdin = {
@@ -129,6 +139,7 @@ export async function createPtyAdapter(params: {
       return waitResult;
     }
     if (!waitPromise) {
+      waitPromise = new Promise<{ code: number | null; signal: NodeJS.Signals | number | null }>(
         (resolve) => {
           resolveWait = resolve;
           if (waitResult) {
@@ -142,16 +153,21 @@ export async function createPtyAdapter(params: {
     return waitPromise;
   };
 
+  const kill = (signal: NodeJS.Signals = "SIGKILL") => {
     try {
+      if (signal === "SIGKILL" && typeof pty.pid === "number" && pty.pid > 0) {
         killProcessTree(pty.pid);
       } else if (process.platform === "win32") {
         pty.kill();
       } else {
+        pty.kill(signal);
       }
     } catch {
       // ignore kill errors
     }
 
+    if (signal === "SIGKILL") {
+      scheduleForceKillWaitFallback(signal);
     }
   };
 
@@ -169,6 +185,7 @@ export async function createPtyAdapter(params: {
     clearForceKillWaitFallback();
     dataListener = null;
     exitListener = null;
+    settleWait({ code: null, signal: null });
   };
 
   return {

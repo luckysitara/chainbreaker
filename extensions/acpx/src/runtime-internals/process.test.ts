@@ -330,6 +330,7 @@ describe("waitForExit", () => {
 
     const exit = await waitForExit(child);
     expect(exit.code).toBe(0);
+    expect(exit.signal).toBeNull();
     expect(exit.error).toBeNull();
   });
 });
@@ -373,6 +374,7 @@ describe("spawnAndCollect", () => {
     return JSON.parse(result.stdout.trim()) as SpawnedEnvSnapshot;
   }
 
+  it("returns abort error immediately when signal is already aborted", async () => {
     const controller = new AbortController();
     controller.abort();
     const result = await spawnAndCollect(
@@ -382,12 +384,14 @@ describe("spawnAndCollect", () => {
         cwd: process.cwd(),
       },
       undefined,
+      { signal: controller.signal },
     );
 
     expect(result.code).toBeNull();
     expect(result.error?.name).toBe("AbortError");
   });
 
+  it("terminates a running process when signal aborts", async () => {
     const controller = new AbortController();
     const resultPromise = spawnAndCollect(
       {
@@ -396,6 +400,7 @@ describe("spawnAndCollect", () => {
         cwd: process.cwd(),
       },
       undefined,
+      { signal: controller.signal },
     );
 
     setTimeout(() => {

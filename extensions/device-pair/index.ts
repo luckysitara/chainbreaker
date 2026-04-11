@@ -92,12 +92,14 @@ const QR_CHANNEL_SENDERS: Record<string, QrChannelSender> = {
       ...(accountId ? { accountId } : {}),
     }),
   },
+  discord: {
     createOpts: ({ qrFilePath, mediaLocalRoots, accountId }) => ({
       mediaUrl: qrFilePath,
       mediaLocalRoots,
       ...(accountId ? { accountId } : {}),
     }),
   },
+  slack: {
     createOpts: ({ ctx, qrFilePath, mediaLocalRoots, accountId }) => ({
       mediaUrl: qrFilePath,
       mediaLocalRoots,
@@ -105,12 +107,14 @@ const QR_CHANNEL_SENDERS: Record<string, QrChannelSender> = {
       ...(accountId ? { accountId } : {}),
     }),
   },
+  signal: {
     createOpts: ({ qrFilePath, mediaLocalRoots, accountId }) => ({
       mediaUrl: qrFilePath,
       mediaLocalRoots,
       ...(accountId ? { accountId } : {}),
     }),
   },
+  imessage: {
     createOpts: ({ qrFilePath, mediaLocalRoots, accountId }) => ({
       mediaUrl: qrFilePath,
       mediaLocalRoots,
@@ -251,8 +255,7 @@ async function resolveTailnetHost(): Promise<string | null> {
 function resolveAuthLabel(cfg: ChainbreakerPluginApi["config"]): ResolveAuthLabelResult {
   const mode = cfg.gateway?.auth?.mode;
   const token =
-    pickFirstDefined([process.env.CHAINBREAKER_GATEWAY_TOKEN, cfg.gateway?.auth?.token]) ??
-    undefined;
+    pickFirstDefined([process.env.CHAINBREAKER_GATEWAY_TOKEN, cfg.gateway?.auth?.token]) ?? undefined;
   const password =
     pickFirstDefined([process.env.CHAINBREAKER_GATEWAY_PASSWORD, cfg.gateway?.auth?.password]) ??
     undefined;
@@ -467,6 +470,7 @@ function canSendQrPngToChannel(channel: string): boolean {
 }
 
 function resolveQrReplyTarget(ctx: QrCommandContext): string {
+  if (ctx.channel === "discord") {
     const senderId = ctx.senderId?.trim() ?? "";
     if (senderId) {
       return senderId.startsWith("user:") || senderId.startsWith("channel:")
@@ -669,11 +673,9 @@ export default definePluginEntry({
                 api,
                 ctx,
                 target,
-                caption: [
-                  "Scan this QR code with the Chainbreaker iOS app:",
-                  "",
-                  ...infoLines,
-                ].join("\n"),
+                caption: ["Scan this QR code with the Chainbreaker iOS app:", "", ...infoLines].join(
+                  "\n",
+                ),
                 qrFilePath,
               });
               if (sent) {

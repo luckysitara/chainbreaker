@@ -142,6 +142,7 @@ describe("live tool probe utils", () => {
           text: "Let me try reading the file again:",
           nonceA: "nonce-a",
           nonceB: "nonce-b",
+          provider: "zai",
           attempt: 0,
           maxAttempts: 3,
         },
@@ -153,6 +154,7 @@ describe("live tool probe utils", () => {
           text: "Let me try a different approach.",
           nonceA: "nonce-a",
           nonceB: "nonce-b",
+          provider: "zai",
           attempt: 0,
           maxAttempts: 3,
         },
@@ -261,6 +263,7 @@ describe("live tool probe utils", () => {
         params: {
           text: "Let me try reading the file again:",
           nonce: "nonce-c",
+          provider: "zai",
           attempt: 0,
           maxAttempts: 3,
         },
@@ -293,6 +296,7 @@ describe("live tool probe utils", () => {
         params: {
           text: "Let me try a different approach.",
           nonce: "nonce-c",
+          provider: "zai",
           attempt: 0,
           maxAttempts: 3,
         },

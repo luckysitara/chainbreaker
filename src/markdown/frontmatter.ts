@@ -4,6 +4,8 @@ export type ParsedFrontmatter = Record<string, string>;
 
 type ParsedFrontmatterLineEntry = {
   value: string;
+  kind: "inline" | "multiline";
+  rawInline: string;
 };
 
 type ParsedYamlValue = {
@@ -75,49 +77,70 @@ function parseYamlFrontmatter(block: string): Record<string, ParsedYamlValue> | 
 }
 
 function extractMultiLineValue(
+  lines: string[],
   startIndex: number,
 ): {
   value: string;
+  linesConsumed: number;
 } {
   const valueLines: string[] = [];
   let i = startIndex + 1;
 
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line.length > 0 && !line.startsWith(" ") && !line.startsWith("\t")) {
       break;
     }
+    valueLines.push(line);
     i += 1;
   }
 
   const combined = valueLines.join("\n").trim();
+  return { value: combined, linesConsumed: i - startIndex };
 }
 
 function parseLineFrontmatter(block: string): Record<string, ParsedFrontmatterLineEntry> {
   const result: Record<string, ParsedFrontmatterLineEntry> = {};
+  const lines = block.split("\n");
   let i = 0;
 
+  while (i < lines.length) {
+    const line = lines[i];
+    const match = line.match(/^([\w-]+):\s*(.*)$/);
     if (!match) {
       i += 1;
       continue;
     }
 
     const key = match[1];
+    const inlineValue = match[2].trim();
     if (!key) {
       i += 1;
       continue;
     }
 
+    if (!inlineValue && i + 1 < lines.length) {
+      const nextLine = lines[i + 1];
       if (nextLine.startsWith(" ") || nextLine.startsWith("\t")) {
+        const { value, linesConsumed } = extractMultiLineValue(lines, i);
         if (value) {
           result[key] = {
             value,
+            kind: "multiline",
+            rawInline: inlineValue,
           };
         }
+        i += linesConsumed;
         continue;
       }
     }
 
+    const value = stripQuotes(inlineValue);
     if (value) {
       result[key] = {
         value,
+        kind: "inline",
+        rawInline: inlineValue,
       };
     }
     i += 1;
@@ -126,6 +149,7 @@ function parseLineFrontmatter(block: string): Record<string, ParsedFrontmatterLi
   return result;
 }
 
+function lineFrontmatterToPlain(
   parsed: Record<string, ParsedFrontmatterLineEntry>,
 ): ParsedFrontmatter {
   const result: ParsedFrontmatter = {};
@@ -139,15 +163,21 @@ function isYamlBlockScalarIndicator(value: string): boolean {
   return /^[|>][+-]?(\d+)?[+-]?$/.test(value);
 }
 
+function shouldPreferInlineLineValue(params: {
+  lineEntry: ParsedFrontmatterLineEntry;
   yamlValue: ParsedYamlValue;
 }): boolean {
+  const { lineEntry, yamlValue } = params;
   if (yamlValue.kind !== "structured") {
     return false;
   }
+  if (lineEntry.kind !== "inline") {
     return false;
   }
+  if (isYamlBlockScalarIndicator(lineEntry.rawInline)) {
     return false;
   }
+  return lineEntry.value.includes(":");
 }
 
 function extractFrontmatterBlock(content: string): string | undefined {
@@ -168,19 +198,27 @@ export function parseFrontmatterBlock(content: string): ParsedFrontmatter {
     return {};
   }
 
+  const lineParsed = parseLineFrontmatter(block);
   const yamlParsed = parseYamlFrontmatter(block);
   if (yamlParsed === null) {
+    return lineFrontmatterToPlain(lineParsed);
   }
 
   const merged: ParsedFrontmatter = {};
   for (const [key, yamlValue] of Object.entries(yamlParsed)) {
     merged[key] = yamlValue.value;
+    const lineEntry = lineParsed[key];
+    if (!lineEntry) {
       continue;
     }
+    if (shouldPreferInlineLineValue({ lineEntry, yamlValue })) {
+      merged[key] = lineEntry.value;
     }
   }
 
+  for (const [key, lineEntry] of Object.entries(lineParsed)) {
     if (!(key in merged)) {
+      merged[key] = lineEntry.value;
     }
   }
 

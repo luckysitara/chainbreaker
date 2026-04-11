@@ -21,6 +21,7 @@ export type WaitForTransportReadyParams = {
 export async function waitForTransportReady(params: WaitForTransportReadyParams): Promise<void> {
   const started = Date.now();
   const timeoutMs = Math.max(0, params.timeoutMs);
+  const deadline = started + timeoutMs;
   const logAfterMs = Math.max(0, params.logAfterMs ?? timeoutMs);
   const logIntervalMs = Math.max(1_000, params.logIntervalMs ?? 30_000);
   const pollIntervalMs = Math.max(50, params.pollIntervalMs ?? 150);
@@ -38,6 +39,7 @@ export async function waitForTransportReady(params: WaitForTransportReadyParams)
     lastError = res.error ?? null;
 
     const now = Date.now();
+    if (now >= deadline) {
       break;
     }
     if (now >= nextLogAt) {

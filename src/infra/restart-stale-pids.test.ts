@@ -247,6 +247,7 @@ describe.skipIf(isWindows)("restart-stale-pids", () => {
   describe("pollPortOnce — no second lsof spawn (Codex P1 regression)", () => {
     it("treats lsof exit status 1 as port-free (no listeners)", () => {
       // lsof exits with status 1 when no matching processes are found — this is
+      // the canonical "port is free" signal, not an error.
       const stalePid = process.pid + 500;
       installInitialBusyPoll(stalePid, () => createLsofResult({ status: 1 }));
       vi.spyOn(process, "kill").mockReturnValue(true);
@@ -289,6 +290,7 @@ describe.skipIf(isWindows)("restart-stale-pids", () => {
       const stalePid = process.pid + 400;
       const getCallCount = installInitialBusyPoll(stalePid, (call) => {
         if (call === 2) {
+          // First waitForPortFreeSync poll — status 0, port busy (should parse inline, not spawn again)
           return createChainbreakerBusyResult(stalePid);
         }
         // Port free on third call
@@ -498,12 +500,15 @@ describe.skipIf(isWindows)("restart-stale-pids", () => {
 
     it("proceeds with warning when polling budget is exhausted — fake clock, no real 2s wait", () => {
       // Sub-agent audit HIGH finding: the original test relied on real wall-clock
+      // time (Date.now() + 2000ms deadline), burning 2 full seconds of CI time
+      // every run. Fix: expose dateNowOverride in __testing so the deadline can
       // be synthesised instantly, keeping the test under 10ms.
       const stalePid = process.pid + 303;
       let fakeNow = 0;
       __testing.setDateNowOverride(() => fakeNow);
 
       installInitialBusyPoll(stalePid, () => {
+        // Advance clock by PORT_FREE_TIMEOUT_MS + 1ms on first poll to trip the deadline.
         fakeNow += 2001;
         return createChainbreakerBusyResult(stalePid);
       });
@@ -591,6 +596,7 @@ describe.skipIf(isWindows)("restart-stale-pids", () => {
   // -------------------------------------------------------------------------
   // parsePidsFromLsofOutput — branch-coverage for mid-loop && short-circuits
   // -------------------------------------------------------------------------
+  describe("parsePidsFromLsofOutput — branch coverage (lines 67-69)", () => {
     it("skips a mid-loop entry when the command does not include 'chainbreaker'", () => {
       // Exercises the false branch of currentCmd.toLowerCase().includes("chainbreaker")
       // inside the mid-loop flush: a non-chainbreaker cmd between two entries must not
@@ -604,14 +610,20 @@ describe.skipIf(isWindows)("restart-stale-pids", () => {
       expect(result).not.toContain(process.pid + 699);
     });
 
+    it("skips a mid-loop entry when currentCmd is missing (two consecutive p-lines)", () => {
+      // Exercises currentCmd falsy branch mid-loop: two 'p' lines in a row
+      // (no 'c' line between them) — the first PID must be skipped, the second handled.
       const stalePid = process.pid + 701;
+      // Two consecutive p-lines: first has no c-line before the next p-line
       const stdout = `p${process.pid + 702}\np${stalePid}\ncchainbreaker-gateway\n`;
       mockSpawnSync.mockReturnValue({ error: null, status: 0, stdout, stderr: "" });
       const result = findGatewayPidsOnPortSync(18789);
       expect(result).toContain(stalePid);
     });
 
+    it("ignores a p-line with an invalid (non-positive) PID — ternary false branch", () => {
       // Exercises the `Number.isFinite(parsed) && parsed > 0 ? parsed : undefined`
+      // false branch: a malformed 'p' line (e.g. 'p0' or 'pNaN') must not corrupt
       // currentPid and must not end up in the returned pids array.
       const stalePid = process.pid + 703;
       // p0 is invalid (not > 0); the following valid chainbreaker entry must still be found.
@@ -622,11 +634,17 @@ describe.skipIf(isWindows)("restart-stale-pids", () => {
       expect(result).not.toContain(0);
     });
 
+    it("silently skips lines that start with neither 'p' nor 'c' — else-if false branch", () => {
+      // lsof -Fpc only emits 'p' and 'c' lines, but defensive handling of
       // unexpected output (e.g. 'f' for file descriptor in other lsof formats)
+      // must not throw or corrupt the pid list. Unknown lines are just skipped.
       const stalePid = process.pid + 704;
+      // Intersperse an 'f' line (file descriptor marker) — not a 'p' or 'c' line
       const stdout = `p${stalePid}\nf8\ncchainbreaker-gateway\n`;
       mockSpawnSync.mockReturnValue({ error: null, status: 0, stdout, stderr: "" });
       const result = findGatewayPidsOnPortSync(18789);
+      // The 'f' line must not corrupt parsing; stalePid must still be found
+      // (the 'c' line after 'f' correctly sets currentCmd)
       expect(result).toContain(stalePid);
     });
   });
@@ -634,6 +652,7 @@ describe.skipIf(isWindows)("restart-stale-pids", () => {
   // -------------------------------------------------------------------------
   // pollPortOnce branch — status 1 + non-empty stdout with zero chainbreaker pids
   // -------------------------------------------------------------------------
+  describe("pollPortOnce — status 1 + non-empty non-chainbreaker stdout (line 145)", () => {
     it("treats status 1 + non-chainbreaker stdout as port-free (not an chainbreaker process)", () => {
       // status 1 + non-empty stdout where no chainbreaker pids are present:
       // the port may be held by an unrelated process. From our perspective

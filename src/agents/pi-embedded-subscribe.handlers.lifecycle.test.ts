@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createInlineCodeState } from "../markdown/code-spans.js";
 import { handleAgentEnd } from "./pi-embedded-subscribe.handlers.lifecycle.js";
 import type { EmbeddedPiSubscribeContext } from "./pi-embedded-subscribe.handlers.types.js";
 
@@ -27,6 +28,7 @@ function createContext(
       blockState: {
         thinking: true,
         final: true,
+        inlineCode: createInlineCodeState(),
       },
     },
     log: {

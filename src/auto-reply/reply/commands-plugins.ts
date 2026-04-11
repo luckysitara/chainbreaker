@@ -114,6 +114,7 @@ function formatPluginsList(report: PluginStatusReport): string {
   }
 
   const loaded = report.plugins.filter((plugin) => plugin.status === "loaded").length;
+  const lines = [
     `🔌 Plugins (${loaded}/${report.plugins.length} loaded)`,
     ...report.plugins.map((plugin) => {
       const format = plugin.bundleFormat
@@ -122,6 +123,7 @@ function formatPluginsList(report: PluginStatusReport): string {
       return `- ${formatPluginLabel(plugin)} [${plugin.status}] ${format}`;
     }),
   ];
+  return lines.join("\n");
 }
 
 function findPlugin(report: PluginStatusReport, rawName: string): PluginRecord | undefined {

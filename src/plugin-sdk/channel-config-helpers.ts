@@ -330,10 +330,7 @@ export function resolveOptionalConfigString(
 }
 
 /** Adapt `{ cfg, accountId }` accessors to callback sites that pass positional args. */
-export function adaptScopedAccountAccessor<
-  Result,
-  Config extends ChainbreakerConfig = ChainbreakerConfig,
->(
+export function adaptScopedAccountAccessor<Result, Config extends ChainbreakerConfig = ChainbreakerConfig>(
   accessor: (params: { cfg: Config; accountId?: string | null }) => Result,
 ): (cfg: Config, accountId?: string | null) => Result {
   return (cfg, accountId) => accessor({ cfg, accountId });
@@ -908,6 +905,7 @@ export function resolveIMessageConfigAllowFrom(params: {
   return mapAllowFromEntries(
     resolveMergedSimpleChannelAccountConfig({
       cfg: params.cfg,
+      channelKey: "imessage",
       accountId: params.accountId,
     }).allowFrom,
   );
@@ -921,6 +919,7 @@ export function resolveIMessageConfigDefaultTo(params: {
   return resolveOptionalConfigString(
     resolveMergedSimpleChannelAccountConfig({
       cfg: params.cfg,
+      channelKey: "imessage",
       accountId: params.accountId,
     }).defaultTo,
   );

@@ -311,6 +311,7 @@ describe("discoverChainbreakerPlugins", () => {
     mkdirSafe(disabledDir);
     fs.writeFileSync(path.join(disabledDir, "index.ts"), "export default function () {}", "utf-8");
 
+    const bakDir = path.join(globalExt, "discord.bak");
     mkdirSafe(bakDir);
     fs.writeFileSync(path.join(bakDir, "index.ts"), "export default function () {}", "utf-8");
 
@@ -321,6 +322,7 @@ describe("discoverChainbreakerPlugins", () => {
     const { candidates } = await discoverWithStateDir(stateDir, {});
     expectCandidateIds(candidates, {
       includes: ["live"],
+      excludes: ["feishu.backup-20260222", "telegram.disabled.20260222", "discord.bak"],
     });
   });
 

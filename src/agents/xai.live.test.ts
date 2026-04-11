@@ -152,6 +152,7 @@ describeLive("xai live", () => {
       provider?: string;
       content?: string;
       citations?: string[];
+      inlineCitations?: Array<unknown>;
       error?: string;
       message?: string;
     };
@@ -162,6 +163,7 @@ describeLive("xai live", () => {
 
     const citationCount =
       (Array.isArray(details.citations) ? details.citations.length : 0) +
+      (Array.isArray(details.inlineCitations) ? details.inlineCitations.length : 0);
     expect(citationCount).toBeGreaterThan(0);
   }, 45_000);
 });

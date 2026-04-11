@@ -1,17 +1,24 @@
 import { spawnSync } from "node:child_process";
 import fsSync from "node:fs";
 import { parseCmdScriptCommandLine } from "../daemon/cmd-argv.js";
+import { isGatewayArgv, parseProcCmdline } from "./gateway-process-argv.js";
 import { findGatewayPidsOnPortSync as findUnixGatewayPidsOnPortSync } from "./restart-stale-pids.js";
 
 const WINDOWS_GATEWAY_DISCOVERY_TIMEOUT_MS = 5_000;
 
 function extractWindowsCommandLine(raw: string): string | null {
+  const lines = raw
     .split(/\r?\n/)
+    .map((line) => line.trim())
     .filter(Boolean);
+  for (const line of lines) {
+    if (!line.toLowerCase().startsWith("commandline=")) {
       continue;
     }
+    const value = line.slice("commandline=".length).trim();
     return value || null;
   }
+  return lines.find((line) => line.toLowerCase() !== "commandline") ?? null;
 }
 
 function readWindowsProcessArgsViaPowerShell(pid: number): string[] | null {
@@ -71,6 +78,7 @@ function readWindowsListeningPidsViaPowerShell(port: number): number[] | null {
   }
   return ps.stdout
     .split(/\r?\n/)
+    .map((line) => Number.parseInt(line.trim(), 10))
     .filter((pid) => Number.isFinite(pid) && pid > 0);
 }
 
@@ -84,6 +92,8 @@ function readWindowsListeningPidsViaNetstat(port: number): number[] {
     return [];
   }
   const pids = new Set<number>();
+  for (const line of netstat.stdout.split(/\r?\n/)) {
+    const match = line.match(/^\s*TCP\s+(\S+):(\d+)\s+\S+\s+LISTENING\s+(\d+)\s*$/i);
     if (!match) {
       continue;
     }
@@ -103,6 +113,7 @@ function readWindowsListeningPidsOnPortSync(port: number): number[] {
 export function readGatewayProcessArgsSync(pid: number): string[] | null {
   if (process.platform === "linux") {
     try {
+      return parseProcCmdline(fsSync.readFileSync(`/proc/${pid}/cmdline`, "utf8"));
     } catch {
       return null;
     }
@@ -124,9 +135,12 @@ export function readGatewayProcessArgsSync(pid: number): string[] | null {
   return null;
 }
 
+export function signalVerifiedGatewayPidSync(pid: number, signal: "SIGTERM" | "SIGUSR1"): void {
   const args = readGatewayProcessArgsSync(pid);
   if (!args || !isGatewayArgv(args, { allowGatewayBinary: true })) {
+    throw new Error(`refusing to signal non-gateway process pid ${pid}`);
   }
+  process.kill(pid, signal);
 }
 
 export function findVerifiedGatewayListenerPidsOnPortSync(port: number): number[] {

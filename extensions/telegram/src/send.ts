@@ -1,7 +1,11 @@
 import type {
+  InlineKeyboardButton,
+  InlineKeyboardMarkup,
   ReactionType,
   ReactionTypeEmoji,
 } from "@grammyjs/types";
+import { type ApiClientOptions, Bot, HttpError } from "grammy";
+import * as grammy from "grammy";
 import { recordChannelActivity } from "chainbreaker/plugin-sdk/channel-runtime";
 import { loadConfig } from "chainbreaker/plugin-sdk/config-runtime";
 import { resolveMarkdownTableMode } from "chainbreaker/plugin-sdk/config-runtime";
@@ -18,11 +22,10 @@ import { createSubsystemLogger } from "chainbreaker/plugin-sdk/runtime-env";
 import { formatErrorMessage } from "chainbreaker/plugin-sdk/ssrf-runtime";
 import { redactSensitiveText } from "chainbreaker/plugin-sdk/text-runtime";
 import { loadWebMedia } from "chainbreaker/plugin-sdk/web-media";
-import { type ApiClientOptions, Bot, HttpError } from "grammy";
-import * as grammy from "grammy";
 import { type ResolvedTelegramAccount, resolveTelegramAccount } from "./accounts.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import { buildTelegramThreadParams, buildTypingThreadParams } from "./bot/helpers.js";
+import type { TelegramInlineButtons } from "./button-types.js";
 import { splitTelegramCaption } from "./caption.js";
 import { resolveTelegramApiBase, resolveTelegramFetch } from "./fetch.js";
 import { renderTelegramHtmlText, splitTelegramHtmlChunks } from "./format.js";
@@ -91,6 +94,8 @@ type TelegramSendOpts = {
   quoteText?: string;
   /** Forum topic thread ID (for forum supergroups) */
   messageThreadId?: number;
+  /** Inline keyboard buttons (reply markup). */
+  buttons?: TelegramInlineButtons;
   /** Send image as document to avoid Telegram compression. Defaults to false. */
   forceDocument?: boolean;
 };
@@ -606,7 +611,9 @@ function createTelegramNonIdempotentRequestWithDiag(params: {
   });
 }
 
+export function buildInlineKeyboard(
   buttons?: TelegramSendOpts["buttons"],
+): InlineKeyboardMarkup | undefined {
   if (!buttons?.length) {
     return undefined;
   }
@@ -615,6 +622,7 @@ function createTelegramNonIdempotentRequestWithDiag(params: {
       row
         .filter((button) => button?.text && button?.callback_data)
         .map(
+          (button): InlineKeyboardButton => ({
             text: button.text,
             callback_data: button.callback_data,
             ...(button.style ? { style: button.style } : {}),
@@ -625,6 +633,7 @@ function createTelegramNonIdempotentRequestWithDiag(params: {
   if (rows.length === 0) {
     return undefined;
   }
+  return { inline_keyboard: rows };
 }
 
 export async function sendMessageTelegram(
@@ -646,6 +655,7 @@ export async function sendMessageTelegram(
   const mediaMaxBytes =
     opts.maxBytes ??
     (typeof account.config.mediaMaxMb === "number" ? account.config.mediaMaxMb : 100) * 1024 * 1024;
+  const replyMarkup = buildInlineKeyboard(opts.buttons);
 
   const threadParams = buildTelegramThreadReplyParams({
     targetMessageThreadId: target.messageThreadId,
@@ -1294,6 +1304,8 @@ type TelegramEditOpts = {
   textMode?: "markdown" | "html";
   /** Controls whether link previews are shown in the edited message. */
   linkPreview?: boolean;
+  /** Inline keyboard buttons (reply markup). Pass empty array to remove buttons. */
+  buttons?: TelegramInlineButtons;
   /** Optional config injection to avoid global loadConfig() (improves testability). */
   cfg?: ReturnType<typeof loadConfig>;
 };
@@ -1304,6 +1316,8 @@ type TelegramEditReplyMarkupOpts = {
   verbose?: boolean;
   api?: TelegramApiOverride;
   retry?: RetryConfig;
+  /** Inline keyboard buttons (reply markup). Pass empty array to remove buttons. */
+  buttons?: TelegramInlineButtons;
   /** Optional config injection to avoid global loadConfig() (improves testability). */
   cfg?: ReturnType<typeof loadConfig>;
 };
@@ -1311,6 +1325,7 @@ type TelegramEditReplyMarkupOpts = {
 export async function editMessageReplyMarkupTelegram(
   chatIdInput: string | number,
   messageIdInput: string | number,
+  buttons: TelegramInlineButtons,
   opts: TelegramEditReplyMarkupOpts = {},
 ): Promise<{ ok: true; messageId: string; chatId: string }> {
   const { cfg, account, api } = resolveTelegramApiContext({
@@ -1332,6 +1347,7 @@ export async function editMessageReplyMarkupTelegram(
     retry: opts.retry,
     verbose: opts.verbose,
   });
+  const replyMarkup = buildInlineKeyboard(buttons) ?? { inline_keyboard: [] };
   try {
     await requestWithDiag(
       () => api.editMessageReplyMarkup(chatId, messageId, { reply_markup: replyMarkup }),
@@ -1393,7 +1409,11 @@ export async function editMessageTelegram(
 
   // Reply markup semantics:
   // - buttons === undefined → don't send reply_markup (keep existing)
+  // - buttons is [] (or filters to empty) → send { inline_keyboard: [] } (remove)
+  // - otherwise → send built inline keyboard
   const shouldTouchButtons = opts.buttons !== undefined;
+  const builtKeyboard = shouldTouchButtons ? buildInlineKeyboard(opts.buttons) : undefined;
+  const replyMarkup = shouldTouchButtons ? (builtKeyboard ?? { inline_keyboard: [] }) : undefined;
 
   const editParams: TelegramEditMessageTextParams = {
     parse_mode: "HTML",
@@ -1614,6 +1634,7 @@ export async function sendPollTelegram(
   }
 
   // Build poll parameters following Grammy's api.sendPoll signature
+  // sendPoll(chat_id, question, options, other?, signal?)
   const pollParams: TelegramSendPollParams = {
     allows_multiple_answers: normalizedPoll.maxSelections > 1,
     is_anonymous: opts.isAnonymous ?? true,

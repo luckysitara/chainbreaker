@@ -315,18 +315,27 @@ describe("acquireSessionWriteLock", () => {
     }
   });
 
+  it("removes held locks on termination signals", async () => {
+    const signals = ["SIGINT", "SIGTERM", "SIGQUIT", "SIGABRT"] as const;
     const originalKill = process.kill.bind(process);
+    process.kill = ((_pid: number, _signal?: NodeJS.Signals) => true) as typeof process.kill;
     try {
+      for (const signal of signals) {
         const root = await fs.mkdtemp(path.join(os.tmpdir(), "chainbreaker-lock-cleanup-"));
         try {
           const sessionFile = path.join(root, "sessions.json");
           const lockPath = `${sessionFile}.lock`;
           await acquireSessionWriteLock({ sessionFile, timeoutMs: 500 });
           const keepAlive = () => {};
+          if (signal === "SIGINT") {
+            process.on(signal, keepAlive);
           }
 
+          __testing.handleTerminationSignal(signal);
 
           await expect(fs.stat(lockPath)).rejects.toThrow();
+          if (signal === "SIGINT") {
+            process.off(signal, keepAlive);
           }
         } finally {
           await fs.rm(root, { recursive: true, force: true });
@@ -379,6 +388,8 @@ describe("acquireSessionWriteLock", () => {
     const killCalls: Array<NodeJS.Signals | undefined> = [];
     let otherHandlerCalled = false;
 
+    process.kill = ((pid: number, signal?: NodeJS.Signals) => {
+      killCalls.push(signal);
       return true;
     }) as typeof process.kill;
 
@@ -414,6 +425,7 @@ describe("acquireSessionWriteLock", () => {
       await expect(fs.access(lockPath)).rejects.toThrow();
     });
   });
+  it("keeps other signal listeners registered", () => {
     const keepAlive = () => {};
     process.on("SIGINT", keepAlive);
 

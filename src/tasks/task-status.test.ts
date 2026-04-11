@@ -61,6 +61,7 @@ describe("task status formatting", () => {
     const task = makeTask({
       task: "This is a deliberately long task prompt that should never be emitted in full because it may include internal instructions and file paths.",
       progressSummary:
+        "This progress detail is also intentionally long so the status line proves it truncates verbose task context instead of dumping a wall of text.",
     });
 
     expect(formatTaskStatusTitle(task)).toContain(
@@ -68,6 +69,7 @@ describe("task status formatting", () => {
     );
     expect(formatTaskStatusTitle(task).endsWith("…")).toBe(true);
     expect(formatTaskStatusDetail(task)).toContain(
+      "This progress detail is also intentionally long so the status line proves it truncates verbose task context",
     );
     expect(formatTaskStatusDetail(task)?.endsWith("…")).toBe(true);
   });

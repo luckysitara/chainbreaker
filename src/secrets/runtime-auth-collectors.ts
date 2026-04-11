@@ -30,6 +30,7 @@ function collectApiKeyProfileAssignment(params: {
 }): void {
   const {
     explicitRef: keyRef,
+    inlineRef: inlineKeyRef,
     ref: resolvedKeyRef,
   } = resolveSecretInputRef({
     value: params.profile.key,
@@ -39,6 +40,8 @@ function collectApiKeyProfileAssignment(params: {
   if (!resolvedKeyRef) {
     return;
   }
+  if (!keyRef && inlineKeyRef) {
+    params.profile.keyRef = inlineKeyRef;
   }
   if (keyRef && isNonEmptyString(params.profile.key)) {
     pushWarning(params.context, {
@@ -66,6 +69,7 @@ function collectTokenProfileAssignment(params: {
 }): void {
   const {
     explicitRef: tokenRef,
+    inlineRef: inlineTokenRef,
     ref: resolvedTokenRef,
   } = resolveSecretInputRef({
     value: params.profile.token,
@@ -75,6 +79,8 @@ function collectTokenProfileAssignment(params: {
   if (!resolvedTokenRef) {
     return;
   }
+  if (!tokenRef && inlineTokenRef) {
+    params.profile.tokenRef = inlineTokenRef;
   }
   if (tokenRef && isNonEmptyString(params.profile.token)) {
     pushWarning(params.context, {

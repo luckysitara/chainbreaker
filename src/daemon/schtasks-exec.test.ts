@@ -17,6 +17,7 @@ describe("execSchtasks", () => {
       stdout: "ok",
       stderr: "",
       code: 0,
+      signal: null,
       killed: false,
       termination: "exit",
     });
@@ -37,6 +38,7 @@ describe("execSchtasks", () => {
       stdout: "",
       stderr: "",
       code: null,
+      signal: "SIGTERM",
       killed: true,
       termination: "timeout",
     });

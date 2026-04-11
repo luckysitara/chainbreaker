@@ -70,7 +70,9 @@ describe("issuePairingChallenge", () => {
     {
       name: "supports custom reply text builder",
       issueParams: {
+        channel: "line",
         senderId: "u1",
+        senderIdLine: "Your line id: u1",
         upsertPairingRequest: async () => ({ code: "ZXCV", created: true }),
         buildReplyText: ({ code }: { code: string }) => `custom ${code}`,
       },
@@ -112,6 +114,7 @@ describe("issuePairingChallenge", () => {
         const upsert = vi.fn(async () => ({ code: "1111", created: true }));
         return {
           issueParams: {
+            channel: "discord",
             senderId: "42",
             senderIdLine: "Your Discord user id: 42",
             meta: { name: "alice" },
@@ -133,6 +136,7 @@ describe("issuePairingChallenge", () => {
         const onReplyError = vi.fn();
         return {
           issueParams: {
+            channel: "signal",
             senderId: "+1555",
             senderIdLine: "Your Signal sender id: +1555",
             upsertPairingRequest: async () => ({ code: "9999", created: true }),

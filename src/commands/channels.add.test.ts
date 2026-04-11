@@ -184,6 +184,7 @@ function createSignalPlugin(
 ): ChannelPlugin {
   return {
     ...createChannelTestPluginBase({
+      id: "signal",
       label: "Signal",
     }),
     setup: {
@@ -191,9 +192,11 @@ function createSignalPlugin(
         ...cfg,
         channels: {
           ...cfg.channels,
+          signal: {
             enabled: true,
             accounts: {
               [accountId]: {
+                signalNumber: input.signalNumber,
               },
             },
           },
@@ -206,8 +209,10 @@ function createSignalPlugin(
 
 async function runSignalAddCommand(afterAccountConfigWritten: SignalAfterAccountConfigWritten) {
   const plugin = createSignalPlugin(afterAccountConfigWritten);
+  setActivePluginRegistry(createTestRegistry([{ pluginId: "signal", plugin, source: "test" }]));
   configMocks.readConfigFileSnapshot.mockResolvedValue({ ...baseConfigSnapshot });
   await channelsAddCommand(
+    { channel: "signal", account: "ops", signalNumber: "+15550001" },
     runtime,
     { hasFlags: true },
   );
@@ -448,9 +453,11 @@ describe("channelsAddCommand", () => {
       previousCfg: baseConfigSnapshot.config,
       cfg: expect.objectContaining({
         channels: {
+          signal: {
             enabled: true,
             accounts: {
               ops: {
+                signalNumber: "+15550001",
               },
             },
           },
@@ -458,6 +465,7 @@ describe("channelsAddCommand", () => {
       }),
       accountId: "ops",
       input: expect.objectContaining({
+        signalNumber: "+15550001",
       }),
       runtime,
     });
@@ -470,6 +478,7 @@ describe("channelsAddCommand", () => {
     expect(configMocks.writeConfigFile).toHaveBeenCalledTimes(1);
     expect(runtime.exit).not.toHaveBeenCalled();
     expect(runtime.error).toHaveBeenCalledWith(
+      'Channel signal post-setup warning for "ops": hook failed',
     );
   });
 });

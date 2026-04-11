@@ -61,8 +61,6 @@ describe("uninstallCommand", () => {
       dryRun: true,
     });
 
-    expect(runtime.log).not.toHaveBeenCalledWith(
-      expect.stringContaining("chainbreaker backup create"),
-    );
+    expect(runtime.log).not.toHaveBeenCalledWith(expect.stringContaining("chainbreaker backup create"));
   });
 });

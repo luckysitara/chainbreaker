@@ -231,6 +231,7 @@ export const VENICE_MODEL_CATALOG = [
     privacy: "private",
   },
   {
+    id: "zai-org-glm-4.6",
     name: "GLM 4.6",
     reasoning: false,
     input: ["text"],
@@ -239,6 +240,7 @@ export const VENICE_MODEL_CATALOG = [
     privacy: "private",
   },
   {
+    id: "zai-org-glm-4.7",
     name: "GLM 4.7",
     reasoning: true,
     input: ["text"],
@@ -247,6 +249,7 @@ export const VENICE_MODEL_CATALOG = [
     privacy: "private",
   },
   {
+    id: "zai-org-glm-4.7-flash",
     name: "GLM 4.7 Flash",
     reasoning: true,
     input: ["text"],
@@ -255,6 +258,7 @@ export const VENICE_MODEL_CATALOG = [
     privacy: "private",
   },
   {
+    id: "zai-org-glm-5",
     name: "GLM 5",
     reasoning: true,
     input: ["text"],
@@ -281,6 +285,7 @@ export const VENICE_MODEL_CATALOG = [
     privacy: "private",
   },
   {
+    id: "minimax-m21",
     name: "MiniMax M2.1",
     reasoning: true,
     input: ["text"],
@@ -289,6 +294,7 @@ export const VENICE_MODEL_CATALOG = [
     privacy: "private",
   },
   {
+    id: "minimax-m25",
     name: "MiniMax M2.5",
     reasoning: true,
     input: ["text"],
@@ -600,6 +606,7 @@ export async function discoverVeniceModels(): Promise<ModelDefinitionConfig[]> {
     const response = await retryAsync(
       async () => {
         const currentResponse = await fetch(`${VENICE_BASE_URL}/models`, {
+          signal: AbortSignal.timeout(VENICE_DISCOVERY_TIMEOUT_MS),
           headers: {
             Accept: "application/json",
           },

@@ -185,6 +185,7 @@ describe("task-executor", () => {
         ownerKey: "agent:main:main",
         scopeKind: "session",
         childSessionKey: "agent:codex:acp:child",
+        runId: "run-linear-cancel",
         task: "Inspect a PR",
         startedAt: 10,
         deliveryStatus: "pending",

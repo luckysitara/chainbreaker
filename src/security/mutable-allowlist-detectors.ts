@@ -9,6 +9,7 @@ export function isDiscordMutableAllowEntry(raw: string): boolean {
     return false;
   }
 
+  for (const prefix of ["discord:", "user:", "pk:"]) {
     if (!text.startsWith(prefix)) {
       continue;
     }
@@ -29,6 +30,7 @@ export function isSlackMutableAllowEntry(raw: string): boolean {
     return false;
   }
 
+  const withoutPrefix = text.replace(/^(slack|user):/i, "").trim();
   if (/^[UWBCGDT][A-Z0-9]{2,}$/.test(withoutPrefix)) {
     return false;
   }

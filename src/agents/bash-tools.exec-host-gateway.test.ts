@@ -49,6 +49,7 @@ vi.mock("./bash-tools.exec-host-shared.js", () => ({
   createAndRegisterDefaultExecApprovalRequest: createAndRegisterDefaultExecApprovalRequestMock,
   resolveApprovalDecisionOrUndefined: vi.fn(async () => undefined),
   sendExecApprovalFollowupResult: vi.fn(async () => undefined),
+  shouldResolveExecApprovalUnavailableInline: vi.fn(() => false),
 }));
 
 vi.mock("./bash-tools.exec-runtime.js", () => ({
@@ -63,6 +64,9 @@ vi.mock("./bash-process-registry.js", () => ({
   tail: vi.fn((value) => value),
 }));
 
+vi.mock("../infra/exec-inline-eval.js", () => ({
+  describeInterpreterInlineEval: vi.fn(() => "python -c"),
+  detectInterpreterInlineEvalArgv: vi.fn(() => null),
 }));
 
 vi.mock("../infra/exec-obfuscation-detect.js", () => ({

@@ -66,6 +66,7 @@ async function readTarPreflight(params: {
   }
   const entries = listResult.stdout
     .split("\n")
+    .map((line) => line.trim())
     .filter(Boolean);
 
   const verboseResult = await runCommandWithTimeout(["tar", "tvf", params.archivePath], {

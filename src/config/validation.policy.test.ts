@@ -58,8 +58,10 @@ describe("config validation SecretRef policy guards", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("replaces derived unrecognized-key errors with policy guidance for discord thread binding webhookToken", () => {
     const result = validateConfigObjectRaw({
       channels: {
+        discord: {
           threadBindings: {
             webhookToken: {
               source: "env",
@@ -74,13 +76,16 @@ describe("config validation SecretRef policy guards", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       const policyIssue = result.issues.find(
+        (entry) => entry.path === "channels.discord.threadBindings.webhookToken",
       );
       expect(policyIssue).toBeDefined();
       expect(policyIssue?.message).toContain(
+        "SecretRef objects are not supported at channels.discord.threadBindings.webhookToken",
       );
       expect(
         result.issues.some(
           (entry) =>
+            entry.path === "channels.discord.threadBindings" &&
             entry.message.includes('Unrecognized key: "webhookToken"'),
         ),
       ).toBe(false);
@@ -90,6 +95,7 @@ describe("config validation SecretRef policy guards", () => {
   it("preserves unrelated unknown-key errors when policy and typos coexist", () => {
     const result = validateConfigObjectRaw({
       channels: {
+        discord: {
           threadBindings: {
             webhookToken: {
               source: "env",
@@ -107,12 +113,14 @@ describe("config validation SecretRef policy guards", () => {
       expect(
         result.issues.some(
           (entry) =>
+            entry.path === "channels.discord.threadBindings.webhookToken" &&
             entry.message.includes("SecretRef objects are not supported"),
         ),
       ).toBe(true);
       expect(
         result.issues.some(
           (entry) =>
+            entry.path === "channels.discord.threadBindings" &&
             entry.message.includes("webhookTokne"),
         ),
       ).toBe(true);

@@ -69,6 +69,8 @@ async function writeMainSessionStore() {
   });
 }
 
+async function writeMainSessionTranscript(sessionDir: string, lines: string[]) {
+  await fs.writeFile(path.join(sessionDir, "sess-main.jsonl"), `${lines.join("\n")}\n`, "utf-8");
 }
 
 async function fetchHistoryMessages(
@@ -318,7 +320,9 @@ describe("gateway server chat", () => {
       });
 
       const baseText = "s".repeat(1_200);
+      const lines: string[] = [];
       for (let i = 0; i < 30; i += 1) {
+        lines.push(
           JSON.stringify({
             message: {
               role: "user",
@@ -330,6 +334,7 @@ describe("gateway server chat", () => {
       }
 
       const hugeNestedText = "z".repeat(120_000);
+      lines.push(
         JSON.stringify({
           message: {
             role: "assistant",
@@ -349,6 +354,7 @@ describe("gateway server chat", () => {
         }),
       );
 
+      await writeMainSessionTranscript(sessionDir, lines);
       const messages = await fetchHistoryMessages(ws);
       const serialized = JSON.stringify(messages);
       const bytes = Buffer.byteLength(serialized, "utf8");
@@ -392,12 +398,14 @@ describe("gateway server chat", () => {
     });
   });
 
+  test("chat.history strips inline directives from displayed message text", async () => {
     await withGatewayChatHarness(async ({ ws, createSessionDir }) => {
       await connectOk(ws);
 
       const sessionDir = await createSessionDir();
       await writeMainSessionStore();
 
+      const lines = [
         JSON.stringify({
           message: {
             role: "assistant",
@@ -429,6 +437,7 @@ describe("gateway server chat", () => {
           },
         }),
       ];
+      await writeMainSessionTranscript(sessionDir, lines);
       const messages = await fetchHistoryMessages(ws);
       expect(messages.length).toBe(4);
 
@@ -459,10 +468,14 @@ describe("gateway server chat", () => {
 
       mockGetReplyFromConfigOnce(async (_ctx, opts) => {
         opts?.onAgentRunStart?.(opts.runId ?? "idem-abort-1");
+        const signal = opts?.abortSignal;
         await new Promise<void>((resolve) => {
+          if (!signal || signal.aborted) {
+            aborted = Boolean(signal?.aborted);
             resolve();
             return;
           }
+          signal.addEventListener(
             "abort",
             () => {
               aborted = true;

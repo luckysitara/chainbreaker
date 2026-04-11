@@ -28,6 +28,7 @@ export type ResolvedWhatsAppAccount = {
   groupPolicy?: GroupPolicy;
   dmPolicy?: DmPolicy;
   textChunkLimit?: number;
+  chunkMode?: "length" | "newline";
   mediaMaxMb?: number;
   blockStreaming?: boolean;
   ackReaction?: WhatsAppAccountConfig["ackReaction"];

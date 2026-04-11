@@ -201,8 +201,10 @@ describe("resolveHeartbeatVisibility", () => {
     });
   });
 
+  it("works with discord channel", () => {
     const cfg = {
       channels: {
+        discord: {
           heartbeat: {
             useIndicator: false,
           },
@@ -210,6 +212,7 @@ describe("resolveHeartbeatVisibility", () => {
       },
     } as ChainbreakerConfig;
 
+    const result = resolveHeartbeatVisibility({ cfg, channel: "discord" });
 
     expect(result).toEqual({
       showOk: false,
@@ -218,8 +221,10 @@ describe("resolveHeartbeatVisibility", () => {
     });
   });
 
+  it("works with slack channel", () => {
     const cfg = {
       channels: {
+        slack: {
           heartbeat: {
             showOk: true,
             showAlerts: true,
@@ -229,6 +234,7 @@ describe("resolveHeartbeatVisibility", () => {
       },
     } as ChainbreakerConfig;
 
+    const result = resolveHeartbeatVisibility({ cfg, channel: "slack" });
 
     expect(result).toEqual({
       showOk: true,

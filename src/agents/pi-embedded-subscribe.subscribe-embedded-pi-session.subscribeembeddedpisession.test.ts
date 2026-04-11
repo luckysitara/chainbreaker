@@ -165,6 +165,7 @@ describe("subscribeEmbeddedPiSession", () => {
         blockReplyChunking: {
           minChars: 5,
           maxChars: 50,
+          breakPreference: "newline",
         },
       });
 
@@ -194,6 +195,7 @@ describe("subscribeEmbeddedPiSession", () => {
     },
   );
 
+  it("streams native thinking_delta events and signals reasoning end", () => {
     const onReasoningStream = vi.fn();
     const onReasoningEnd = vi.fn();
 

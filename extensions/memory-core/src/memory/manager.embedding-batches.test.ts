@@ -59,6 +59,8 @@ describe("memory embedding batches", () => {
     const managerLarge = fx.getManagerLarge();
     // Keep this small but above the embedding batch byte threshold (8k) so we
     // exercise multi-batch behavior without generating lots of chunks/DB rows.
+    const line = "a".repeat(4200);
+    const content = [line, line].join("\n");
     await fs.writeFile(path.join(memoryDir, "2026-01-03.md"), content);
     const updates: Array<{ completed: number; total: number; label?: string }> = [];
     await requireSync(managerLarge)({
@@ -88,6 +90,8 @@ describe("memory embedding batches", () => {
   it("keeps small files in a single embedding batch", async () => {
     const memoryDir = fx.getMemoryDir();
     const managerSmall = fx.getManagerSmall();
+    const line = "b".repeat(120);
+    const content = Array.from({ length: 4 }, () => line).join("\n");
     await fs.writeFile(path.join(memoryDir, "2026-01-04.md"), content);
     await requireSync(managerSmall)({ reason: "test" });
 
@@ -97,6 +101,8 @@ describe("memory embedding batches", () => {
   it("retries embeddings on transient rate limit and 5xx errors", async () => {
     const memoryDir = fx.getMemoryDir();
     const managerSmall = fx.getManagerSmall();
+    const line = "d".repeat(120);
+    const content = Array.from({ length: 4 }, () => line).join("\n");
     await fs.writeFile(path.join(memoryDir, "2026-01-06.md"), content);
 
     const transientErrors = [
@@ -121,6 +127,8 @@ describe("memory embedding batches", () => {
   it("retries embeddings on too-many-tokens-per-day rate limits", async () => {
     const memoryDir = fx.getMemoryDir();
     const managerSmall = fx.getManagerSmall();
+    const line = "e".repeat(120);
+    const content = Array.from({ length: 4 }, () => line).join("\n");
     await fs.writeFile(path.join(memoryDir, "2026-01-08.md"), content);
 
     let calls = 0;

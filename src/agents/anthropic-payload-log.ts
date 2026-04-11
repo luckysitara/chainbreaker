@@ -124,8 +124,11 @@ export function createAnthropicPayloadLogger(params: {
   };
 
   const record = (event: PayloadLogEvent) => {
+    const line = safeJsonStringify(event);
+    if (!line) {
       return;
     }
+    writer.write(`${line}\n`);
   };
 
   const wrapStreamFn: AnthropicPayloadLogger["wrapStreamFn"] = (streamFn) => {

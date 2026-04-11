@@ -309,6 +309,7 @@ async function saveApprovals(file: PluginBindingApprovalsFile): Promise<void> {
   state.approvalsLoaded = true;
   await writeJsonAtomic(filePath, file, {
     mode: 0o600,
+    trailingNewline: true,
   });
 }
 
@@ -463,14 +464,19 @@ async function bindConversationNow(params: {
 }
 
 function buildApprovalMessage(request: PendingPluginBindingRequest): string {
+  const lines = [
     `Plugin bind approval required`,
     `Plugin: ${request.pluginName ?? request.pluginId}`,
     `Channel: ${request.conversation.channel}`,
     `Account: ${request.conversation.accountId}`,
   ];
   if (request.summary?.trim()) {
+    lines.push(`Request: ${request.summary.trim()}`);
   } else {
+    lines.push("Request: Bind this conversation so future plain messages route to the plugin.");
   }
+  lines.push("Choose whether to allow this plugin to bind the current conversation.");
+  return lines.join("\n");
 }
 
 function resolvePluginBindingDisplayName(binding: {
@@ -489,6 +495,7 @@ export function buildPluginBindingUnavailableText(binding: PluginConversationBin
   return `The bound plugin ${resolvePluginBindingDisplayName(binding)} is not currently loaded. Routing this message to Chainbreaker instead.${buildDetachHintSuffix(binding.detachHint)}`;
 }
 
+export function buildPluginBindingDeclinedText(binding: PluginConversationBinding): string {
   return `The bound plugin ${resolvePluginBindingDisplayName(binding)} did not handle this message. This conversation is still bound to that plugin.${buildDetachHintSuffix(binding.detachHint)}`;
 }
 

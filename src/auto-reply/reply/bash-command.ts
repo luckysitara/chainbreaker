@@ -257,6 +257,7 @@ export async function handleBashChatCommand(params: {
         activeJob = null;
       }
       const exitLabel = finished.exitSignal
+        ? `signal ${String(finished.exitSignal)}`
         : `code ${String(finished.exitCode ?? 0)}`;
       const prefix = finished.status === "completed" ? "⚙️" : "⚠️";
       return {

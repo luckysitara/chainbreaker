@@ -169,6 +169,7 @@ Successfully processed 1 files`;
       expect(entries).toHaveLength(0);
     });
 
+    it("skips localized (non-English) status lines that have no parenthesised token", () => {
       const output =
         "C:\\Users\\karte\\.chainbreaker NT AUTHORITY\\\u0421\u0418\u0421\u0422\u0415\u041c\u0410:(OI)(CI)(F)\n" +
         "\u0423\u0441\u043f\u0435\u0448\u043d\u043e \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u0430\u043d\u043e 1 \u0444\u0430\u0439\u043b\u043e\u0432; " +
@@ -188,6 +189,7 @@ Successfully processed 1 files`;
       expect(entries[1].principal).toBe("S-1-5-21-1824257776-4070701511-781240313-1001");
     });
 
+    it("ignores malformed ACL lines that contain ':' but no rights tokens", () => {
       const output = `C:\\test\\file.txt random:message
                      C:\\test\\file.txt BUILTIN\\Administrators:(F)`;
       const entries = parseIcaclsOutput(output, "C:\\test\\file.txt");

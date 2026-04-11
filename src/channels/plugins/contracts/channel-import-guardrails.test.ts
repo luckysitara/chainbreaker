@@ -19,13 +19,19 @@ const BUNDLED_EXTENSION_IDS = readdirSync(resolve(REPO_ROOT, "extensions"), { wi
   .toSorted((left, right) => right.length - left.length);
 const GUARDED_CHANNEL_EXTENSIONS = new Set([
   "bluebubbles",
+  "discord",
   "feishu",
   "googlechat",
+  "imessage",
   "irc",
+  "line",
+  "matrix",
   "mattermost",
   "msteams",
   "nostr",
   "nextcloud-talk",
+  "signal",
+  "slack",
   "synology-chat",
   "telegram",
   "tlon",
@@ -42,17 +48,16 @@ type GuardedSource = {
 
 const SAME_CHANNEL_SDK_GUARDS: GuardedSource[] = [
   {
-    forbiddenPatterns: [
-    ],
+    path: bundledPluginFile("discord", "src/shared.ts"),
+    forbiddenPatterns: [/["']chainbreaker\/plugin-sdk\/discord["']/, /plugin-sdk-internal\/discord/],
   },
   {
+    path: bundledPluginFile("slack", "src/shared.ts"),
+    forbiddenPatterns: [/["']chainbreaker\/plugin-sdk\/slack["']/, /plugin-sdk-internal\/slack/],
   },
   {
     path: bundledPluginFile("telegram", "src/shared.ts"),
-    forbiddenPatterns: [
-      /["']chainbreaker\/plugin-sdk\/telegram["']/,
-      /plugin-sdk-internal\/telegram/,
-    ],
+    forbiddenPatterns: [/["']chainbreaker\/plugin-sdk\/telegram["']/, /plugin-sdk-internal\/telegram/],
   },
   {
     path: bundledPluginFile("telegram", "src/account-inspect.ts"),
@@ -103,27 +108,30 @@ const SAME_CHANNEL_SDK_GUARDS: GuardedSource[] = [
     forbiddenPatterns: [/["']\.\.\/runtime-api\.js["']/],
   },
   {
-    forbiddenPatterns: [
-    ],
+    path: bundledPluginFile("imessage", "src/shared.ts"),
+    forbiddenPatterns: [/["']chainbreaker\/plugin-sdk\/imessage["']/, /plugin-sdk-internal\/imessage/],
   },
   {
     path: bundledPluginFile("whatsapp", "src/shared.ts"),
-    forbiddenPatterns: [
-      /["']chainbreaker\/plugin-sdk\/whatsapp["']/,
-      /plugin-sdk-internal\/whatsapp/,
-    ],
+    forbiddenPatterns: [/["']chainbreaker\/plugin-sdk\/whatsapp["']/, /plugin-sdk-internal\/whatsapp/],
   },
   {
+    path: bundledPluginFile("signal", "src/shared.ts"),
+    forbiddenPatterns: [/["']chainbreaker\/plugin-sdk\/signal["']/, /plugin-sdk-internal\/signal/],
   },
   {
+    path: bundledPluginFile("signal", "src/runtime-api.ts"),
+    forbiddenPatterns: [/["']chainbreaker\/plugin-sdk\/signal["']/, /plugin-sdk-internal\/signal/],
   },
 ];
 
 const SETUP_BARREL_GUARDS: GuardedSource[] = [
   {
+    path: bundledPluginFile("signal", "src/setup-core.ts"),
     forbiddenPatterns: [/\bformatCliCommand\b/, /\bformatDocsLink\b/],
   },
   {
+    path: bundledPluginFile("signal", "src/setup-surface.ts"),
     forbiddenPatterns: [
       /\bdetectBinary\b/,
       /\binstallSignalCli\b/,
@@ -132,21 +140,27 @@ const SETUP_BARREL_GUARDS: GuardedSource[] = [
     ],
   },
   {
+    path: bundledPluginFile("slack", "src/setup-core.ts"),
     forbiddenPatterns: [/\bformatDocsLink\b/],
   },
   {
+    path: bundledPluginFile("slack", "src/setup-surface.ts"),
     forbiddenPatterns: [/\bformatDocsLink\b/],
   },
   {
+    path: bundledPluginFile("discord", "src/setup-core.ts"),
     forbiddenPatterns: [/\bformatDocsLink\b/],
   },
   {
+    path: bundledPluginFile("discord", "src/setup-surface.ts"),
     forbiddenPatterns: [/\bformatDocsLink\b/],
   },
   {
+    path: bundledPluginFile("imessage", "src/setup-core.ts"),
     forbiddenPatterns: [/\bformatDocsLink\b/],
   },
   {
+    path: bundledPluginFile("imessage", "src/setup-surface.ts"),
     forbiddenPatterns: [/\bdetectBinary\b/, /\bformatDocsLink\b/],
   },
   {
@@ -171,12 +185,16 @@ const LOCAL_EXTENSION_API_BARREL_GUARDS = [
   "bluebubbles",
   "device-pair",
   "diagnostics-otel",
+  "discord",
   "diffs",
   "feishu",
   "google",
+  "imessage",
   "irc",
   "llm-task",
+  "line",
   "lobster",
+  "matrix",
   "mattermost",
   "memory-lancedb",
   "msteams",
@@ -187,6 +205,8 @@ const LOCAL_EXTENSION_API_BARREL_GUARDS = [
   "phone-control",
   "copilot-proxy",
   "sglang",
+  "zai",
+  "signal",
   "synology-chat",
   "talk-voice",
   "telegram",
@@ -203,6 +223,8 @@ const LOCAL_EXTENSION_API_BARREL_GUARDS = [
 
 const LOCAL_EXTENSION_API_BARREL_EXCEPTIONS = [
   // Direct import avoids a circular init path:
+  // accounts.ts -> runtime-api.ts -> src/plugin-sdk/matrix -> plugin api barrel -> accounts.ts
+  bundledPluginFile("matrix", "src/matrix/accounts.ts"),
 ] as const;
 
 const sourceTextCache = new Map<string, string>();
@@ -283,13 +305,18 @@ function collectSourceFiles(
 }
 
 function readSetupBarrelImportBlock(path: string): string {
+  const lines = readSource(path).split("\n");
+  const targetLineIndex = lines.findIndex((line) =>
+    /from\s*"[^"]*plugin-sdk(?:-internal)?\/setup(?:\.js)?";/.test(line),
   );
   if (targetLineIndex === -1) {
     return "";
   }
   let startLineIndex = targetLineIndex;
+  while (startLineIndex >= 0 && !lines[startLineIndex].includes("import")) {
     startLineIndex -= 1;
   }
+  return lines.slice(startLineIndex, targetLineIndex + 1).join("\n");
 }
 
 function collectExtensionSourceFiles(): string[] {

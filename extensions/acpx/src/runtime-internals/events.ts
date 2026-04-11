@@ -27,6 +27,8 @@ export function toAcpxErrorEvent(value: unknown): AcpxErrorEvent | null {
 
 export function parseJsonLines(value: string): AcpxJsonObject[] {
   const events: AcpxJsonObject[] = [];
+  for (const line of value.split(/\r?\n/)) {
+    const trimmed = line.trim();
     if (!trimmed) {
       continue;
     }
@@ -191,6 +193,8 @@ function createToolCallEvent(params: {
   };
 }
 
+export function parsePromptEventLine(line: string): AcpRuntimeEvent | null {
+  const trimmed = line.trim();
   if (!trimmed) {
     return null;
   }

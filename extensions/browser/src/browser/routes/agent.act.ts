@@ -97,6 +97,8 @@ async function waitForExistingSessionCondition(params: {
     return;
   }
   const timeoutMs = Math.max(250, params.timeoutMs ?? 10_000);
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
     let ready = true;
     if (predicate) {
       ready = Boolean(
@@ -725,6 +727,7 @@ export function registerBrowserAgentActRoutes(
                 profileName,
                 userDataDir: profileCtx.profile.userDataDir,
                 targetId: tab.targetId,
+                fn: `(el) => { el.scrollIntoView({ block: "center", inline: "center" }); return true; }`,
                 args: [ref!],
               });
               return res.json({ ok: true, targetId: tab.targetId });
@@ -1041,6 +1044,7 @@ export function registerBrowserAgentActRoutes(
               targetId: tab.targetId,
               fn,
               ref,
+              signal: req.signal,
             };
             if (evalTimeoutMs !== undefined) {
               evalRequest.timeoutMs = evalTimeoutMs;
@@ -1177,7 +1181,14 @@ export function registerBrowserAgentActRoutes(
               if (!(el instanceof Element)) {
                 return false;
               }
+              el.scrollIntoView({ block: "center", inline: "center" });
+              const previousOutline = el.style.outline;
+              const previousOffset = el.style.outlineOffset;
+              el.style.outline = "3px solid #FF4500";
+              el.style.outlineOffset = "2px";
               setTimeout(() => {
+                el.style.outline = previousOutline;
+                el.style.outlineOffset = previousOffset;
               }, 2000);
               return true;
             }`,

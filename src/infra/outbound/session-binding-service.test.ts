@@ -26,8 +26,10 @@ function setMinimalCurrentConversationRegistry(): void {
   setActivePluginRegistry(
     createTestRegistry([
       {
+        pluginId: "slack",
         source: "test",
         plugin: {
+          id: "slack",
           meta: { aliases: [] },
           conversationBindings: {
             supportsCurrentConversationBinding: true,
@@ -265,6 +267,7 @@ describe("session binding service", () => {
     });
 
     const bound = await service.bind({
+      targetSessionKey: "agent:codex:acp:slack-dm",
       targetKind: "session",
       conversation: {
         channel: " Slack ",
@@ -272,43 +275,54 @@ describe("session binding service", () => {
         conversationId: " user:U123 ",
       },
       metadata: {
+        label: "slack-dm",
       },
       ttlMs: 60_000,
     });
 
     expect(bound).toMatchObject({
+      bindingId: "generic:slack\u241fdefault\u241f\u241fuser:U123",
+      targetSessionKey: "agent:codex:acp:slack-dm",
       targetKind: "session",
       conversation: {
+        channel: "slack",
         accountId: "default",
         conversationId: "user:U123",
       },
       status: "active",
       metadata: expect.objectContaining({
+        label: "slack-dm",
       }),
     });
 
     const resolved = service.resolveByConversation({
+      channel: "slack",
       accountId: "default",
       conversationId: "user:U123",
     });
     expect(resolved).toMatchObject({
       bindingId: bound.bindingId,
+      targetSessionKey: "agent:codex:acp:slack-dm",
     });
+    expect(service.listBySession("agent:codex:acp:slack-dm")).toEqual([resolved]);
 
     service.touch(bound.bindingId, 1234);
     expect(
       service.resolveByConversation({
+        channel: "slack",
         accountId: "default",
         conversationId: "user:U123",
       })?.metadata,
     ).toEqual(
       expect.objectContaining({
+        label: "slack-dm",
         lastActivityAt: 1234,
       }),
     );
 
     await expect(
       service.unbind({
+        targetSessionKey: "agent:codex:acp:slack-dm",
         reason: "test cleanup",
       }),
     ).resolves.toEqual([
@@ -318,6 +332,7 @@ describe("session binding service", () => {
     ]);
     expect(
       service.resolveByConversation({
+        channel: "slack",
         accountId: "default",
         conversationId: "user:U123",
       }),

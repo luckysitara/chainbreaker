@@ -36,11 +36,14 @@ export async function requestJsonlSocket<T>(params: {
       buffer += data.toString("utf8");
       let idx = buffer.indexOf("\n");
       while (idx !== -1) {
+        const line = buffer.slice(0, idx).trim();
         buffer = buffer.slice(idx + 1);
         idx = buffer.indexOf("\n");
+        if (!line) {
           continue;
         }
         try {
+          const msg = JSON.parse(line) as unknown;
           const result = accept(msg);
           if (result === undefined) {
             continue;

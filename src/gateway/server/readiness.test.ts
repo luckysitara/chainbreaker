@@ -35,6 +35,7 @@ function createManager(snapshot: ChannelRuntimeSnapshot): ChannelManager {
 function createHealthyDiscordManager(startedAt: number, lastEventAt: number): ChannelManager {
   return createManager(
     snapshotWith({
+      discord: {
         running: true,
         connected: true,
         enabled: true,
@@ -89,6 +90,7 @@ describe("createReadinessChecker", () => {
       const { readiness } = createReadinessHarness({
         startedAgoMs: 5 * 60_000,
         accounts: {
+          discord: {
             running: false,
             enabled: false,
             configured: true,
@@ -111,6 +113,7 @@ describe("createReadinessChecker", () => {
       const { readiness } = createReadinessHarness({
         startedAgoMs: 30_000,
         accounts: {
+          discord: {
             running: true,
             connected: false,
             enabled: true,
@@ -128,6 +131,7 @@ describe("createReadinessChecker", () => {
       const { readiness } = createReadinessHarness({
         startedAgoMs: 5 * 60_000,
         accounts: {
+          discord: {
             running: true,
             connected: false,
             enabled: true,
@@ -136,6 +140,7 @@ describe("createReadinessChecker", () => {
           },
         },
       });
+      expect(readiness()).toEqual({ ready: false, failing: ["discord"], uptimeMs: 300_000 });
     });
   });
 
@@ -145,6 +150,7 @@ describe("createReadinessChecker", () => {
       const { readiness } = createReadinessHarness({
         startedAgoMs: 5 * 60_000,
         accounts: {
+          discord: {
             running: false,
             restartPending: true,
             reconnectAttempts: 3,
@@ -165,6 +171,7 @@ describe("createReadinessChecker", () => {
       const { readiness } = createReadinessHarness({
         startedAgoMs: 31 * 60_000,
         accounts: {
+          discord: {
             running: true,
             connected: true,
             enabled: true,
@@ -203,6 +210,7 @@ describe("createReadinessChecker", () => {
       const { manager, readiness } = createReadinessHarness({
         startedAgoMs: 5 * 60_000,
         accounts: {
+          discord: {
             running: true,
             connected: true,
             enabled: true,

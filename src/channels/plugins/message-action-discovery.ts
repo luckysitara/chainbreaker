@@ -161,9 +161,7 @@ export function listChannelMessageActions(cfg: ChainbreakerConfig): ChannelMessa
   return Array.from(actions);
 }
 
-export function listChannelMessageCapabilities(
-  cfg: ChainbreakerConfig,
-): ChannelMessageCapability[] {
+export function listChannelMessageCapabilities(cfg: ChainbreakerConfig): ChannelMessageCapability[] {
   const capabilities = new Set<ChannelMessageCapability>();
   for (const plugin of listChannelPlugins()) {
     for (const capability of resolveMessageActionDiscoveryForPlugin({

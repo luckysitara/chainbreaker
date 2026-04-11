@@ -1347,6 +1347,8 @@ describe("task-registry", () => {
       process.env.CHAINBREAKER_STATE_DIR = root;
       resetTaskRegistryForTests();
       hoisted.sendMessageMock.mockResolvedValue({
+        channel: "discord",
+        to: "discord:123",
         via: "direct",
       });
 
@@ -1355,6 +1357,8 @@ describe("task-registry", () => {
         ownerKey: "agent:main:main",
         scopeKind: "session",
         requesterOrigin: {
+          channel: "discord",
+          to: "discord:123",
         },
         childSessionKey: "agent:codex:acp:child",
         runId: "run-state-change",
@@ -1400,6 +1404,8 @@ describe("task-registry", () => {
       resetTaskRegistryForTests();
       resetSystemEventsForTest();
       hoisted.sendMessageMock.mockResolvedValue({
+        channel: "discord",
+        to: "discord:123",
         via: "direct",
       });
       vi.useFakeTimers();
@@ -1409,6 +1415,8 @@ describe("task-registry", () => {
         ownerKey: "agent:main:main",
         scopeKind: "session",
         requesterOrigin: {
+          channel: "discord",
+          to: "discord:123",
         },
         childSessionKey: "agent:codex:acp:child",
         runId: "run-quiet-terminal",
@@ -1453,6 +1461,8 @@ describe("task-registry", () => {
 
       expect(hoisted.sendMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({
+          channel: "discord",
+          to: "discord:123",
           content: "Background task done: ACP background task (run run-quie).",
         }),
       );
@@ -1468,6 +1478,8 @@ describe("task-registry", () => {
       resetTaskRegistryForTests();
       resetSystemEventsForTest();
       hoisted.sendMessageMock.mockResolvedValue({
+        channel: "discord",
+        to: "discord:123",
         via: "direct",
       });
 
@@ -1476,6 +1488,8 @@ describe("task-registry", () => {
         ownerKey: "agent:main:main",
         scopeKind: "session",
         requesterOrigin: {
+          channel: "discord",
+          to: "discord:123",
         },
         childSessionKey: "agent:codex:acp:child",
         runId: "run-failure-terminal",
@@ -1499,6 +1513,8 @@ describe("task-registry", () => {
 
       expect(hoisted.sendMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({
+          channel: "discord",
+          to: "discord:123",
           content:
             "Background task failed: ACP background task (run run-fail). Permission denied by ACP runtime",
         }),
@@ -1513,6 +1529,8 @@ describe("task-registry", () => {
       resetTaskRegistryForTests();
       resetSystemEventsForTest();
       hoisted.sendMessageMock.mockResolvedValue({
+        channel: "discord",
+        to: "discord:123",
         via: "direct",
       });
       vi.useFakeTimers();
@@ -1522,6 +1540,8 @@ describe("task-registry", () => {
         ownerKey: "agent:main:main",
         scopeKind: "session",
         requesterOrigin: {
+          channel: "discord",
+          to: "discord:123",
         },
         childSessionKey: "agent:codex:acp:child",
         runId: "run-state-stream",

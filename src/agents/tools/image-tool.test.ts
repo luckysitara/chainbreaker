@@ -10,6 +10,7 @@ import type {
   MediaUnderstandingProvider,
 } from "../../plugin-sdk/media-understanding.js";
 import { withFetchPreconnect } from "../../test-utils/fetch-mock.js";
+import { minimaxUnderstandImage } from "../minimax-vlm.js";
 import type { SandboxFsBridge } from "../sandbox/fs-bridge.js";
 import { createHostSandboxFsBridge } from "../test-helpers/host-sandbox-fs-bridge.js";
 import { createUnsafeMountedSandbox } from "../test-helpers/unsafe-mounted-sandbox.js";
@@ -17,9 +18,7 @@ import { makeZeroUsageSnapshot } from "../usage.js";
 import { __testing, createImageTool, resolveImageModelConfigForTool } from "./image-tool.js";
 
 type PiToolsModule = typeof import("../pi-tools.js");
-type CreateChainbreakerCodingToolsArgs = Parameters<
-  PiToolsModule["createChainbreakerCodingTools"]
->[0];
+type CreateChainbreakerCodingToolsArgs = Parameters<PiToolsModule["createChainbreakerCodingTools"]>[0];
 type MockChainbreakerToolsOptions = {
   config?: ChainbreakerConfig;
   agentDir?: string;
@@ -141,9 +140,7 @@ async function writeAuthProfiles(agentDir: string, profiles: unknown) {
   );
 }
 
-async function createChainbreakerCodingToolsWithFreshModules(
-  options?: CreateChainbreakerCodingToolsArgs,
-) {
+async function createChainbreakerCodingToolsWithFreshModules(options?: CreateChainbreakerCodingToolsArgs) {
   vi.resetModules();
   const { createChainbreakerCodingTools } = await import("../pi-tools.js");
   return createChainbreakerCodingTools(options);
@@ -205,6 +202,7 @@ function stubMinimaxOkFetch() {
     }),
   });
   global.fetch = withFetchPreconnect(fetch);
+  vi.stubEnv("MINIMAX_API_KEY", "minimax-test");
   return fetch;
 }
 
@@ -273,10 +271,13 @@ function createMinimaxImageConfig(): ChainbreakerConfig {
   return {
     agents: {
       defaults: {
+        model: { primary: "minimax/MiniMax-M2.7" },
+        imageModel: { primary: "minimax/MiniMax-VL-01" },
       },
     },
     plugins: {
       entries: {
+        minimax: { enabled: true },
       },
     },
   };
@@ -289,8 +290,11 @@ function createDefaultImageFallbackExpectation(primary: string) {
   };
 }
 
+const minimaxProvider = {
+  id: "minimax",
   capabilities: ["image"],
   describeImage: async (params: ImageDescriptionRequest) => ({
+    text: await minimaxUnderstandImage({
       apiKey: process.env.MINIMAX_API_KEY ?? "",
       prompt: params.prompt ?? "Describe the image.",
       imageDataUrl: `data:${params.mime ?? "image/jpeg"};base64,${params.buffer.toString("base64")}`,
@@ -300,6 +304,7 @@ function createDefaultImageFallbackExpectation(primary: string) {
   describeImages: async (params: ImagesDescriptionRequest) => {
     const parts: string[] = [];
     for (const [index, image] of params.images.entries()) {
+      const text = await minimaxUnderstandImage({
         apiKey: process.env.MINIMAX_API_KEY ?? "",
         prompt:
           params.images.length > 1
@@ -483,6 +488,7 @@ describe("image tool implicit imageModel config", () => {
   ]);
 
   beforeEach(() => {
+    installImageUnderstandingProviderStubs(minimaxProvider, moonshotProvider);
   });
 
   afterEach(() => {
@@ -500,22 +506,29 @@ describe("image tool implicit imageModel config", () => {
     });
   });
 
+  it("pairs minimax primary with MiniMax-VL-01 (and fallbacks) when auth exists", async () => {
     await withTempAgentDir(async (agentDir) => {
+      vi.stubEnv("MINIMAX_API_KEY", "minimax-test");
       vi.stubEnv("OPENAI_API_KEY", "openai-test");
       vi.stubEnv("ANTHROPIC_API_KEY", "anthropic-test");
       const cfg: ChainbreakerConfig = {
+        agents: { defaults: { model: { primary: "minimax/MiniMax-M2.7" } } },
       };
       expect(resolveImageModelConfigForTool({ cfg, agentDir })).toEqual(
+        createDefaultImageFallbackExpectation("minimax/MiniMax-VL-01"),
       );
       expect(createImageTool({ config: cfg, agentDir })).not.toBeNull();
     });
   });
 
+  it("pairs minimax-portal primary with MiniMax-VL-01 (and fallbacks) when auth exists", async () => {
     await withTempAgentDir(async (agentDir) => {
       await writeAuthProfiles(agentDir, {
         version: 1,
         profiles: {
+          "minimax-portal:default": {
             type: "oauth",
+            provider: "minimax-portal",
             access: "oauth-test",
             refresh: "refresh-test",
             expires: Date.now() + 60_000,
@@ -525,19 +538,25 @@ describe("image tool implicit imageModel config", () => {
       vi.stubEnv("OPENAI_API_KEY", "openai-test");
       vi.stubEnv("ANTHROPIC_API_KEY", "anthropic-test");
       const cfg: ChainbreakerConfig = {
+        agents: { defaults: { model: { primary: "minimax-portal/MiniMax-M2.7" } } },
       };
       expect(resolveImageModelConfigForTool({ cfg, agentDir })).toEqual(
+        createDefaultImageFallbackExpectation("minimax-portal/MiniMax-VL-01"),
       );
       expect(createImageTool({ config: cfg, agentDir })).not.toBeNull();
     });
   });
 
+  it("pairs zai primary with glm-4.6v (and fallbacks) when auth exists", async () => {
     await withTempAgentDir(async (agentDir) => {
+      vi.stubEnv("ZAI_API_KEY", "zai-test");
       vi.stubEnv("OPENAI_API_KEY", "openai-test");
       vi.stubEnv("ANTHROPIC_API_KEY", "anthropic-test");
       const cfg: ChainbreakerConfig = {
+        agents: { defaults: { model: { primary: "zai/glm-4.7" } } },
       };
       expect(resolveImageModelConfigForTool({ cfg, agentDir })).toEqual(
+        createDefaultImageFallbackExpectation("zai/glm-4.6v"),
       );
       expect(createImageTool({ config: cfg, agentDir })).not.toBeNull();
     });
@@ -610,6 +629,7 @@ describe("image tool implicit imageModel config", () => {
       const cfg: ChainbreakerConfig = {
         agents: {
           defaults: {
+            model: { primary: "minimax/MiniMax-M2.7" },
             imageModel: { primary: "openai/gpt-5-mini" },
           },
         },
@@ -792,12 +812,15 @@ describe("image tool implicit imageModel config", () => {
     });
   });
 
+  it("falls back to the generic image runtime when minimax-portal has no media provider registration", async () => {
     await withTempAgentDir(async (agentDir) => {
       installImageUnderstandingProviderStubs();
       await writeAuthProfiles(agentDir, {
         version: 1,
         profiles: {
+          "minimax-portal:default": {
             type: "oauth",
+            provider: "minimax-portal",
             access: "oauth-test",
             refresh: "refresh-test",
             expires: Date.now() + 60_000,
@@ -808,6 +831,8 @@ describe("image tool implicit imageModel config", () => {
       const cfg: ChainbreakerConfig = {
         agents: {
           defaults: {
+            model: { primary: "minimax-portal/MiniMax-M2.7" },
+            imageModel: { primary: "minimax-portal/MiniMax-VL-01" },
           },
         },
       };
@@ -957,6 +982,7 @@ describe("image tool implicit imageModel config", () => {
 
       vi.stubEnv("OPENAI_API_KEY", "openai-test");
       const cfg: ChainbreakerConfig = {
+        agents: { defaults: { model: { primary: "minimax/MiniMax-M2.7" } } },
       };
       const tool = createRequiredImageTool({ config: cfg, agentDir, sandbox });
 
@@ -1023,6 +1049,8 @@ describe("image tool implicit imageModel config", () => {
       const cfg: ChainbreakerConfig = {
         agents: {
           defaults: {
+            model: { primary: "minimax/MiniMax-M2.7" },
+            imageModel: { primary: "minimax/MiniMax-VL-01" },
           },
         },
       };
@@ -1069,6 +1097,7 @@ describe("image tool MiniMax VLM routing", () => {
   ]);
 
   beforeEach(() => {
+    installImageUnderstandingProviderStubs(minimaxProvider);
   });
 
   afterEach(() => {
@@ -1079,6 +1108,8 @@ describe("image tool MiniMax VLM routing", () => {
   async function createMinimaxVlmFixture(baseResp: { status_code: number; status_msg: string }) {
     const fetch = stubMinimaxFetch(baseResp, baseResp.status_code === 0 ? "ok" : "");
 
+    const agentDir = await fs.mkdtemp(path.join(os.tmpdir(), "chainbreaker-minimax-vlm-"));
+    vi.stubEnv("MINIMAX_API_KEY", "minimax-test");
     const cfg = createMinimaxImageConfig();
     const tool = createRequiredImageTool({ config: cfg, agentDir });
     return { fetch, tool };
@@ -1094,8 +1125,10 @@ describe("image tool MiniMax VLM routing", () => {
 
     expect(fetch).toHaveBeenCalledTimes(1);
     const [url, init] = fetch.mock.calls[0];
+    expect(String(url)).toBe("https://api.minimax.io/v1/coding_plan/vlm");
     expect(init?.method).toBe("POST");
     expect(String((init?.headers as Record<string, string>)?.Authorization)).toBe(
+      "Bearer minimax-test",
     );
     expect(String(init?.body)).toContain('"prompt":"Describe the image."');
     expect(String(init?.body)).toContain('"image_url":"data:image/png;base64,');

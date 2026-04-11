@@ -32,7 +32,9 @@ describe("mcp-proxy", () => {
     const echoServerPath = await makeTempScript(
       "echo-server.cjs",
       String.raw`#!/usr/bin/env node
+const { createInterface } = require("node:readline");
 const rl = createInterface({ input: process.stdin });
+rl.on("line", (line) => process.stdout.write(line + "\n"));
 `,
     );
 
@@ -92,9 +94,12 @@ const rl = createInterface({ input: process.stdin });
     });
 
     expect(exitCode).toBe(0);
+    const lines = stdout
       .trim()
       .split(/\r?\n/)
+      .map((line) => JSON.parse(line) as { method: string; params: Record<string, unknown> });
 
+    expect(lines[0].params.mcpServers).toEqual([
       {
         name: "canva",
         command: "npx",
@@ -102,5 +107,8 @@ const rl = createInterface({ input: process.stdin });
         env: [{ name: "CANVA_TOKEN", value: "secret" }],
       },
     ]);
+    expect(lines[1].params.mcpServers).toEqual(lines[0].params.mcpServers);
+    expect(lines[2].method).toBe("session/prompt");
+    expect(lines[2].params.mcpServers).toBeUndefined();
   });
 });

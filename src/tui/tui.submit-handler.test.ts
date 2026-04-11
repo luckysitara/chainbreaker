@@ -6,6 +6,7 @@ import {
 } from "./tui-submit.js";
 
 describe("createEditorSubmitHandler", () => {
+  it("routes lines starting with ! to handleBangLine", () => {
     const { handleCommand, sendMessage, handleBangLine, onSubmit } = createSubmitHarness();
 
     onSubmit("!ls");
@@ -45,6 +46,7 @@ describe("createEditorSubmitHandler", () => {
     expect(editor.addToHistory).toHaveBeenCalledWith("hello");
   });
 
+  it("preserves internal newlines for multiline messages", () => {
     const { editor, handleCommand, sendMessage, handleBangLine, onSubmit } = createSubmitHarness();
 
     onSubmit("Line 1\nLine 2\nLine 3");
@@ -57,6 +59,7 @@ describe("createEditorSubmitHandler", () => {
 });
 
 describe("createSubmitBurstCoalescer", () => {
+  it("coalesces rapid single-line submits into one multiline submit when enabled", () => {
     vi.useFakeTimers();
     const submit = vi.fn();
     let now = 1_000;

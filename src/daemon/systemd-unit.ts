@@ -52,6 +52,8 @@ export function buildSystemdUnit({
   return [
     "[Unit]",
     descriptionLine,
+    "After=network-online.target",
+    "Wants=network-online.target",
     "",
     "[Service]",
     `ExecStart=${execStart}`,
@@ -70,6 +72,7 @@ export function buildSystemdUnit({
     "WantedBy=default.target",
     "",
   ]
+    .filter((line) => line !== null)
     .join("\n");
 }
 

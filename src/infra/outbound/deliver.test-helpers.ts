@@ -1,11 +1,13 @@
 import { vi } from "vitest";
 import {
+  signalOutbound,
   telegramOutbound,
   whatsappOutbound,
 } from "../../../test/channel-outbounds.js";
 import type { ChainbreakerConfig } from "../../config/config.js";
 import { setActivePluginRegistry } from "../../plugins/runtime.js";
 import { createOutboundTestPlugin, createTestRegistry } from "../../test-utils/channel-plugins.js";
+import { createIMessageTestPlugin } from "../../test-utils/imessage-test-plugin.js";
 import { createInternalHookEventPayload } from "../../test-utils/internal-hook-event-payload.js";
 import type { DeliverOutboundPayloadsParams, OutboundDeliveryResult } from "./deliver.js";
 
@@ -147,8 +149,11 @@ export const whatsappChunkConfig: ChainbreakerConfig = {
 
 export const defaultRegistry = createTestRegistry([
   {
+    pluginId: "signal",
     source: "test",
     plugin: createOutboundTestPlugin({
+      id: "signal",
+      outbound: signalOutbound,
     }),
   },
   {
@@ -168,6 +173,7 @@ export const defaultRegistry = createTestRegistry([
     }),
   },
   {
+    pluginId: "imessage",
     source: "test",
     plugin: createIMessageTestPlugin(),
   },

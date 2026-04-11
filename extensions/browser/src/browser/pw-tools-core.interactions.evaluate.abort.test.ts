@@ -80,6 +80,7 @@ describe("evaluateViaPlaywright (abort)", () => {
       cdpUrl: "http://127.0.0.1:9222",
       fn,
       ref,
+      signal: ctrl.signal,
     });
 
     await pending.evalCalledPromise;

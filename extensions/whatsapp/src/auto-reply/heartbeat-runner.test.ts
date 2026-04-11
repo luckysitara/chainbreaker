@@ -203,6 +203,7 @@ describe("runWebHeartbeatOnce", () => {
     );
   });
 
+  it("injects a cron-style Current time line into the heartbeat prompt", async () => {
     await runWebHeartbeatOnce(
       buildRunArgs({
         cfg: { agents: { defaults: { heartbeat: { prompt: "Ops check" } } }, session: {} } as never,

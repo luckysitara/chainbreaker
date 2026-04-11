@@ -22,6 +22,7 @@ function createGatewayAudit({
   expectedGatewayToken?: string;
   path?: string;
   serviceToken?: string;
+  environmentValueSources?: Record<string, "file" | "inline">;
 } = {}) {
   return auditGatewayServiceConfig({
     env: { HOME: "/tmp" },
@@ -162,6 +163,7 @@ describe("checkTokenDrift", () => {
     expect(result).toBeNull();
   });
 
+  it("returns null when tokens match but service token has trailing newline", () => {
     const result = checkTokenDrift({ serviceToken: "same-token\n", configToken: "same-token" });
     expect(result).toBeNull();
   });

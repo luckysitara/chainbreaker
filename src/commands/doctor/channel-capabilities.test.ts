@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { getDoctorChannelCapabilities } from "./channel-capabilities.js";
 
 describe("doctor channel capabilities", () => {
+  it("returns built-in capability overrides for matrix", () => {
+    expect(getDoctorChannelCapabilities("matrix")).toEqual({
       dmAllowFromMode: "nestedOnly",
       groupModel: "sender",
       groupAllowFromFallbackToAllowFrom: false,

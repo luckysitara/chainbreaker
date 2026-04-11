@@ -132,6 +132,7 @@ describe("TelegramExecApprovalHandler", () => {
       ...baseRequest,
       request: {
         ...baseRequest.request,
+        turnSourceChannel: "slack",
         turnSourceTo: "U1",
         turnSourceAccountId: null,
         turnSourceThreadId: null,

@@ -163,7 +163,9 @@ describe("gateway node pairing authorization", () => {
         commands: ["canvas.snapshot", "system.run"],
       });
 
+      const deadline = Date.now() + 2_000;
       let lastNodes: Array<{ nodeId: string; connected?: boolean; commands?: string[] }> = [];
+      while (Date.now() < deadline) {
         const list = await rpcReq<{
           nodes?: Array<{ nodeId: string; connected?: boolean; commands?: string[] }>;
         }>(controlWs, "node.list", {});
@@ -223,7 +225,9 @@ describe("gateway node pairing authorization", () => {
         commands: ["canvas.snapshot", "system.run"],
       });
 
+      const deadline = Date.now() + 2_000;
       let lastNodes: Array<{ nodeId: string; connected?: boolean; commands?: string[] }> = [];
+      while (Date.now() < deadline) {
         const list = await rpcReq<{
           nodes?: Array<{ nodeId: string; connected?: boolean; commands?: string[] }>;
         }>(controlWs, "node.list", {});

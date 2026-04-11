@@ -256,6 +256,7 @@ describe("push APNs registration store", () => {
     ).rejects.toThrow("sendGrant too long");
   });
 
+  it("persists with a trailing newline and clears registrations", async () => {
     const baseDir = await makeTempDir();
     await registerApnsToken({
       nodeId: "ios-node-1",

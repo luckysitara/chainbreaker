@@ -95,6 +95,7 @@ export function getSlashCommands(options: SlashCommandOptions = {}): SlashComman
     },
     {
       name: "usage",
+      description: "Toggle per-response usage line",
       getArgumentCompletions: usageCompletions,
     },
     {

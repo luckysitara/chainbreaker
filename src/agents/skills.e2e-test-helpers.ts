@@ -17,6 +17,7 @@ export async function writeSkill(params: {
     metadata ? `metadata: ${metadata}` : "",
     frontmatterExtra ?? "",
   ]
+    .filter((line) => line.trim().length > 0)
     .join("\n");
   await fs.writeFile(
     path.join(dir, "SKILL.md"),

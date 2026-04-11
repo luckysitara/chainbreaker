@@ -81,24 +81,30 @@ describe("delivery context helpers", () => {
     ).toBe("demo-channel|channel:C1||123.456");
   });
 
+  it("formats generic non-matrix conversation targets as channels", () => {
     expect(formatConversationTarget({ channel: "demo-channel", conversationId: "123" })).toBe(
       "channel:123",
     );
   });
 
+  it("formats matrix conversation targets as rooms", () => {
+    expect(formatConversationTarget({ channel: "matrix", conversationId: "!room:example" })).toBe(
       "room:!room:example",
     );
     expect(
       formatConversationTarget({
+        channel: "matrix",
         conversationId: "$thread",
         parentConversationId: "!room:example",
       }),
     ).toBe("room:!room:example");
+    expect(formatConversationTarget({ channel: "matrix", conversationId: "  " })).toBeUndefined();
   });
 
   it("resolves delivery targets for Matrix child threads", () => {
     expect(
       resolveConversationDeliveryTarget({
+        channel: "matrix",
         conversationId: "$thread",
         parentConversationId: "!room:example",
       }),

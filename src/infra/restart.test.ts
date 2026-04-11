@@ -105,9 +105,7 @@ describe.runIf(process.platform !== "win32")("cleanStaleGatewayProcessesSync", (
       .mockReturnValueOnce({
         error: undefined,
         status: 0,
-        stdout: [`p${stalePidA}`, "cchainbreaker", `p${stalePidB}`, "cchainbreaker-gateway"].join(
-          "\n",
-        ),
+        stdout: [`p${stalePidA}`, "cchainbreaker", `p${stalePidB}`, "cchainbreaker-gateway"].join("\n"),
       })
       .mockReturnValue({
         error: undefined,

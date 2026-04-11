@@ -50,15 +50,19 @@ describe("markdownTheme", () => {
       );
     });
 
+    it("falls back to auto-detect for unknown language and preserves lines", () => {
       cliHighlightMocks.supportsLanguage.mockReturnValue(false);
+      cliHighlightMocks.highlight.mockImplementation((code: string) => `${code}\nline-2`);
       const result = markdownTheme.highlightCode!(`echo "hello"`, "not-a-real-language");
       expect(cliHighlightMocks.highlight).toHaveBeenCalledWith(
         `echo "hello"`,
         expect.objectContaining({ language: undefined }),
       );
       expect(stripAnsi(result[0] ?? "")).toContain("echo");
+      expect(stripAnsi(result[1] ?? "")).toBe("line-2");
     });
 
+    it("returns plain highlighted lines when highlighting throws", () => {
       cliHighlightMocks.highlight.mockImplementation(() => {
         throw new Error("boom");
       });

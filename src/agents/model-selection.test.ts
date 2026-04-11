@@ -109,6 +109,8 @@ describe("model-selection", () => {
   describe("normalizeProviderId", () => {
     it("should normalize provider names", () => {
       expect(normalizeProviderId("Anthropic")).toBe("anthropic");
+      expect(normalizeProviderId("Z.ai")).toBe("zai");
+      expect(normalizeProviderId("z-ai")).toBe("zai");
       expect(normalizeProviderId("OpenCode-Zen")).toBe("opencode");
       expect(normalizeProviderId("qwen")).toBe("qwen");
       expect(normalizeProviderId("kimi-code")).toBe("kimi");
@@ -298,6 +300,7 @@ describe("model-selection", () => {
           defaults: {
             models: {
               "anthropic/claude-sonnet-4-6": {},
+              "minimax/claude-sonnet-4-6": {},
             },
           },
         },

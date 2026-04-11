@@ -234,12 +234,18 @@ function ensureWatchdogStarted(intervalMs: number): void {
   watchdogState.timer.unref?.();
 }
 
+function handleTerminationSignal(signal: CleanupSignal): void {
   releaseAllLocksSync();
   const cleanupState = resolveCleanupState();
+  const shouldReraise = process.listenerCount(signal) === 1;
   if (shouldReraise) {
+    const handler = cleanupState.cleanupHandlers.get(signal);
     if (handler) {
+      process.off(signal, handler);
+      cleanupState.cleanupHandlers.delete(signal);
     }
     try {
+      process.kill(process.pid, signal);
     } catch {
       // Ignore errors during shutdown
     }
@@ -258,16 +264,25 @@ function registerCleanupHandlers(): void {
 
   ensureWatchdogStarted(DEFAULT_WATCHDOG_INTERVAL_MS);
 
+  // Handle termination signals
+  for (const signal of CLEANUP_SIGNALS) {
+    if (cleanupState.cleanupHandlers.has(signal)) {
       continue;
     }
     try {
+      const handler = () => handleTerminationSignal(signal);
+      cleanupState.cleanupHandlers.set(signal, handler);
+      process.on(signal, handler);
     } catch {
+      // Ignore unsupported signals on this platform.
     }
   }
 }
 
 function unregisterCleanupHandlers(): void {
   const cleanupState = resolveCleanupState();
+  for (const [signal, handler] of cleanupState.cleanupHandlers) {
+    process.off(signal, handler);
   }
   cleanupState.cleanupHandlers.clear();
   cleanupState.registered = false;

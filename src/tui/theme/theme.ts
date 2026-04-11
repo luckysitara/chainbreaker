@@ -135,6 +135,7 @@ const syntaxTheme = createSyntaxTheme(fg(palette.code), lightMode);
 
 /**
  * Highlight code with syntax coloring.
+ * Returns an array of lines with ANSI escape codes.
  */
 function highlightCode(code: string, lang?: string): string[] {
   try {
@@ -149,6 +150,7 @@ function highlightCode(code: string, lang?: string): string[] {
     return highlighted.split("\n");
   } catch {
     // If highlighting fails, return plain code
+    return code.split("\n").map((line) => fg(palette.code)(line));
   }
 }
 
@@ -188,6 +190,7 @@ export const markdownTheme: MarkdownTheme = {
   bold: (text) => chalk.bold(text),
   italic: (text) => chalk.italic(text),
   strikethrough: (text) => chalk.strikethrough(text),
+  underline: (text) => chalk.underline(text),
   highlightCode,
 };
 

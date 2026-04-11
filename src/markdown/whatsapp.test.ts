@@ -8,6 +8,7 @@ describe("markdownToWhatsApp", () => {
     ["converts ~~strikethrough~~ to ~strikethrough~", "~~deleted~~", "~deleted~"],
     ["leaves single *italic* unchanged (already WhatsApp bold)", "*text*", "*text*"],
     ["leaves _italic_ unchanged (already WhatsApp italic)", "_text_", "_text_"],
+    ["preserves inline code", "Use `**not bold**` here", "Use `**not bold**` here"],
     [
       "handles mixed formatting",
       "**bold** and ~~strike~~ and _italic_",

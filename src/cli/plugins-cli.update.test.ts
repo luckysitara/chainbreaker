@@ -73,6 +73,7 @@ describe("plugins cli update", () => {
     );
     expect(writeConfigFile).toHaveBeenCalledWith(nextConfig);
     expect(
+      runtimeLogs.some((line) => line.includes("Restart the gateway to load plugins and hooks.")),
     ).toBe(true);
   });
 
@@ -281,6 +282,7 @@ describe("plugins cli update", () => {
     );
     expect(writeConfigFile).toHaveBeenCalledWith(nextConfig);
     expect(
+      runtimeLogs.some((line) => line.includes("Restart the gateway to load plugins and hooks.")),
     ).toBe(true);
   });
 });

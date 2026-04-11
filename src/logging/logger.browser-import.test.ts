@@ -16,9 +16,7 @@ async function importBrowserSafeLogger(params?: {
   const resolvePreferredChainbreakerTmpDir =
     params?.resolvePreferredChainbreakerTmpDir ??
     vi.fn(() => {
-      throw new Error(
-        "resolvePreferredChainbreakerTmpDir should not run during browser-safe import",
-      );
+      throw new Error("resolvePreferredChainbreakerTmpDir should not run during browser-safe import");
     });
 
   vi.doMock("../infra/tmp-chainbreaker-dir.js", async () => {

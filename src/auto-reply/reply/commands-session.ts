@@ -12,7 +12,10 @@ import { formatTokenCount, formatUsd } from "../../utils/usage-format.js";
 import { parseActivationCommand } from "../group-activation.js";
 import { parseSendPolicyCommand } from "../send-policy.js";
 import { normalizeFastMode, normalizeUsageDisplay, resolveResponseUsageMode } from "../thinking.js";
-import { isTelegramSurface, resolveChannelAccountId } from "./channel-context.js";
+import {
+  isTelegramSurface,
+  resolveChannelAccountId,
+} from "./channel-context.js";
 import { rejectNonOwnerCommand, rejectUnauthorizedCommand } from "./command-gates.js";
 import { handleAbortTrigger, handleStopCommand } from "./commands-session-abort.js";
 import { persistSessionEntry } from "./commands-session-store.js";
@@ -99,7 +102,7 @@ function resolveUpdatedLifecycleDurationMs(
   key: "idleTimeoutMs" | "maxAgeMs",
 ): number | undefined {
   if (!isSessionBindingRecord(binding)) {
-    const raw = binding[key];
+    const raw = (binding as UpdatedLifecycleBinding)[key];
     if (typeof raw === "number" && Number.isFinite(raw)) {
       return Math.max(0, Math.floor(raw));
     }
@@ -119,7 +122,7 @@ function toUpdatedLifecycleBinding(
 ): UpdatedLifecycleBinding {
   const lastActivityAt = isSessionBindingRecord(binding)
     ? resolveSessionBindingLastActivityAt(binding)
-    : Math.max(Math.floor(binding.lastActivityAt), binding.boundAt);
+    : Math.max(Math.floor((binding as UpdatedLifecycleBinding).lastActivityAt), binding.boundAt);
   return {
     boundAt: binding.boundAt,
     lastActivityAt,
@@ -451,16 +454,17 @@ export const handleSessionCommand: CommandHandler = async (params, allowTextComm
   }
 
   const idleTimeoutMs = resolveSessionBindingDurationMs(
-    telegramBinding,
+    telegramBinding!,
     "idleTimeoutMs",
     24 * 60 * 60 * 1000,
   );
-  const idleExpiresAt =
-    idleTimeoutMs > 0
-      ? resolveSessionBindingLastActivityAt(telegramBinding) + idleTimeoutMs
-      : undefined;
-  const maxAgeMs = resolveSessionBindingDurationMs(telegramBinding, "maxAgeMs", 0);
-  const maxAgeExpiresAt = maxAgeMs > 0 ? telegramBinding.boundAt + maxAgeMs : undefined;
+  const idleExpiresAt = idleTimeoutMs > 0
+    ? resolveSessionBindingLastActivityAt(telegramBinding!) + idleTimeoutMs
+    : undefined;
+  const maxAgeMs = resolveSessionBindingDurationMs(telegramBinding!, "maxAgeMs", 0);
+  const maxAgeExpiresAt = maxAgeMs > 0
+    ? telegramBinding!.boundAt + maxAgeMs
+    : undefined;
 
   const durationArgRaw = tokens.slice(1).join("");
   if (!durationArgRaw) {
@@ -502,7 +506,7 @@ export const handleSessionCommand: CommandHandler = async (params, allowTextComm
   }
 
   const senderId = params.command.senderId?.trim() || "";
-  const boundBy = resolveSessionBindingBoundBy(telegramBinding);
+  const boundBy = resolveSessionBindingBoundBy(telegramBinding!);
   if (boundBy && boundBy !== "system" && senderId && senderId !== boundBy) {
     return {
       shouldContinue: false,
@@ -526,13 +530,13 @@ export const handleSessionCommand: CommandHandler = async (params, allowTextComm
     return action === SESSION_ACTION_IDLE
       ? channelRuntime.threadBindings.setIdleTimeoutBySessionKey({
           channelId: "telegram",
-          targetSessionKey: telegramBinding.targetSessionKey,
+          targetSessionKey: telegramBinding!.targetSessionKey,
           accountId,
           idleTimeoutMs: durationMs,
         })
       : channelRuntime.threadBindings.setMaxAgeBySessionKey({
           channelId: "telegram",
-          targetSessionKey: telegramBinding.targetSessionKey,
+          targetSessionKey: telegramBinding!.targetSessionKey,
           accountId,
           maxAgeMs: durationMs,
         });
@@ -624,6 +628,7 @@ export const handleRestartCommand: CommandHandler = async (params, allowTextComm
   return {
     shouldContinue: false,
     reply: {
+      text: `⚙️ Restarting Chainbreaker via ${restartMethod.method}; give me a few seconds to come back online.`,
     },
   };
 };

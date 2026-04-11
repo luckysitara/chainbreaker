@@ -13,9 +13,7 @@ export type ChainbreakerVersion = {
 
 const VERSION_RE = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/;
 
-export function parseChainbreakerVersion(
-  raw: string | null | undefined,
-): ChainbreakerVersion | null {
+export function parseChainbreakerVersion(raw: string | null | undefined): ChainbreakerVersion | null {
   if (!raw) {
     return null;
   }

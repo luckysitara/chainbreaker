@@ -10,6 +10,9 @@ import {
   resolveExecApprovalsFromFile,
 } from "../infra/exec-approvals.js";
 import {
+  describeInterpreterInlineEval,
+  detectInterpreterInlineEvalArgv,
+} from "../infra/exec-inline-eval.js";
 import { detectCommandObfuscation } from "../infra/exec-obfuscation-detect.js";
 import { buildNodeShellCommand } from "../infra/node-shell.js";
 import { parsePreparedSystemRunPayload } from "../infra/system-run-approval-context.js";
@@ -45,6 +48,7 @@ export type ExecuteNodeHostCommandParams = {
   agentId?: string;
   security: ExecSecurity;
   ask: ExecAsk;
+  strictInlineEval?: boolean;
   timeoutSec?: number;
   defaultTimeoutSec: number;
   approvalRunningNoticeMs: number;
@@ -133,12 +137,18 @@ export async function executeNodeHostCommand(
   let analysisOk = baseAllowlistEval.analysisOk;
   let allowlistSatisfied = false;
   let durableApprovalSatisfied = false;
+  const inlineEvalHit =
+    params.strictInlineEval === true
       ? (baseAllowlistEval.segments
           .map((segment) =>
+            detectInterpreterInlineEvalArgv(segment.resolution?.effectiveArgv ?? segment.argv),
           )
           .find((entry) => entry !== null) ?? null)
       : null;
+  if (inlineEvalHit) {
     params.warnings.push(
+      `Warning: strict inline-eval mode requires explicit approval for ${describeInterpreterInlineEval(
+        inlineEvalHit,
       )}.`,
     );
   }
@@ -197,6 +207,7 @@ export async function executeNodeHostCommand(
       allowlistSatisfied,
       durableApprovalSatisfied,
     }) ||
+    inlineEvalHit !== null ||
     obfuscation.detected;
   const invokeTimeoutMs = Math.max(
     10_000,
@@ -222,6 +233,7 @@ export async function executeNodeHostCommand(
         sessionKey: runSessionKey,
         approved: approvedByAsk,
         approvalDecision:
+          approvalDecision === "allow-always" && inlineEvalHit !== null
             ? "allow-once"
             : (approvalDecision ?? undefined),
         runId: runId ?? undefined,
@@ -230,6 +242,9 @@ export async function executeNodeHostCommand(
       idempotencyKey: crypto.randomUUID(),
     }) satisfies Record<string, unknown>;
 
+  let inlineApprovedByAsk = false;
+  let inlineApprovalDecision: "allow-once" | "allow-always" | null = null;
+  let inlineApprovalId: string | undefined;
   if (requiresAsk) {
     const requestArgs = execHostShared.buildDefaultExecApprovalRequestArgs({
       warnings: params.warnings,
@@ -268,6 +283,7 @@ export async function executeNodeHostCommand(
       register: registerNodeApproval,
     });
     if (
+      execHostShared.shouldResolveExecApprovalUnavailableInline({
         trigger: params.trigger,
         unavailableReason,
         preResolvedDecision,
@@ -289,6 +305,9 @@ export async function executeNodeHostCommand(
           }),
         );
       }
+      inlineApprovedByAsk = approvedByAsk;
+      inlineApprovalDecision = approvedByAsk ? "allow-once" : null;
+      inlineApprovalId = approvalId;
     } else {
       const followupTarget = execHostShared.buildExecApprovalFollowupTarget({
         approvalId,
@@ -405,6 +424,7 @@ export async function executeNodeHostCommand(
   const raw = await callGatewayTool(
     "node.invoke",
     { timeoutMs: invokeTimeoutMs },
+    buildInvokeParams(inlineApprovedByAsk, inlineApprovalDecision, inlineApprovalId),
   );
   const payload =
     raw && typeof raw === "object" ? (raw as { payload?: unknown }).payload : undefined;

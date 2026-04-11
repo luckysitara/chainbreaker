@@ -316,6 +316,8 @@ describe("subagent announce formatting", () => {
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "matrix",
+          plugin: createChannelTestPluginBase({ id: "matrix", label: "Matrix" }),
           source: "test",
         },
       ]),
@@ -464,6 +466,8 @@ describe("subagent announce formatting", () => {
   });
 
   it.each([
+    { role: "toolResult", toolOutput: "tool output line 1", childRunId: "run-tool-fallback-1" },
+    { role: "tool", toolOutput: "tool output line 2", childRunId: "run-tool-fallback-2" },
   ] as const)(
     "falls back to latest $role output when assistant reply is empty",
     async (testCase) => {
@@ -501,9 +505,11 @@ describe("subagent announce formatting", () => {
       messages: [
         {
           role: "tool",
+          content: [{ type: "text", text: "tool output line" }],
         },
         {
           role: "assistant",
+          content: [{ type: "text", text: "assistant final line" }],
         },
       ],
     });
@@ -520,6 +526,7 @@ describe("subagent announce formatting", () => {
 
     const call = agentSpy.mock.calls[0]?.[0] as { params?: { message?: string } };
     const msg = call?.params?.message as string;
+    expect(msg).toContain("assistant final line");
   });
 
   it("keeps full findings and includes compact stats", async () => {
@@ -580,6 +587,7 @@ describe("subagent announce formatting", () => {
       childRunId: "run-direct-completion",
       requesterSessionKey: "agent:main:main",
       requesterDisplayKey: "main",
+      requesterOrigin: { channel: "discord", to: "channel:12345", accountId: "acct-1" },
       ...defaultOutcomeAnnounce,
       expectsCompletionMessage: true,
     });
@@ -590,6 +598,7 @@ describe("subagent announce formatting", () => {
     const call = agentSpy.mock.calls[0]?.[0] as { params?: Record<string, unknown> };
     const rawMessage = call?.params?.message;
     const msg = typeof rawMessage === "string" ? rawMessage : "";
+    expect(call?.params?.channel).toBe("discord");
     expect(call?.params?.to).toBe("channel:12345");
     expect(call?.params?.sessionKey).toBe("agent:main:main");
     expect(call?.params?.inputProvenance).toMatchObject({
@@ -647,6 +656,7 @@ describe("subagent announce formatting", () => {
       childRunId: "run-direct-self-pending",
       requesterSessionKey: "agent:main:main",
       requesterDisplayKey: "main",
+      requesterOrigin: { channel: "discord", to: "channel:12345", accountId: "acct-1" },
       ...defaultOutcomeAnnounce,
       expectsCompletionMessage: true,
     });
@@ -656,6 +666,7 @@ describe("subagent announce formatting", () => {
     expect(agentSpy).toHaveBeenCalledTimes(1);
     const call = agentSpy.mock.calls[0]?.[0] as { params?: Record<string, unknown> };
     expect(call?.params?.deliver).toBe(true);
+    expect(call?.params?.channel).toBe("discord");
     expect(call?.params?.to).toBe("channel:12345");
   });
 
@@ -665,6 +676,7 @@ describe("subagent announce formatting", () => {
       childRunId: "run-direct-completion-skip",
       requesterSessionKey: "agent:main:main",
       requesterDisplayKey: "main",
+      requesterOrigin: { channel: "discord", to: "channel:12345", accountId: "acct-1" },
       ...defaultOutcomeAnnounce,
       expectsCompletionMessage: true,
       roundOneReply: "ANNOUNCE_SKIP",
@@ -698,6 +710,7 @@ describe("subagent announce formatting", () => {
       childRunId: "run-direct-completion-no-reply",
       requesterSessionKey: "agent:main:main",
       requesterDisplayKey: "main",
+      requesterOrigin: { channel: "slack", to: "channel:C123", accountId: "acct-1" },
       ...defaultOutcomeAnnounce,
       expectsCompletionMessage: true,
       roundOneReply: " NO_REPLY ",
@@ -714,6 +727,7 @@ describe("subagent announce formatting", () => {
       childRunId: "run-direct-completion-no-reply:wake",
       requesterSessionKey: "agent:main:main",
       requesterDisplayKey: "main",
+      requesterOrigin: { channel: "slack", to: "channel:C123", accountId: "acct-1" },
       ...defaultOutcomeAnnounce,
       expectsCompletionMessage: true,
       roundOneReply: " NO_REPLY ",
@@ -810,6 +824,7 @@ describe("subagent announce formatting", () => {
       childRunId: "run-direct-coordinated",
       requesterSessionKey: "agent:main:main",
       requesterDisplayKey: "main",
+      requesterOrigin: { channel: "discord", to: "channel:12345", accountId: "acct-1" },
       ...defaultOutcomeAnnounce,
       expectsCompletionMessage: true,
     });
@@ -821,6 +836,7 @@ describe("subagent announce formatting", () => {
     const rawMessage = call?.params?.message;
     const msg = typeof rawMessage === "string" ? rawMessage : "";
     expect(call?.params?.deliver).toBe(true);
+    expect(call?.params?.channel).toBe("discord");
     expect(call?.params?.to).toBe("channel:12345");
     expect(msg).not.toContain("There are still");
     expect(msg).not.toContain("wait for the remaining results");
@@ -842,14 +858,17 @@ describe("subagent announce formatting", () => {
       sessionKey === "agent:main:main" ? 1 : 0,
     );
     registerSessionBindingAdapter({
+      channel: "discord",
       accountId: "acct-1",
       listBySession: (targetSessionKey: string) =>
         targetSessionKey === "agent:main:subagent:test"
           ? [
               {
+                bindingId: "discord:acct-1:thread-bound-1",
                 targetSessionKey,
                 targetKind: "subagent",
                 conversation: {
+                  channel: "discord",
                   accountId: "acct-1",
                   conversationId: "thread-bound-1",
                   parentConversationId: "parent-main",
@@ -867,6 +886,7 @@ describe("subagent announce formatting", () => {
       childRunId: "run-session-bound-direct",
       requesterSessionKey: "agent:main:main",
       requesterDisplayKey: "main",
+      requesterOrigin: { channel: "discord", to: "channel:12345", accountId: "acct-1" },
       ...defaultOutcomeAnnounce,
       expectsCompletionMessage: true,
       spawnMode: "session",
@@ -876,6 +896,7 @@ describe("subagent announce formatting", () => {
     expect(sendSpy).not.toHaveBeenCalled();
     expect(agentSpy).toHaveBeenCalledTimes(1);
     const call = agentSpy.mock.calls[0]?.[0] as { params?: Record<string, unknown> };
+    expect(call?.params?.channel).toBe("discord");
     expect(call?.params?.to).toBe("channel:thread-bound-1");
   });
 
@@ -897,14 +918,17 @@ describe("subagent announce formatting", () => {
       sessionKey === "agent:main:main" ? 2 : 0,
     );
     registerSessionBindingAdapter({
+      channel: "discord",
       accountId: "acct-1",
       listBySession: (targetSessionKey: string) => {
         if (targetSessionKey === "agent:main:subagent:child-a") {
           return [
             {
+              bindingId: "discord:acct-1:thread-child-a",
               targetSessionKey,
               targetKind: "subagent",
               conversation: {
+                channel: "discord",
                 accountId: "acct-1",
                 conversationId: "thread-child-a",
                 parentConversationId: "main-parent-channel",
@@ -917,9 +941,11 @@ describe("subagent announce formatting", () => {
         if (targetSessionKey === "agent:main:subagent:child-b") {
           return [
             {
+              bindingId: "discord:acct-1:thread-child-b",
               targetSessionKey,
               targetKind: "subagent",
               conversation: {
+                channel: "discord",
                 accountId: "acct-1",
                 conversationId: "thread-child-b",
                 parentConversationId: "main-parent-channel",
@@ -941,6 +967,7 @@ describe("subagent announce formatting", () => {
         requesterSessionKey: "agent:main:main",
         requesterDisplayKey: "main",
         requesterOrigin: {
+          channel: "discord",
           to: "channel:main-parent-channel",
           accountId: "acct-1",
         },
@@ -954,6 +981,7 @@ describe("subagent announce formatting", () => {
         requesterSessionKey: "agent:main:main",
         requesterDisplayKey: "main",
         requesterOrigin: {
+          channel: "discord",
           to: "channel:main-parent-channel",
           accountId: "acct-1",
         },
@@ -977,22 +1005,32 @@ describe("subagent announce formatting", () => {
 
   it("routes Matrix bound completion delivery to room targets", async () => {
     sessionStore = {
+      "agent:main:subagent:matrix-child": {
+        sessionId: "child-session-matrix",
       },
       "agent:main:main": {
+        sessionId: "requester-session-matrix",
       },
     };
     chatHistoryMock.mockResolvedValueOnce({
+      messages: [{ role: "assistant", content: [{ type: "text", text: "matrix bound answer" }] }],
     });
     subagentRegistryMock.countActiveDescendantRuns.mockImplementation((sessionKey: string) =>
       sessionKey === "agent:main:main" ? 1 : 0,
     );
     registerSessionBindingAdapter({
+      channel: "matrix",
+      accountId: "acct-matrix",
       listBySession: (targetSessionKey: string) =>
+        targetSessionKey === "agent:main:subagent:matrix-child"
           ? [
               {
+                bindingId: "matrix:acct-matrix:$thread-bound-1",
                 targetSessionKey,
                 targetKind: "subagent",
                 conversation: {
+                  channel: "matrix",
+                  accountId: "acct-matrix",
                   conversationId: "$thread-bound-1",
                   parentConversationId: "!room:example",
                 },
@@ -1005,8 +1043,11 @@ describe("subagent announce formatting", () => {
     });
 
     const didAnnounce = await runSubagentAnnounceFlow({
+      childSessionKey: "agent:main:subagent:matrix-child",
+      childRunId: "run-session-bound-matrix",
       requesterSessionKey: "agent:main:main",
       requesterDisplayKey: "main",
+      requesterOrigin: { channel: "matrix", to: "room:!room:example", accountId: "acct-matrix" },
       ...defaultOutcomeAnnounce,
       expectsCompletionMessage: true,
       spawnMode: "session",
@@ -1016,6 +1057,7 @@ describe("subagent announce formatting", () => {
     expect(sendSpy).not.toHaveBeenCalled();
     expect(agentSpy).toHaveBeenCalledTimes(1);
     const call = agentSpy.mock.calls[0]?.[0] as { params?: Record<string, unknown> };
+    expect(call?.params?.channel).toBe("matrix");
     expect(call?.params?.to).toBe("room:!room:example");
     expect(call?.params?.threadId).toBe("$thread-bound-1");
   });
@@ -1062,6 +1104,7 @@ describe("subagent announce formatting", () => {
         childRunId: testCase.childRunId,
         requesterSessionKey: "agent:main:main",
         requesterDisplayKey: "main",
+        requesterOrigin: { channel: "discord", to: "channel:12345", accountId: "acct-1" },
         ...defaultOutcomeAnnounce,
         outcome: testCase.outcome,
         expectsCompletionMessage: true,
@@ -1086,7 +1129,9 @@ describe("subagent announce formatting", () => {
         childSessionId: "child-session-direct-thread",
         requesterSessionId: "requester-session-thread",
         childRunId: "run-direct-stale-thread",
+        requesterOrigin: { channel: "discord", to: "channel:12345", accountId: "acct-1" },
         requesterSessionMeta: {
+          lastChannel: "discord",
           lastTo: "channel:stale",
           lastThreadId: 42,
         },
@@ -1097,6 +1142,7 @@ describe("subagent announce formatting", () => {
         requesterSessionId: "requester-session-thread-pass",
         childRunId: "run-direct-thread-pass",
         requesterOrigin: {
+          channel: "discord",
           to: "channel:12345",
           accountId: "acct-1",
           threadId: 99,
@@ -1136,6 +1182,7 @@ describe("subagent announce formatting", () => {
       expect(sendSpy).not.toHaveBeenCalled();
       expect(agentSpy).toHaveBeenCalledTimes(1);
       const call = agentSpy.mock.calls[0]?.[0] as { params?: Record<string, unknown> };
+      expect(call?.params?.channel).toBe("discord");
       expect(call?.params?.to).toBe("channel:12345");
       expect(call?.params?.threadId).toBe(testCase.expectedThreadId);
     }
@@ -1146,22 +1193,27 @@ describe("subagent announce formatting", () => {
     agentSpy.mockClear();
     sessionStore = {
       "agent:main:subagent:test": {
+        sessionId: "child-session-slack-bound",
       },
       "agent:main:main": {
+        sessionId: "requester-session-slack-bound",
       },
     };
     chatHistoryMock.mockResolvedValueOnce({
       messages: [{ role: "assistant", content: [{ type: "text", text: "done" }] }],
     });
     registerSessionBindingAdapter({
+      channel: "slack",
       accountId: "acct-1",
       listBySession: (targetSessionKey: string) =>
         targetSessionKey === "agent:main:subagent:test"
           ? [
               {
+                bindingId: "slack:acct-1:C123",
                 targetSessionKey,
                 targetKind: "subagent",
                 conversation: {
+                  channel: "slack",
                   accountId: "acct-1",
                   conversationId: "C123",
                 },
@@ -1175,9 +1227,11 @@ describe("subagent announce formatting", () => {
 
     const didAnnounce = await runSubagentAnnounceFlow({
       childSessionKey: "agent:main:subagent:test",
+      childRunId: "run-direct-slack-bound",
       requesterSessionKey: "agent:main:main",
       requesterDisplayKey: "main",
       requesterOrigin: {
+        channel: "slack",
         to: "channel:C123",
         accountId: "acct-1",
       },
@@ -1190,6 +1244,7 @@ describe("subagent announce formatting", () => {
     expect(sendSpy).not.toHaveBeenCalled();
     expect(agentSpy).toHaveBeenCalledTimes(1);
     const call = agentSpy.mock.calls[0]?.[0] as { params?: Record<string, unknown> };
+    expect(call?.params?.channel).toBe("slack");
     expect(call?.params?.to).toBe("channel:C123");
     expect(call?.params?.threadId).toBeUndefined();
   });
@@ -1240,6 +1295,7 @@ describe("subagent announce formatting", () => {
       {
         childRunId: "run-direct-thread-bound",
         requesterOrigin: {
+          channel: "discord",
           to: "channel:12345",
           accountId: "acct-1",
           threadId: "777",
@@ -1248,6 +1304,7 @@ describe("subagent announce formatting", () => {
       {
         childRunId: "run-direct-thread-bound-single",
         requesterOrigin: {
+          channel: "discord",
           to: "channel:12345",
           accountId: "acct-1",
         },
@@ -1255,6 +1312,7 @@ describe("subagent announce formatting", () => {
       {
         childRunId: "run-direct-thread-no-match",
         requesterOrigin: {
+          channel: "discord",
           to: "channel:12345",
           accountId: "acct-1",
           threadId: "999",
@@ -1268,6 +1326,7 @@ describe("subagent announce formatting", () => {
       hasSubagentDeliveryTargetHook = true;
       subagentDeliveryTargetHookMock.mockResolvedValueOnce({
         origin: {
+          channel: "discord",
           accountId: "acct-1",
           to: "channel:777",
           threadId: "777",
@@ -1304,6 +1363,7 @@ describe("subagent announce formatting", () => {
       expect(sendSpy).not.toHaveBeenCalled();
       expect(agentSpy).toHaveBeenCalledTimes(1);
       const call = agentSpy.mock.calls[0]?.[0] as { params?: Record<string, unknown> };
+      expect(call?.params?.channel).toBe("discord");
       expect(call?.params?.to).toBe("channel:777");
       expect(call?.params?.threadId).toBe("777");
       const message = typeof call?.params?.message === "string" ? call.params.message : "";
@@ -1328,6 +1388,7 @@ describe("subagent announce formatting", () => {
       requesterSessionKey: "agent:main:main",
       requesterDisplayKey: "main",
       requesterOrigin: {
+        channel: "discord",
         to: "channel:12345",
         accountId: "acct-1",
       },
@@ -1372,6 +1433,7 @@ describe("subagent announce formatting", () => {
       requesterSessionKey: "agent:main:main",
       requesterDisplayKey: "main",
       requesterOrigin: {
+        channel: "discord",
         to: "channel:12345",
         accountId: "acct-1",
       },
@@ -1384,6 +1446,7 @@ describe("subagent announce formatting", () => {
     expect(sendSpy).not.toHaveBeenCalled();
     expect(agentSpy).toHaveBeenCalledTimes(1);
     const call = agentSpy.mock.calls[0]?.[0] as { params?: Record<string, unknown> };
+    expect(call?.params?.channel).toBe("discord");
     expect(call?.params?.to).toBe("channel:12345");
     expect(call?.params?.threadId).toBeUndefined();
   });
@@ -1657,6 +1720,7 @@ describe("subagent announce formatting", () => {
       childRunId: "run-completion-explicit-route",
       requesterSessionKey: "main",
       requesterDisplayKey: "main",
+      requesterOrigin: { channel: "discord", to: "channel:12345", accountId: "acct-1" },
       expectsCompletionMessage: true,
       ...defaultOutcomeAnnounce,
     });
@@ -1668,6 +1732,7 @@ describe("subagent announce formatting", () => {
       method: "agent",
       params: {
         sessionKey: "agent:main:main",
+        channel: "discord",
         to: "channel:12345",
         deliver: true,
       },
@@ -1720,6 +1785,7 @@ describe("subagent announce formatting", () => {
       childRunId: "run-completion-assistant-output",
       requesterSessionKey: "agent:main:main",
       requesterDisplayKey: "main",
+      requesterOrigin: { channel: "discord", to: "channel:12345", accountId: "acct-1" },
       expectsCompletionMessage: true,
       ...defaultOutcomeAnnounce,
     });
@@ -1753,6 +1819,7 @@ describe("subagent announce formatting", () => {
       childRunId: "run-completion-tool-output",
       requesterSessionKey: "agent:main:main",
       requesterDisplayKey: "main",
+      requesterOrigin: { channel: "discord", to: "channel:12345", accountId: "acct-1" },
       expectsCompletionMessage: true,
       ...defaultOutcomeAnnounce,
     });
@@ -1781,6 +1848,7 @@ describe("subagent announce formatting", () => {
       childRunId: "run-completion-ignore-user",
       requesterSessionKey: "agent:main:main",
       requesterDisplayKey: "main",
+      requesterOrigin: { channel: "discord", to: "channel:12345", accountId: "acct-1" },
       expectsCompletionMessage: true,
       ...defaultOutcomeAnnounce,
     });
@@ -2833,6 +2901,7 @@ describe("subagent announce formatting", () => {
         },
         expectedSessionKey: "agent:main:main",
         expectedDeliver: false,
+        expectedChannel: "discord",
       },
       {
         name: "falls back when parent sessionId is blank",
@@ -2854,6 +2923,7 @@ describe("subagent announce formatting", () => {
         },
         expectedSessionKey: "agent:main:main",
         expectedDeliver: false,
+        expectedChannel: "discord",
       },
     ] as const;
 
@@ -2865,6 +2935,7 @@ describe("subagent announce formatting", () => {
       sessionStore = testCase.sessionStoreFixture as SessionStoreFixture;
       subagentRegistryMock.resolveRequesterForChildSession.mockReturnValue({
         requesterSessionKey: "agent:main:main",
+        requesterOrigin: { channel: "discord", accountId: "jaris-account" },
       });
 
       const didAnnounce = await runSubagentAnnounceFlow({
@@ -2884,6 +2955,7 @@ describe("subagent announce formatting", () => {
     }
   });
 
+  describe("subagent announce regression matrix for nested completion delivery", () => {
     function makeChildCompletion(params: {
       runId: string;
       childSessionKey: string;

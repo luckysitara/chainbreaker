@@ -6,6 +6,7 @@ export const testServiceAuditCodes = {
 export function readEmbeddedGatewayTokenForTest(
   command: {
     environment?: Record<string, string>;
+    environmentValueSources?: Record<string, "inline" | "file">;
   } | null,
 ) {
   return command?.environmentValueSources?.CHAINBREAKER_GATEWAY_TOKEN === "file"

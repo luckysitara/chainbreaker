@@ -112,6 +112,7 @@ export function noteOpencodeProviderOverrides(cfg: ChainbreakerConfig): void {
     return;
   }
 
+  const lines = overrides.flatMap((id) => {
     const providerLabel = id === "opencode-go" ? "OpenCode Go" : "OpenCode Zen";
     const providerEntry = providers[id];
     const api =
@@ -121,10 +122,13 @@ export function noteOpencodeProviderOverrides(cfg: ChainbreakerConfig): void {
     return [
       `- models.providers.${id} is set; this overrides the built-in ${providerLabel} catalog.`,
       api ? `- models.providers.${id}.api=${api}` : null,
+    ].filter((line): line is string => Boolean(line));
   });
 
+  lines.push(
     "- Remove these entries to restore per-model API routing + costs (then re-run setup if needed).",
   );
+  note(lines.join("\n"), "OpenCode");
 }
 
 export function noteIncludeConfinementWarning(snapshot: {

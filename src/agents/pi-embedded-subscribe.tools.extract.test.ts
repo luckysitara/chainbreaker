@@ -39,11 +39,13 @@ describe("extractMessagingToolSend", () => {
   it("prefers provider when both provider and channel are set", () => {
     const result = extractMessagingToolSend("message", {
       action: "send",
+      provider: "slack",
       channel: "telegram",
       to: "channel:C1",
     });
 
     expect(result?.tool).toBe("message");
+    expect(result?.provider).toBe("slack");
     expect(result?.to).toBe("channel:C1");
   });
 

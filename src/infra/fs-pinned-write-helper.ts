@@ -4,6 +4,7 @@ import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import type { FileIdentityStat } from "./file-identity.js";
 
 export type PinnedWriteInput =
@@ -133,16 +134,20 @@ function resolvePinnedWritePython(): string {
 }
 
 function parsePinnedIdentity(stdout: string): FileIdentityStat {
+  const line = stdout
     .trim()
     .split(/\r?\n/)
     .map((value) => value.trim())
     .filter(Boolean)
     .at(-1);
+  if (!line) {
     throw new Error("Pinned write helper returned no identity");
   }
+  const [devRaw, inoRaw] = line.split("|");
   const dev = Number.parseInt(devRaw ?? "", 10);
   const ino = Number.parseInt(inoRaw ?? "", 10);
   if (!Number.isFinite(dev) || !Number.isFinite(ino)) {
+    throw new Error(`Pinned write helper returned invalid identity: ${line}`);
   }
   return { dev, ino };
 }
@@ -201,11 +206,14 @@ export async function runPinnedWriteHelper(params: {
         child.stdin.end(input.data, () => resolve());
       });
     } else {
+      await pipeline(params.input.stream, child.stdin);
     }
 
+    const [code, signal] = await exitPromise;
     if (code !== 0) {
       throw new Error(
         stderr.trim() ||
+          `Pinned write helper failed with code ${code ?? "null"} (${signal ?? "?"})`,
       );
     }
     return parsePinnedIdentity(stdout);
@@ -244,6 +252,7 @@ async function runPinnedWriteFallback(params: {
   } else {
     const handle = await fs.open(tempPath, "w", params.mode);
     try {
+      await pipeline(params.input.stream, handle.createWriteStream());
     } finally {
       await handle.close().catch(() => {});
     }

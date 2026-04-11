@@ -16,6 +16,7 @@ import { stripMentions, stripStructuralPrefixes } from "./mentions.js";
 import { extractQueueDirective } from "./queue/directive.js";
 import type { QueueDropPolicy, QueueMode } from "./queue/types.js";
 
+export type InlineDirectives = {
   cleaned: string;
   hasThinkDirective: boolean;
   thinkLevel?: ThinkLevel;
@@ -63,12 +64,14 @@ import type { QueueDropPolicy, QueueMode } from "./queue/types.js";
   hasQueueOptions: boolean;
 };
 
+export function parseInlineDirectives(
   body: string,
   options?: {
     modelAliases?: string[];
     disableElevated?: boolean;
     allowStatusDirective?: boolean;
   },
+): InlineDirectives {
   const {
     cleaned: thinkCleaned,
     thinkLevel,
@@ -200,6 +203,7 @@ import type { QueueDropPolicy, QueueMode } from "./queue/types.js";
 }
 
 export function isDirectiveOnly(params: {
+  directives: InlineDirectives;
   cleanedBody: string;
   ctx: MsgContext;
   cfg: ChainbreakerConfig;

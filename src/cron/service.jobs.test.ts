@@ -80,6 +80,7 @@ describe("applyJobPatch", () => {
     const patch: CronJobPatch = {
       delivery: {
         mode: "none",
+        channel: "signal",
         to: "555",
         bestEffort: true,
       },
@@ -92,6 +93,7 @@ describe("applyJobPatch", () => {
     }
     expect(job.delivery).toEqual({
       mode: "none",
+      channel: "signal",
       to: "555",
       bestEffort: true,
     });
@@ -366,6 +368,7 @@ describe("createJob rejects sessionTarget main for non-default agents", () => {
           to: "123",
           failureDestination: {
             mode: "announce",
+            channel: "signal",
             to: "+15550001111",
           },
         },

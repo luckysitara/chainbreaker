@@ -79,6 +79,9 @@ const baseCfg = {
 
 function createDiscordCommandParams(commandBody: string) {
   const params = buildCommandTestParams(commandBody, baseCfg, {
+    Provider: "discord",
+    Surface: "discord",
+    OriginatingChannel: "discord",
     OriginatingTo: "channel:parent-1",
     AccountId: "default",
     MessageThreadId: "thread-1",
@@ -102,6 +105,9 @@ function createTelegramTopicCommandParams(commandBody: string) {
 
 function createMatrixThreadCommandParams(commandBody: string, cfg: ChainbreakerConfig = baseCfg) {
   const params = buildCommandTestParams(commandBody, cfg, {
+    Provider: "matrix",
+    Surface: "matrix",
+    OriginatingChannel: "matrix",
     OriginatingTo: "room:!room:example.org",
     AccountId: "default",
     MessageThreadId: "$thread-1",
@@ -115,6 +121,9 @@ function createMatrixTriggerThreadCommandParams(
   cfg: ChainbreakerConfig = baseCfg,
 ) {
   const params = buildCommandTestParams(commandBody, cfg, {
+    Provider: "matrix",
+    Surface: "matrix",
+    OriginatingChannel: "matrix",
     OriginatingTo: "room:!room:example.org",
     AccountId: "default",
     MessageThreadId: "$root",
@@ -125,6 +134,9 @@ function createMatrixTriggerThreadCommandParams(
 
 function createMatrixRoomCommandParams(commandBody: string, cfg: ChainbreakerConfig = baseCfg) {
   const params = buildCommandTestParams(commandBody, cfg, {
+    Provider: "matrix",
+    Surface: "matrix",
+    OriginatingChannel: "matrix",
     OriginatingTo: "room:!room:example.org",
     AccountId: "default",
   });
@@ -140,6 +152,7 @@ function createSessionBindingRecord(
     targetSessionKey: "agent:codex-acp:session-1",
     targetKind: "session",
     conversation: {
+      channel: "discord",
       accountId: "default",
       conversationId: "thread-1",
       parentConversationId: "parent-1",
@@ -232,6 +245,7 @@ describe("/focus, /unfocus, /agents", () => {
         targetKind: "session",
         targetSessionKey: "agent:codex-acp:session-1",
         conversation: expect.objectContaining({
+          channel: "discord",
           conversationId: "thread-1",
         }),
         metadata: expect.objectContaining({
@@ -261,6 +275,7 @@ describe("/focus, /unfocus, /agents", () => {
     const cfg = {
       ...baseCfg,
       channels: {
+        matrix: {
           threadBindings: {
             enabled: true,
             spawnSubagentSessions: true,
@@ -276,6 +291,7 @@ describe("/focus, /unfocus, /agents", () => {
       expect.objectContaining({
         placement: "child",
         conversation: expect.objectContaining({
+          channel: "matrix",
           conversationId: "!room:example.org",
         }),
       }),
@@ -290,6 +306,7 @@ describe("/focus, /unfocus, /agents", () => {
       expect.objectContaining({
         placement: "current",
         conversation: expect.objectContaining({
+          channel: "matrix",
           conversationId: "$root",
           parentConversationId: "!room:example.org",
         }),
@@ -301,6 +318,7 @@ describe("/focus, /unfocus, /agents", () => {
     const cfg = {
       ...baseCfg,
       channels: {
+        matrix: {
           threadBindings: {
             enabled: true,
           },
@@ -381,7 +399,9 @@ describe("/focus, /unfocus, /agents", () => {
     const params = createMatrixThreadCommandParams("/unfocus");
     hoisted.sessionBindingResolveByConversationMock.mockReturnValue(
       createSessionBindingRecord({
+        bindingId: "default:matrix-thread-1",
         conversation: {
+          channel: "matrix",
           accountId: "default",
           conversationId: "$thread-1",
           parentConversationId: "!room:example.org",
@@ -394,11 +414,13 @@ describe("/focus, /unfocus, /agents", () => {
 
     expect(result?.reply?.text).toContain("Thread unfocused");
     expect(hoisted.sessionBindingResolveByConversationMock).toHaveBeenCalledWith({
+      channel: "matrix",
       accountId: "default",
       conversationId: "$thread-1",
       parentConversationId: "!room:example.org",
     });
     expect(hoisted.sessionBindingUnbindMock).toHaveBeenCalledWith({
+      bindingId: "default:matrix-thread-1",
       reason: "manual",
     });
   });
@@ -434,6 +456,7 @@ describe("/focus, /unfocus, /agents", () => {
             targetSessionKey: sessionKey,
             targetKind: "subagent",
             conversation: {
+              channel: "discord",
               accountId: "default",
               conversationId: "thread-1",
             },
@@ -447,6 +470,7 @@ describe("/focus, /unfocus, /agents", () => {
             targetSessionKey: sessionKey,
             targetKind: "session",
             conversation: {
+              channel: "discord",
               accountId: "default",
               conversationId: "thread-2",
             },
@@ -501,6 +525,7 @@ describe("/focus, /unfocus, /agents", () => {
           targetSessionKey: sessionKey,
           targetKind: "subagent",
           conversation: {
+            channel: "discord",
             accountId: "default",
             conversationId: "thread-persistent-1",
           },

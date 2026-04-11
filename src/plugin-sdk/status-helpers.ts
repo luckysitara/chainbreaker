@@ -45,6 +45,7 @@ type ConfigIssueAccount = {
   configured?: boolean | null;
 } & Record<string, unknown>;
 
+/** Create the baseline runtime snapshot shape used by channel/account status stores. */
 export function createDefaultChannelRuntimeState<T extends Record<string, unknown>>(
   accountId: string,
   extra?: T,

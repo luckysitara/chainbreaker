@@ -119,6 +119,10 @@ vi.mock("./route-reply.runtime.js", () => ({
       channel &&
       [
         "telegram",
+        "slack",
+        "discord",
+        "signal",
+        "imessage",
         "whatsapp",
         "feishu",
         "mattermost",
@@ -298,7 +302,9 @@ describe("dispatchReplyFromConfig", () => {
     ({ __testing: acpManagerTesting } = await import("../../acp/control-plane/manager.js"));
     ({ __testing: pluginBindingTesting } = await import("../../plugins/conversation-binding.js"));
     ({ AcpRuntimeError: AcpRuntimeErrorClass } = await import("../../acp/runtime/errors.js"));
+    const discordTestPlugin = {
       ...createChannelTestPluginBase({
+        id: "discord",
         capabilities: {
           chatTypes: ["direct"],
           nativeCommands: true,
@@ -318,7 +324,9 @@ describe("dispatchReplyFromConfig", () => {
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "discord",
           source: "test",
+          plugin: discordTestPlugin,
         },
       ]),
     );
@@ -377,7 +385,9 @@ describe("dispatchReplyFromConfig", () => {
     const cfg = emptyConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "slack",
       Surface: undefined,
+      OriginatingChannel: "slack",
       OriginatingTo: "channel:C123",
     });
 
@@ -398,6 +408,7 @@ describe("dispatchReplyFromConfig", () => {
     const cfg = emptyConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "slack",
       AccountId: "acc-1",
       MessageThreadId: 123,
       GroupChannel: "ops-room",
@@ -512,6 +523,7 @@ describe("dispatchReplyFromConfig", () => {
     const cfg = emptyConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "slack",
       OriginatingChannel: "telegram",
       OriginatingTo: "telegram:999",
     });
@@ -620,6 +632,8 @@ describe("dispatchReplyFromConfig", () => {
     const ctx = buildTestCtx({
       Provider: "webchat",
       Surface: "webchat",
+      OriginatingChannel: "imessage",
+      OriginatingTo: "imessage:+15550001111",
     });
 
     const replyResolver = async (
@@ -641,6 +655,8 @@ describe("dispatchReplyFromConfig", () => {
     const ctx = buildTestCtx({
       Provider: "webchat",
       Surface: "webchat",
+      OriginatingChannel: "imessage",
+      OriginatingTo: "imessage:+15550001111",
       ExplicitDeliverRoute: true,
     });
 
@@ -654,6 +670,8 @@ describe("dispatchReplyFromConfig", () => {
     expect(dispatcher.sendFinalReply).not.toHaveBeenCalled();
     expect(mocks.routeReply).toHaveBeenCalledWith(
       expect.objectContaining({
+        channel: "imessage",
+        to: "imessage:+15550001111",
       }),
     );
   });
@@ -664,6 +682,7 @@ describe("dispatchReplyFromConfig", () => {
     const cfg = emptyConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "slack",
       ChatType: "group",
       AccountId: "acc-1",
       OriginatingChannel: "telegram",
@@ -1006,6 +1025,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex-acp:session-1",
       BodyForAgent: "write a test",
     });
@@ -1031,6 +1052,7 @@ describe("dispatchReplyFromConfig", () => {
     );
   });
 
+  it("aborts ACP dispatch promptly when the caller abort signal fires", async () => {
     setNoAbort();
     let releaseTurn: (() => void) | undefined;
     const releasePromise = new Promise<void>((resolve) => {
@@ -1045,11 +1067,14 @@ describe("dispatchReplyFromConfig", () => {
             runtimeSessionName: `${input.sessionKey}:${input.mode}`,
           }) as { sessionKey: string; backend: string; runtimeSessionName: string },
       ),
+      runTurn: vi.fn(async function* (params: { signal?: AbortSignal }) {
         await new Promise<void>((resolve) => {
+          if (params.signal?.aborted) {
             resolve();
             return;
           }
           const onAbort = () => resolve();
+          params.signal?.addEventListener("abort", onAbort, { once: true });
           void releasePromise.then(resolve);
         });
         yield { type: "done" };
@@ -1086,6 +1111,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex-acp:session-1",
       BodyForAgent: "write a test",
     });
@@ -1093,6 +1120,7 @@ describe("dispatchReplyFromConfig", () => {
       ctx,
       cfg,
       dispatcher,
+      replyOptions: { abortSignal: abortController.signal },
     });
     await vi.waitFor(() => {
       expect(runtime.runTurn).toHaveBeenCalledTimes(1);
@@ -1135,6 +1163,8 @@ describe("dispatchReplyFromConfig", () => {
 
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex-acp:session-1",
       BodyForAgent: "write a test",
     });
@@ -1195,6 +1225,8 @@ describe("dispatchReplyFromConfig", () => {
 
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex-acp:session-1",
       BodyForAgent: "write a test",
     });
@@ -1277,6 +1309,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex-acp:session-1",
       MessageThreadId: "thread-1",
       BodyForAgent: "show ids",
@@ -1340,6 +1374,7 @@ describe("dispatchReplyFromConfig", () => {
         targetSessionKey: "agent:codex-acp:session-1",
         targetKind: "session",
         conversation: {
+          channel: "discord",
           accountId: "default",
           conversationId: "thread-1",
         },
@@ -1356,6 +1391,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       AccountId: "default",
       SessionKey: "agent:codex-acp:session-1",
       MessageThreadId: undefined,
@@ -1411,6 +1448,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex-acp:session-1",
       BodyForAgent: "write a test",
     });
@@ -1422,6 +1461,7 @@ describe("dispatchReplyFromConfig", () => {
     expect(dispatcher.sendFinalReply).not.toHaveBeenCalled();
   });
 
+  it("routes ACP slash commands through the normal command pipeline", async () => {
     setNoAbort();
     const runtime = createAcpRuntime([{ type: "done" }]);
     acpMocks.readAcpSessionEntry.mockReturnValue({
@@ -1457,6 +1497,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex-acp:session-1",
       CommandBody: "/acp cancel",
       BodyForCommands: "/acp cancel",
@@ -1512,7 +1554,10 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       CommandSource: "native",
+      SessionKey: "discord:slash:owner",
       CommandTargetSessionKey: "agent:codex-acp:session-1",
       CommandBody: "/new continue with deployment",
       BodyForCommands: "/new continue with deployment",
@@ -1576,6 +1621,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex-acp:session-1",
       CommandBody: "/acp cancel",
       BodyForCommands: "/acp cancel",
@@ -1627,6 +1674,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex-acp:session-1",
       CommandBody: "!poll",
       BodyForCommands: "!poll",
@@ -1681,6 +1730,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex-acp:session-1",
       CommandBody: "!poll",
       BodyForCommands: "!poll",
@@ -1738,6 +1789,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex-acp:session-1",
       BodyForAgent: "test spacing",
     });
@@ -1789,6 +1842,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex-acp:session-1",
       BodyForAgent: "stream this",
     });
@@ -1837,6 +1892,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       OriginatingChannel: "telegram",
       OriginatingTo: "telegram:thread-1",
       SessionKey: "agent:codex-acp:session-1",
@@ -1887,6 +1944,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex-acp:oneshot-1",
       BodyForAgent: "run once",
     });
@@ -1926,6 +1985,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex-acp:session-1",
       BodyForAgent: "write a test",
     });
@@ -1952,6 +2013,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex:acp:session-1",
       BodyForAgent: "hello",
     });
@@ -1998,6 +2061,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: "agent:codex-acp:session-1",
       BodyForAgent: "write a test",
     });
@@ -2032,9 +2097,11 @@ describe("dispatchReplyFromConfig", () => {
     expect(replyResolver).toHaveBeenCalledTimes(1);
   });
 
+  it("suppresses local discord exec approval tool prompts when discord approvals are enabled", async () => {
     setNoAbort();
     const cfg = {
       channels: {
+        discord: {
           enabled: true,
           execApprovals: {
             enabled: true,
@@ -2045,6 +2112,8 @@ describe("dispatchReplyFromConfig", () => {
     } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       AccountId: "default",
     });
     const replyResolver = vi.fn(async (_ctx: MsgContext, options?: GetReplyOptions) => {
@@ -2107,6 +2176,8 @@ describe("dispatchReplyFromConfig", () => {
     const cfg = emptyConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "slack",
+      Surface: "slack",
       OriginatingChannel: "Telegram",
       OriginatingTo: "telegram:999",
       CommandBody: "/search hello",
@@ -2274,8 +2345,11 @@ describe("dispatchReplyFromConfig", () => {
     const cfg = { diagnostics: { enabled: true } } as ChainbreakerConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "slack",
+      Surface: "slack",
       SessionKey: "agent:main:main",
       MessageSid: "msg-1",
+      To: "slack:C123",
     });
 
     const replyResolver = async () => ({ text: "hi" }) satisfies ReplyPayload;
@@ -2289,6 +2363,7 @@ describe("dispatchReplyFromConfig", () => {
     });
     expect(diagnosticMocks.logMessageProcessed).toHaveBeenCalledWith(
       expect.objectContaining({
+        channel: "slack",
         outcome: "completed",
         sessionKey: "agent:main:main",
       }),
@@ -2311,6 +2386,7 @@ describe("dispatchReplyFromConfig", () => {
       targetSessionKey: "plugin-binding:codex:abc123",
       targetKind: "session",
       conversation: {
+        channel: "discord",
         accountId: "default",
         conversationId: "channel:1481858418548412579",
       },
@@ -2325,6 +2401,11 @@ describe("dispatchReplyFromConfig", () => {
     const cfg = emptyConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
+      OriginatingChannel: "discord",
+      OriginatingTo: "discord:channel:1481858418548412579",
+      To: "discord:channel:1481858418548412579",
       AccountId: "default",
       SenderId: "user-9",
       SenderUsername: "ada",
@@ -2334,6 +2415,7 @@ describe("dispatchReplyFromConfig", () => {
       RawBody: "who are you",
       Body: "who are you",
       MessageSid: "msg-claim-plugin-1",
+      SessionKey: "agent:main:discord:channel:1481858418548412579",
     });
     const replyResolver = vi.fn(async () => ({ text: "should not run" }) satisfies ReplyPayload);
 
@@ -2344,11 +2426,13 @@ describe("dispatchReplyFromConfig", () => {
     expect(hookMocks.runner.runInboundClaimForPluginOutcome).toHaveBeenCalledWith(
       "chainbreaker-codex-app-server",
       expect.objectContaining({
+        channel: "discord",
         accountId: "default",
         conversationId: "channel:1481858418548412579",
         content: "who are you",
       }),
       expect.objectContaining({
+        channelId: "discord",
         accountId: "default",
         conversationId: "channel:1481858418548412579",
       }),
@@ -2373,6 +2457,7 @@ describe("dispatchReplyFromConfig", () => {
       targetSessionKey: "plugin-binding:codex:dm123",
       targetKind: "session",
       conversation: {
+        channel: "discord",
         accountId: "default",
         conversationId: "user:1177378744822943744",
       },
@@ -2387,6 +2472,10 @@ describe("dispatchReplyFromConfig", () => {
     const cfg = emptyConfig;
     const dispatcher = createDispatcher();
     const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
+      OriginatingChannel: "discord",
+      From: "discord:1177378744822943744",
       OriginatingTo: "channel:1480574946919846079",
       To: "channel:1480574946919846079",
       AccountId: "default",
@@ -2398,6 +2487,7 @@ describe("dispatchReplyFromConfig", () => {
       RawBody: "who are you",
       Body: "who are you",
       MessageSid: "msg-claim-plugin-dm-1",
+      SessionKey: "agent:main:discord:user:1177378744822943744",
     });
     const replyResolver = vi.fn(async () => ({ text: "should not run" }) satisfies ReplyPayload);
 
@@ -2408,11 +2498,13 @@ describe("dispatchReplyFromConfig", () => {
     expect(hookMocks.runner.runInboundClaimForPluginOutcome).toHaveBeenCalledWith(
       "chainbreaker-codex-app-server",
       expect.objectContaining({
+        channel: "discord",
         accountId: "default",
         conversationId: "user:1177378744822943744",
         content: "who are you",
       }),
       expect.objectContaining({
+        channelId: "discord",
         accountId: "default",
         conversationId: "user:1177378744822943744",
       }),
@@ -2435,6 +2527,7 @@ describe("dispatchReplyFromConfig", () => {
       targetSessionKey: "plugin-binding:codex:missing123",
       targetKind: "session",
       conversation: {
+        channel: "discord",
         accountId: "default",
         conversationId: "channel:missing-plugin",
       },
@@ -2449,15 +2542,19 @@ describe("dispatchReplyFromConfig", () => {
       },
     } satisfies SessionBindingRecord);
 
-    const replyResolver = vi.fn(
-      async () => ({ text: "chainbreaker fallback" }) satisfies ReplyPayload,
-    );
+    const replyResolver = vi.fn(async () => ({ text: "chainbreaker fallback" }) satisfies ReplyPayload);
 
     const firstDispatcher = createDispatcher();
     await dispatchReplyFromConfig({
       ctx: buildTestCtx({
+        Provider: "discord",
+        Surface: "discord",
+        OriginatingChannel: "discord",
+        OriginatingTo: "discord:channel:missing-plugin",
+        To: "discord:channel:missing-plugin",
         AccountId: "default",
         MessageSid: "msg-missing-plugin-1",
+        SessionKey: "agent:main:discord:channel:missing-plugin",
         CommandBody: "hello",
         RawBody: "hello",
         Body: "hello",
@@ -2480,8 +2577,14 @@ describe("dispatchReplyFromConfig", () => {
     const secondDispatcher = createDispatcher();
     await dispatchReplyFromConfig({
       ctx: buildTestCtx({
+        Provider: "discord",
+        Surface: "discord",
+        OriginatingChannel: "discord",
+        OriginatingTo: "discord:channel:missing-plugin",
+        To: "discord:channel:missing-plugin",
         AccountId: "default",
         MessageSid: "msg-missing-plugin-2",
+        SessionKey: "agent:main:discord:channel:missing-plugin",
         CommandBody: "still there?",
         RawBody: "still there?",
         Body: "still there?",
@@ -2511,6 +2614,7 @@ describe("dispatchReplyFromConfig", () => {
       targetSessionKey: "plugin-binding:codex:nohandler123",
       targetKind: "session",
       conversation: {
+        channel: "discord",
         accountId: "default",
         conversationId: "channel:no-handler",
       },
@@ -2524,14 +2628,18 @@ describe("dispatchReplyFromConfig", () => {
       },
     } satisfies SessionBindingRecord);
     const dispatcher = createDispatcher();
-    const replyResolver = vi.fn(
-      async () => ({ text: "chainbreaker fallback" }) satisfies ReplyPayload,
-    );
+    const replyResolver = vi.fn(async () => ({ text: "chainbreaker fallback" }) satisfies ReplyPayload);
 
     await dispatchReplyFromConfig({
       ctx: buildTestCtx({
+        Provider: "discord",
+        Surface: "discord",
+        OriginatingChannel: "discord",
+        OriginatingTo: "discord:channel:no-handler",
+        To: "discord:channel:no-handler",
         AccountId: "default",
         MessageSid: "msg-no-handler-1",
+        SessionKey: "agent:main:discord:channel:no-handler",
         CommandBody: "hello",
         RawBody: "hello",
         Body: "hello",
@@ -2549,6 +2657,7 @@ describe("dispatchReplyFromConfig", () => {
     expect(hookMocks.runner.runInboundClaim).not.toHaveBeenCalled();
   });
 
+  it("notifies the user when a bound plugin declines the turn and keeps the binding attached", async () => {
     setNoAbort();
     hookMocks.runner.hasHooks.mockImplementation(
       ((hookName?: string) =>
@@ -2556,11 +2665,16 @@ describe("dispatchReplyFromConfig", () => {
     );
     hookMocks.registry.plugins = [{ id: "chainbreaker-codex-app-server", status: "loaded" }];
     hookMocks.runner.runInboundClaimForPluginOutcome.mockResolvedValue({
+      status: "declined",
     });
     sessionBindingMocks.resolveByConversation.mockReturnValue({
+      bindingId: "binding-declined-1",
+      targetSessionKey: "plugin-binding:codex:declined123",
       targetKind: "session",
       conversation: {
+        channel: "discord",
         accountId: "default",
+        conversationId: "channel:declined",
       },
       status: "active",
       boundAt: 1710000000000,
@@ -2577,7 +2691,14 @@ describe("dispatchReplyFromConfig", () => {
 
     await dispatchReplyFromConfig({
       ctx: buildTestCtx({
+        Provider: "discord",
+        Surface: "discord",
+        OriginatingChannel: "discord",
+        OriginatingTo: "discord:channel:declined",
+        To: "discord:channel:declined",
         AccountId: "default",
+        MessageSid: "msg-declined-1",
+        SessionKey: "agent:main:discord:channel:declined",
         CommandBody: "hello",
         RawBody: "hello",
         Body: "hello",
@@ -2611,6 +2732,7 @@ describe("dispatchReplyFromConfig", () => {
       targetSessionKey: "plugin-binding:codex:error123",
       targetKind: "session",
       conversation: {
+        channel: "discord",
         accountId: "default",
         conversationId: "channel:error",
       },
@@ -2628,8 +2750,14 @@ describe("dispatchReplyFromConfig", () => {
 
     await dispatchReplyFromConfig({
       ctx: buildTestCtx({
+        Provider: "discord",
+        Surface: "discord",
+        OriginatingChannel: "discord",
+        OriginatingTo: "discord:channel:error",
+        To: "discord:channel:error",
         AccountId: "default",
         MessageSid: "msg-error-1",
+        SessionKey: "agent:main:discord:channel:error",
         CommandBody: "hello",
         RawBody: "hello",
         Body: "hello",
@@ -2831,8 +2959,12 @@ describe("before_dispatch hook", () => {
       Body: "raw body",
       BodyForAgent: "agent body",
       BodyForCommands: "command body",
+      Provider: "slack",
+      Surface: "slack",
       OriginatingChannel: "telegram",
       OriginatingTo: "telegram:999",
+      From: "signal:group:ops-room",
+      SenderId: "signal:user:alice",
       GroupChannel: "ops-room",
       ChatType: "direct",
       Timestamp: 123,
@@ -2845,11 +2977,13 @@ describe("before_dispatch hook", () => {
         content: "command body",
         body: "agent body",
         channel: "telegram",
+        senderId: "signal:user:alice",
         isGroup: true,
         timestamp: 123,
       }),
       expect.objectContaining({
         channelId: "telegram",
+        senderId: "signal:user:alice",
       }),
     );
     expect(dispatcher.sendFinalReply).not.toHaveBeenCalled();

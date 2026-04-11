@@ -209,6 +209,7 @@ describe("cron tool", () => {
   it("stamps cron.add with caller sessionKey when missing", async () => {
     callGatewayMock.mockResolvedValueOnce({ ok: true });
 
+    const callerSessionKey = "agent:main:discord:channel:ops";
     const sessionKey = await executeAddAndReadSessionKey({
       callId: "call-session-key",
       agentSessionKey: callerSessionKey,
@@ -221,6 +222,7 @@ describe("cron tool", () => {
 
     const sessionKey = await executeAddAndReadSessionKey({
       callId: "call-explicit-session-key",
+      agentSessionKey: "agent:main:discord:channel:ops",
       jobSessionKey: "agent:main:telegram:group:-100123:topic:99",
     });
     expect(sessionKey).toBe("agent:main:telegram:group:-100123:topic:99");
@@ -324,9 +326,11 @@ describe("cron tool", () => {
     expect(
       await executeAddAndReadDelivery({
         callId: "call-thread",
+        agentSessionKey: "agent:main:slack:channel:general:thread:1699999999.0001",
       }),
     ).toEqual({
       mode: "announce",
+      channel: "slack",
       to: "general",
     });
   });
@@ -422,6 +426,7 @@ describe("cron tool", () => {
   it("does not recover flat params when no meaningful job field is present", async () => {
     const tool = createTestCronTool();
     await expect(
+      tool.execute("call-no-signal", {
         action: "add",
         name: "orphan-name",
         enabled: true,
@@ -454,6 +459,7 @@ describe("cron tool", () => {
     callGatewayMock.mockResolvedValueOnce({ ok: true });
     const delivery = await executeAddAndReadDelivery({
       callId: "call-none",
+      agentSessionKey: "agent:main:discord:dm:buddy",
       delivery: { mode: "none" },
     });
     expect(delivery).toEqual({ mode: "none" });
@@ -463,6 +469,7 @@ describe("cron tool", () => {
     callGatewayMock.mockResolvedValueOnce({ ok: true });
     const delivery = await executeAddAndReadDelivery({
       callId: "call-webhook-explicit",
+      agentSessionKey: "agent:main:discord:dm:buddy",
       delivery: { mode: "webhook", to: "https://example.invalid/cron-finished" },
     });
     expect(delivery).toEqual({
@@ -472,6 +479,7 @@ describe("cron tool", () => {
   });
 
   it("fails fast when webhook mode is missing delivery.to", async () => {
+    const tool = createTestCronTool({ agentSessionKey: "agent:main:discord:dm:buddy" });
 
     await expect(
       tool.execute("call-webhook-missing", {
@@ -486,6 +494,7 @@ describe("cron tool", () => {
   });
 
   it("fails fast when webhook mode uses a non-http URL", async () => {
+    const tool = createTestCronTool({ agentSessionKey: "agent:main:discord:dm:buddy" });
 
     await expect(
       tool.execute("call-webhook-invalid", {

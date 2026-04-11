@@ -1,9 +1,6 @@
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import {
-  POSIX_CHAINBREAKER_TMP_DIR,
-  resolvePreferredChainbreakerTmpDir,
-} from "./tmp-chainbreaker-dir.js";
+import { POSIX_CHAINBREAKER_TMP_DIR, resolvePreferredChainbreakerTmpDir } from "./tmp-chainbreaker-dir.js";
 
 type TmpDirOptions = NonNullable<Parameters<typeof resolvePreferredChainbreakerTmpDir>[0]>;
 

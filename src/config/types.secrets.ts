@@ -161,11 +161,15 @@ export function resolveSecretInputRef(params: {
   defaults?: SecretDefaults;
 }): {
   explicitRef: SecretRef | null;
+  inlineRef: SecretRef | null;
   ref: SecretRef | null;
 } {
   const explicitRef = coerceSecretRef(params.refValue, params.defaults);
+  const inlineRef = explicitRef ? null : coerceSecretRef(params.value, params.defaults);
   return {
     explicitRef,
+    inlineRef,
+    ref: explicitRef ?? inlineRef,
   };
 }
 

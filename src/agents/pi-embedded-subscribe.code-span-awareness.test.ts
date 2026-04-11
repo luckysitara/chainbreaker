@@ -19,6 +19,7 @@ describe("subscribeEmbeddedPiSession thinking tag code span awareness", () => {
     return { emit, onPartialReply };
   }
 
+  it("does not strip thinking tags inside inline code backticks", () => {
     const { emit, onPartialReply } = createPartialReplyHarness();
 
     emitAssistantTextDelta({

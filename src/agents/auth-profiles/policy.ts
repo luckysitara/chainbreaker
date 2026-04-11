@@ -134,7 +134,9 @@ export function assertNoOAuthSecretRefPolicyViolations(params: {
   if (violations.length === 0) {
     return;
   }
+  const lines = [
     `${params.context ?? "auth-profiles"} policy validation failed: OAuth + SecretRef is not supported.`,
     ...violations.map((violation) => `- ${violation.path}: ${violation.reason}`),
   ];
+  throw new Error(lines.join("\n"));
 }

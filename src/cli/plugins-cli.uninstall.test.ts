@@ -48,6 +48,7 @@ describe("plugins cli uninstall", () => {
 
     expect(uninstallPlugin).not.toHaveBeenCalled();
     expect(writeConfigFile).not.toHaveBeenCalled();
+    expect(runtimeLogs.some((line) => line.includes("Dry run, no changes made."))).toBe(true);
   });
 
   it("uninstalls with --force and --keep-files without prompting", async () => {

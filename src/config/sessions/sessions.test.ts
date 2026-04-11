@@ -313,9 +313,11 @@ describe("session store lock (Promise chain mutex)", () => {
   });
 
   it("preserves ACP metadata when replacing a session entry wholesale", async () => {
+    const key = "agent:codex:acp:binding:discord:default:feedface";
     const acp = {
       backend: "acpx",
       agent: "codex",
+      runtimeSessionName: "codex-discord",
       mode: "persistent" as const,
       state: "idle" as const,
       lastActivityAt: 100,
@@ -344,6 +346,7 @@ describe("session store lock (Promise chain mutex)", () => {
   });
 
   it("allows explicit ACP metadata removal through the ACP session helper", async () => {
+    const key = "agent:codex:acp:binding:discord:default:deadbeef";
     const { storePath } = await makeTmpStore({
       [key]: {
         sessionId: "sess-acp-clear",
@@ -351,6 +354,7 @@ describe("session store lock (Promise chain mutex)", () => {
         acp: {
           backend: "acpx",
           agent: "codex",
+          runtimeSessionName: "codex-discord",
           mode: "persistent",
           state: "idle",
           lastActivityAt: 100,
@@ -387,6 +391,7 @@ describe("appendAssistantMessageToSessionTranscript", () => {
         [sessionKey]: {
           sessionId,
           chatType: "direct",
+          channel: "discord",
         },
       }),
       "utf-8",
@@ -410,10 +415,14 @@ describe("appendAssistantMessageToSessionTranscript", () => {
         expect(sessionFileMode).toBe(0o600);
       }
 
+      const lines = fs.readFileSync(result.sessionFile, "utf-8").trim().split("\n");
+      expect(lines.length).toBe(2);
 
+      const header = JSON.parse(lines[0]);
       expect(header.type).toBe("session");
       expect(header.id).toBe(sessionId);
 
+      const messageLine = JSON.parse(lines[1]);
       expect(messageLine.type).toBe("message");
       expect(messageLine.message.role).toBe("assistant");
       expect(messageLine.message.content[0].type).toBe("text");
@@ -428,6 +437,7 @@ describe("appendAssistantMessageToSessionTranscript", () => {
       [sessionKey]: {
         sessionId,
         chatType: "direct",
+        channel: "discord",
       },
     };
     fs.writeFileSync(fixture.storePath(), JSON.stringify(store), "utf-8");
@@ -473,7 +483,10 @@ describe("appendAssistantMessageToSessionTranscript", () => {
     });
 
     const sessionFile = resolveSessionTranscriptPathInDir(sessionId, fixture.sessionsDir());
+    const lines = fs.readFileSync(sessionFile, "utf-8").trim().split("\n");
+    expect(lines.length).toBe(2);
 
+    const messageLine = JSON.parse(lines[1]);
     expect(messageLine.message.idempotencyKey).toBe("mirror:test-source-message");
     expect(messageLine.message.content[0].text).toBe("Hello from delivery mirror!");
   });
@@ -502,17 +515,21 @@ describe("appendAssistantMessageToSessionTranscript", () => {
   });
 
   it("finds Slack session entry using normalized (lowercased) key", async () => {
+    const sessionId = "test-slack-session";
     // Slack session keys include channel type and target ID; store key is lowercase
+    const storeKey = "agent:main:slack:direct:u12345abc";
     const store = {
       [storeKey]: {
         sessionId,
         chatType: "direct",
+        channel: "slack",
       },
     };
     fs.writeFileSync(fixture.storePath(), JSON.stringify(store), "utf-8");
 
     // Pass a mixed-case key (as resolveSlackSession might produce) — normalization should match
     const result = await appendAssistantMessageToSessionTranscript({
+      sessionKey: "agent:main:slack:direct:U12345ABC",
       text: "Hello Slack user!",
       storePath: fixture.storePath(),
     });
@@ -520,6 +537,7 @@ describe("appendAssistantMessageToSessionTranscript", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("ignores malformed transcript lines when checking mirror idempotency", async () => {
     writeTranscriptStore();
 
     const sessionFile = resolveSessionTranscriptPathInDir(sessionId, fixture.sessionsDir());
@@ -554,6 +572,8 @@ describe("appendAssistantMessageToSessionTranscript", () => {
     });
 
     expect(result.ok).toBe(true);
+    const lines = fs.readFileSync(sessionFile, "utf-8").trim().split("\n");
+    expect(lines.length).toBe(3);
   });
 });
 

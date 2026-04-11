@@ -137,6 +137,9 @@ describe("security fix", () => {
       channels: {
         telegram: { groupPolicy: "open" },
         whatsapp: { groupPolicy: "open" },
+        discord: { groupPolicy: "open" },
+        signal: { groupPolicy: "open" },
+        imessage: { groupPolicy: "open" },
       },
       logging: { redactSensitive: "off" },
     });
@@ -152,6 +155,9 @@ describe("security fix", () => {
       expect.arrayContaining([
         "channels.telegram.groupPolicy=open -> allowlist",
         "channels.whatsapp.groupPolicy=open -> allowlist",
+        "channels.discord.groupPolicy=open -> allowlist",
+        "channels.signal.groupPolicy=open -> allowlist",
+        "channels.imessage.groupPolicy=open -> allowlist",
         'logging.redactSensitive=off -> "tools"',
       ]),
     );
@@ -162,6 +168,9 @@ describe("security fix", () => {
     const channels = parsed.channels as Record<string, Record<string, unknown>>;
     expect(channels.telegram.groupPolicy).toBe("allowlist");
     expect(channels.whatsapp.groupPolicy).toBe("allowlist");
+    expect(channels.discord.groupPolicy).toBe("allowlist");
+    expect(channels.signal.groupPolicy).toBe("allowlist");
+    expect(channels.imessage.groupPolicy).toBe("allowlist");
 
     expect(channels.whatsapp.groupAllowFrom).toEqual(["+15551234567"]);
   });

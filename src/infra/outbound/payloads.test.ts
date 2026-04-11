@@ -82,6 +82,7 @@ describe("normalizeReplyPayloadsForDelivery", () => {
       normalizeReplyPayloadsForDelivery([
         {
           text: "[[reply_to_current]]",
+          channelData: { line: { flexMessage: { altText: "Card", contents: {} } } },
         },
       ]),
     ).toEqual([
@@ -92,6 +93,7 @@ describe("normalizeReplyPayloadsForDelivery", () => {
         replyToCurrent: true,
         replyToTag: true,
         audioAsVoice: false,
+        channelData: { line: { flexMessage: { altText: "Card", contents: {} } } },
       },
     ]);
   });
@@ -184,6 +186,7 @@ describe("normalizeOutboundPayloadsForJson", () => {
 
 describe("normalizeOutboundPayloads", () => {
   it("keeps channelData-only payloads", () => {
+    const channelData = { line: { flexMessage: { altText: "Card", contents: {} } } };
     expect(normalizeOutboundPayloads([{ channelData }])).toEqual([
       { text: "", mediaUrls: [], channelData },
     ]);
@@ -218,6 +221,7 @@ describe("formatOutboundPayloadLog", () => {
       expected: string;
     }>([
       {
+        name: "text with media lines",
         input: {
           text: "hello  ",
           mediaUrls: ["https://x.test/a.png", "https://x.test/b.png"],

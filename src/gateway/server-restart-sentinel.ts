@@ -189,6 +189,7 @@ export async function scheduleRestartSentinelWake(params: { deps: CliDeps }) {
   // The reply path does this mapping but deliverOutboundPayloads does not,
   // so we must convert here to ensure post-restart notifications land in
   // the originating Slack thread. See #17716.
+  const isSlack = channel === "slack";
   const replyToId = isSlack && threadId != null && threadId !== "" ? String(threadId) : undefined;
   const resolvedThreadId = isSlack ? undefined : threadId;
   const outboundSession = buildOutboundSessionContext({

@@ -110,6 +110,7 @@ describe("collectMissingExplicitDefaultAccountWarnings", () => {
             work: { botToken: "w" },
           },
         },
+        slack: {
           accounts: {
             a: { botToken: "x" },
             b: { botToken: "y" },
@@ -120,5 +121,7 @@ describe("collectMissingExplicitDefaultAccountWarnings", () => {
 
     const warnings = collectMissingExplicitDefaultAccountWarnings(cfg);
     expect(warnings).toHaveLength(2);
+    expect(warnings.some((line) => line.includes("channels.telegram"))).toBe(true);
+    expect(warnings.some((line) => line.includes("channels.slack"))).toBe(true);
   });
 });

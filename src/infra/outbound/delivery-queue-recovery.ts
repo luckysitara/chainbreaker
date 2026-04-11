@@ -49,6 +49,7 @@ const PERMANENT_ERROR_PATTERNS: readonly RegExp[] = [
   /chat_id is empty/i,
   /recipient is not a valid/i,
   /outbound not configured for channel/i,
+  /ambiguous discord recipient/i,
   /User .* not in room/i,
 ];
 
@@ -161,11 +162,13 @@ export async function recoverPendingDeliveries(opts: {
   pending.sort((a, b) => a.enqueuedAt - b.enqueuedAt);
   opts.log.info(`Found ${pending.length} pending delivery entries — starting recovery`);
 
+  const deadline = Date.now() + (opts.maxRecoveryMs ?? 60_000);
   const summary = createEmptyRecoverySummary();
 
   for (let i = 0; i < pending.length; i++) {
     const entry = pending[i];
     const now = Date.now();
+    if (now >= deadline) {
       opts.log.warn(`Recovery time budget exceeded — remaining entries deferred to next startup`);
       await deferRemainingEntriesForBudget(pending.slice(i), opts.stateDir);
       break;

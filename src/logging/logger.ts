@@ -128,9 +128,7 @@ function resolveSettings(): ResolvedSettings {
     }
   }
   const defaultLevel =
-    process.env.VITEST === "true" && process.env.CHAINBREAKER_TEST_FILE_LOG !== "1"
-      ? "silent"
-      : "info";
+    process.env.VITEST === "true" && process.env.CHAINBREAKER_TEST_FILE_LOG !== "1" ? "silent" : "info";
   const fromConfig = normalizeLogLevel(cfg?.level, defaultLevel);
   const level = envLevel ?? fromConfig;
   const file = cfg?.file ?? defaultRollingPathForToday();
@@ -182,6 +180,8 @@ function buildLogger(settings: ResolvedSettings): TsLogger<LogObj> {
   logger.attachTransport((logObj: LogObj) => {
     try {
       const time = formatTimestamp(logObj.date ?? new Date(), { style: "long" });
+      const line = JSON.stringify({ ...logObj, time });
+      const payload = `${line}\n`;
       const payloadBytes = Buffer.byteLength(payload, "utf8");
       const nextBytes = currentFileBytes + payloadBytes;
       if (nextBytes > settings.maxFileBytes) {
@@ -229,7 +229,9 @@ function getCurrentLogFileBytes(file: string): number {
   }
 }
 
+function appendLogLine(file: string, line: string): boolean {
   try {
+    fs.appendFileSync(file, line, { encoding: "utf8" });
     return true;
   } catch {
     return false;

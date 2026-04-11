@@ -175,13 +175,18 @@ describe("setMinimaxApiKey", () => {
   });
 
   it("writes to CHAINBREAKER_AGENT_DIR when set", async () => {
+    const env = await setupAuthTestEnv("chainbreaker-minimax-", { agentSubdir: "custom-agent" });
     lifecycle.setStateDir(env.stateDir);
 
+    await setMinimaxApiKey("sk-minimax-test");
 
     const parsed = await readAuthProfilesForAgent<{
       profiles?: Record<string, { type?: string; provider?: string; key?: string }>;
     }>(env.agentDir);
+    expect(parsed.profiles?.["minimax:default"]).toMatchObject({
       type: "api_key",
+      provider: "minimax",
+      key: "sk-minimax-test",
     });
 
     await expect(
@@ -235,16 +240,20 @@ describe("applyAuthProfileConfig", () => {
       {
         auth: {
           profiles: {
+            "zai:default": { provider: "z.ai", mode: "api_key" },
           },
+          order: { "z.ai": ["zai:default"] },
         },
       },
       {
+        profileId: "zai:work",
         provider: "z-ai",
         mode: "oauth",
       },
     );
 
     expect(next.auth?.order).toEqual({
+      zai: ["zai:work", "zai:default"],
     });
   });
 
@@ -253,18 +262,24 @@ describe("applyAuthProfileConfig", () => {
       {
         auth: {
           profiles: {
+            "zai:default": { provider: "z.ai", mode: "api_key" },
+            "zai:backup": { provider: "z-ai", mode: "token" },
           },
           order: {
+            zai: ["zai:default"],
+            "z.ai": ["zai:backup"],
           },
         },
       },
       {
+        profileId: "zai:work",
         provider: "z-ai",
         mode: "oauth",
       },
     );
 
     expect(next.auth?.order).toEqual({
+      zai: ["zai:work", "zai:default", "zai:backup"],
     });
   });
 

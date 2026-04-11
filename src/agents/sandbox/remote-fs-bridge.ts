@@ -57,6 +57,7 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
   async readFile(params: {
     filePath: string;
     cwd?: string;
+    signal?: AbortSignal;
   }): Promise<Buffer> {
     const target = this.resolveTarget(params);
     const relativePath = path.posix.relative(target.mountRootPath, target.containerPath);
@@ -75,6 +76,7 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
         path.posix.dirname(relativePath) === "." ? "" : path.posix.dirname(relativePath),
         path.posix.basename(relativePath),
       ],
+      signal: params.signal,
     });
     return result.stdout;
   }
@@ -85,6 +87,7 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
     data: Buffer | string;
     encoding?: BufferEncoding;
     mkdir?: boolean;
+    signal?: AbortSignal;
   }): Promise<void> {
     const target = this.resolveTarget(params);
     this.ensureWritable(target, "write files");
@@ -96,6 +99,7 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
     await this.assertNoHardlinkedFile({
       containerPath: target.containerPath,
       action: "write files",
+      signal: params.signal,
     });
     const buffer = Buffer.isBuffer(params.data)
       ? params.data
@@ -109,9 +113,11 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
         params.mkdir !== false ? "1" : "0",
       ],
       stdin: buffer,
+      signal: params.signal,
     });
   }
 
+  async mkdirp(params: { filePath: string; cwd?: string; signal?: AbortSignal }): Promise<void> {
     const target = this.resolveTarget(params);
     this.ensureWritable(target, "create directories");
     const relativePath = path.posix.relative(target.mountRootPath, target.containerPath);
@@ -122,6 +128,7 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
     }
     await this.runMutation({
       args: ["mkdirp", target.mountRootPath, relativePath === "." ? "" : relativePath],
+      signal: params.signal,
     });
   }
 
@@ -130,9 +137,11 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
     cwd?: string;
     recursive?: boolean;
     force?: boolean;
+    signal?: AbortSignal;
   }): Promise<void> {
     const target = this.resolveTarget(params);
     this.ensureWritable(target, "remove files");
+    const exists = await this.remotePathExists(target.containerPath, params.signal);
     if (!exists) {
       if (params.force === false) {
         throw new Error(`Sandbox path not found; cannot remove files: ${target.containerPath}`);
@@ -154,6 +163,7 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
         params.recursive ? "1" : "0",
         params.force === false ? "0" : "1",
       ],
+      signal: params.signal,
       allowFailure: params.force !== false,
     });
   }
@@ -162,6 +172,7 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
     from: string;
     to: string;
     cwd?: string;
+    signal?: AbortSignal;
   }): Promise<void> {
     const { from, to } = this.resolveRenameTargets(params);
     const fromPinned = await this.resolvePinnedParent({
@@ -186,28 +197,34 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
         toPinned.basename,
         "1",
       ],
+      signal: params.signal,
     });
   }
 
   async stat(params: {
     filePath: string;
     cwd?: string;
+    signal?: AbortSignal;
   }): Promise<SandboxFsStat | null> {
     const target = this.resolveTarget(params);
+    const exists = await this.remotePathExists(target.containerPath, params.signal);
     if (!exists) {
       return null;
     }
     const canonical = await this.resolveCanonicalPath({
       containerPath: target.containerPath,
       action: "stat files",
+      signal: params.signal,
     });
     await this.assertNoHardlinkedFile({
       containerPath: canonical,
       action: "stat files",
+      signal: params.signal,
     });
     const result = await this.runRemoteScript({
       script: 'set -eu\nstat -c "%F|%s|%Y" -- "$1"',
       args: [canonical],
+      signal: params.signal,
     });
     const output = result.stdout.toString("utf8").trim();
     const [kindRaw = "", sizeRaw = "0", mtimeRaw = "0"] = output.split("|");
@@ -339,9 +356,11 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
     }
   }
 
+  private async remotePathExists(containerPath: string, signal?: AbortSignal): Promise<boolean> {
     const result = await this.runRemoteScript({
       script: 'if [ -e "$1" ] || [ -L "$1" ]; then printf "1\\n"; else printf "0\\n"; fi',
       args: [containerPath],
+      signal,
     });
     return result.stdout.toString("utf8").trim() === "1";
   }
@@ -350,6 +369,7 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
     containerPath: string;
     action: string;
     allowFinalSymlinkForUnlink?: boolean;
+    signal?: AbortSignal;
   }): Promise<string> {
     const script = [
       "set -eu",
@@ -372,6 +392,7 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
     const result = await this.runRemoteScript({
       script,
       args: [params.containerPath, params.allowFinalSymlinkForUnlink ? "1" : "0"],
+      signal: params.signal,
     });
     const canonical = normalizeContainerPath(result.stdout.toString("utf8").trim());
     if (!this.resolveMountByContainerPath(this.getMounts(), canonical)) {
@@ -385,6 +406,7 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
   private async assertNoHardlinkedFile(params: {
     containerPath: string;
     action: string;
+    signal?: AbortSignal;
   }): Promise<void> {
     const result = await this.runRemoteScript({
       script: [
@@ -393,6 +415,7 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
         'printf "%s\\n" "$stats"',
       ].join("\n"),
       args: [params.containerPath],
+      signal: params.signal,
       allowFailure: true,
     });
     const output = result.stdout.toString("utf8").trim();
@@ -449,6 +472,7 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
   private async runMutation(params: {
     args: string[];
     stdin?: Buffer | string;
+    signal?: AbortSignal;
     allowFailure?: boolean;
   }): Promise<SandboxBackendCommandResult> {
     return await this.runRemoteScript({
@@ -460,6 +484,7 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
       ].join("\n"),
       args: params.args,
       stdin: params.stdin,
+      signal: params.signal,
       allowFailure: params.allowFailure,
     });
   }
@@ -468,12 +493,14 @@ class RemoteShellSandboxFsBridge implements SandboxFsBridge {
     script: string;
     args?: string[];
     stdin?: Buffer | string;
+    signal?: AbortSignal;
     allowFailure?: boolean;
   }) {
     return await this.runtime.runRemoteShellScript({
       script: params.script,
       args: params.args,
       stdin: params.stdin,
+      signal: params.signal,
       allowFailure: params.allowFailure,
     });
   }

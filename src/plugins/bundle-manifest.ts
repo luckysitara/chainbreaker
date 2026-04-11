@@ -65,6 +65,7 @@ export function mergeBundlePathLists(...groups: string[][]): string[] {
   return merged;
 }
 
+function hasInlineCapabilityValue(value: unknown): boolean {
   if (typeof value === "string") {
     return value.trim().length > 0;
   }
@@ -177,16 +178,19 @@ function resolveCursorAgentDirs(raw: Record<string, unknown>, rootDir: string): 
 
 function hasCursorHookCapability(raw: Record<string, unknown>, rootDir: string): boolean {
   return (
+    hasInlineCapabilityValue(raw.hooks) ||
     fs.existsSync(path.join(rootDir, ".cursor", "hooks.json"))
   );
 }
 
 function hasCursorRulesCapability(raw: Record<string, unknown>, rootDir: string): boolean {
   return (
+    hasInlineCapabilityValue(raw.rules) || fs.existsSync(path.join(rootDir, ".cursor", "rules"))
   );
 }
 
 function hasCursorMcpCapability(raw: Record<string, unknown>, rootDir: string): boolean {
+  return hasInlineCapabilityValue(raw.mcpServers) || fs.existsSync(path.join(rootDir, ".mcp.json"));
 }
 
 function resolveClaudeComponentPaths(
@@ -244,6 +248,7 @@ function resolveClaudeSettingsFiles(_raw: Record<string, unknown>, rootDir: stri
 }
 
 function hasClaudeHookCapability(raw: Record<string, unknown>, rootDir: string): boolean {
+  return hasInlineCapabilityValue(raw.hooks) || resolveClaudeHookPaths(raw, rootDir).length > 0;
 }
 
 function buildCodexCapabilities(raw: Record<string, unknown>, rootDir: string): string[] {
@@ -254,8 +259,10 @@ function buildCodexCapabilities(raw: Record<string, unknown>, rootDir: string): 
   if (resolveCodexHookDirs(raw, rootDir).length > 0) {
     capabilities.push("hooks");
   }
+  if (hasInlineCapabilityValue(raw.mcpServers) || fs.existsSync(path.join(rootDir, ".mcp.json"))) {
     capabilities.push("mcpServers");
   }
+  if (hasInlineCapabilityValue(raw.apps) || fs.existsSync(path.join(rootDir, ".app.json"))) {
     capabilities.push("apps");
   }
   return capabilities;
@@ -275,11 +282,14 @@ function buildClaudeCapabilities(raw: Record<string, unknown>, rootDir: string):
   if (hasClaudeHookCapability(raw, rootDir)) {
     capabilities.push("hooks");
   }
+  if (hasInlineCapabilityValue(raw.mcpServers) || resolveClaudeMcpPaths(raw, rootDir).length > 0) {
     capabilities.push("mcpServers");
   }
+  if (hasInlineCapabilityValue(raw.lspServers) || resolveClaudeLspPaths(raw, rootDir).length > 0) {
     capabilities.push("lspServers");
   }
   if (
+    hasInlineCapabilityValue(raw.outputStyles) ||
     resolveClaudeOutputStylePaths(raw, rootDir).length > 0
   ) {
     capabilities.push("outputStyles");

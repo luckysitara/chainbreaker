@@ -42,6 +42,7 @@ describe("resolvePythonExecutablePath", () => {
             stdout: `${realPython}\n`,
             stderr: "",
             code: 0,
+            signal: null,
             killed: false,
           });
 
@@ -69,12 +70,14 @@ describe("ensureTailscaleEndpoint", () => {
         stdout: JSON.stringify({ Self: { DNSName: "host.tailnet.ts.net." } }),
         stderr: "",
         code: 0,
+        signal: null,
         killed: false,
       })
       .mockResolvedValueOnce({
         stdout: "tailscale output",
         stderr: "Warning: client version mismatch",
         code: 1,
+        signal: null,
         killed: false,
       });
 
@@ -99,6 +102,7 @@ describe("ensureTailscaleEndpoint", () => {
       stdout: "not-json",
       stderr: "",
       code: 0,
+      signal: null,
       killed: false,
     });
 

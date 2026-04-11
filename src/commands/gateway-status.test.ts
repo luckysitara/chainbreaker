@@ -570,6 +570,7 @@ describe("gateway-status command", () => {
       targets?: Array<Record<string, unknown>>;
     };
     const configRemoteTarget = parsed.targets?.find((target) => target.kind === "configRemote");
+    expect(configRemoteTarget?.config).toMatchInlineSnapshot(`
       {
         "discovery": {
           "wideAreaEnabled": true,

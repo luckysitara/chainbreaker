@@ -194,10 +194,12 @@ export const SAFE_BIN_PROFILE_FIXTURES: Record<string, SafeBinProfileFixture> = 
   },
   head: {
     maxPositional: 0,
+    allowedValueFlags: ["--lines", "--bytes", "-n", "-c"],
   },
   tail: {
     maxPositional: 0,
     allowedValueFlags: [
+      "--lines",
       "--bytes",
       "--sleep-interval",
       "--max-unchanged-stats",

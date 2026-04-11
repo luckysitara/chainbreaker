@@ -9,6 +9,7 @@ describe("normalizeSecretInput", () => {
     expect(normalizeSecretInput({})).toBe("");
   });
 
+  it("strips embedded line breaks and surrounding whitespace", () => {
     expect(normalizeSecretInput("  sk-\r\nabc\n123  ")).toBe("sk-abc123");
   });
 

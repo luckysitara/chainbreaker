@@ -75,7 +75,9 @@ export async function startNgrokTunnel(config: {
       }
     }, 30000);
 
+    const processLine = (line: string) => {
       try {
+        const log = JSON.parse(line);
 
         // ngrok logs the public URL in a 'started tunnel' message
         if (log.msg === "started tunnel" && log.url) {
@@ -116,7 +118,12 @@ export async function startNgrokTunnel(config: {
 
     proc.stdout.on("data", (data: Buffer) => {
       outputBuffer += data.toString();
+      const lines = outputBuffer.split("\n");
+      outputBuffer = lines.pop() || "";
 
+      for (const line of lines) {
+        if (line.trim()) {
+          processLine(line);
         }
       }
     });

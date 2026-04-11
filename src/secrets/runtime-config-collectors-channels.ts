@@ -1,5 +1,6 @@
 import type { ChainbreakerConfig } from "../config/config.js";
 import { coerceSecretRef, resolveSecretInputRef } from "../config/types.secrets.js";
+import { getMatrixScopedEnvVarNames } from "../infra/matrix-config-helpers.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../routing/account-id.js";
 import { collectTtsApiKeyAssignments } from "./runtime-config-collectors-tts.js";
 import {
@@ -392,13 +393,18 @@ function collectSlackAssignments(params: {
   defaults: SecretDefaults | undefined;
   context: ResolverContext;
 }): void {
+  const resolved = getChannelSurface(params.config, "slack");
   if (!resolved) {
     return;
   }
+  const { channel: slack, surface } = resolved;
+  const baseMode = slack.mode === "http" || slack.mode === "socket" ? slack.mode : "socket";
   const fields = ["botToken", "userToken"] as const;
   for (const field of fields) {
     collectSimpleChannelFieldAssignments({
+      channelKey: "slack",
       field,
+      channel: slack,
       surface,
       defaults: params.defaults,
       context: params.context,
@@ -409,7 +415,9 @@ function collectSlackAssignments(params: {
   const resolveAccountMode = (account: Record<string, unknown>) =>
     account.mode === "http" || account.mode === "socket" ? account.mode : baseMode;
   collectConditionalChannelFieldAssignments({
+    channelKey: "slack",
     field: "appToken",
+    channel: slack,
     surface,
     defaults: params.defaults,
     context: params.context,
@@ -421,7 +429,9 @@ function collectSlackAssignments(params: {
     accountInactiveReason: "Slack account is disabled or not running in socket mode.",
   });
   collectConditionalChannelFieldAssignments({
+    channelKey: "slack",
     field: "signingSecret",
+    channel: slack,
     surface,
     defaults: params.defaults,
     context: params.context,
@@ -441,11 +451,15 @@ function collectDiscordAssignments(params: {
   defaults: SecretDefaults | undefined;
   context: ResolverContext;
 }): void {
+  const resolved = getChannelSurface(params.config, "discord");
   if (!resolved) {
     return;
   }
+  const { channel: discord, surface } = resolved;
   collectSimpleChannelFieldAssignments({
+    channelKey: "discord",
     field: "token",
+    channel: discord,
     surface,
     defaults: params.defaults,
     context: params.context,
@@ -453,13 +467,17 @@ function collectDiscordAssignments(params: {
     accountInactiveReason: "Discord account is disabled.",
   });
   collectNestedChannelFieldAssignments({
+    channelKey: "discord",
     nestedKey: "pluralkit",
     field: "token",
+    channel: discord,
     surface,
     defaults: params.defaults,
     context: params.context,
     topLevelActive:
       isBaseFieldActiveForChannelSurface(surface, "pluralkit") &&
+      isRecord(discord.pluralkit) &&
+      isEnabledFlag(discord.pluralkit),
     topInactiveReason:
       "no enabled Discord surface inherits this top-level PluralKit config or PluralKit is disabled.",
     accountActive: ({ account, enabled }) =>
@@ -467,12 +485,16 @@ function collectDiscordAssignments(params: {
     accountInactiveReason: "Discord account is disabled or PluralKit is disabled for this account.",
   });
   collectNestedChannelTtsAssignments({
+    channelKey: "discord",
     nestedKey: "voice",
+    channel: discord,
     surface,
     defaults: params.defaults,
     context: params.context,
     topLevelActive:
       isBaseFieldActiveForChannelSurface(surface, "voice") &&
+      isRecord(discord.voice) &&
+      isEnabledFlag(discord.voice),
     topInactiveReason:
       "no enabled Discord surface inherits this top-level voice config or voice is disabled.",
     accountActive: ({ account, enabled }) =>
@@ -593,9 +615,11 @@ function collectMatrixAssignments(params: {
   defaults: SecretDefaults | undefined;
   context: ResolverContext;
 }): void {
+  const resolved = getChannelSurface(params.config, "matrix");
   if (!resolved) {
     return;
   }
+  const { channel: matrix, surface } = resolved;
   const envAccessTokenConfigured =
     normalizeSecretStringValue(params.context.env.MATRIX_ACCESS_TOKEN).length > 0;
   const defaultScopedAccessTokenConfigured =
@@ -608,18 +632,24 @@ function collectMatrixAssignments(params: {
       hasConfiguredSecretInputValue(account.accessToken, params.defaults),
   );
   const baseAccessTokenConfigured = hasConfiguredSecretInputValue(
+    matrix.accessToken,
     params.defaults,
   );
   collectSecretInputAssignment({
+    value: matrix.accessToken,
+    path: "channels.matrix.accessToken",
     expected: "string",
     defaults: params.defaults,
     context: params.context,
     active: surface.channelEnabled,
     inactiveReason: "Matrix channel is disabled.",
     apply: (value) => {
+      matrix.accessToken = value;
     },
   });
   collectSecretInputAssignment({
+    value: matrix.password,
+    path: "channels.matrix.password",
     expected: "string",
     defaults: params.defaults,
     context: params.context,
@@ -634,6 +664,7 @@ function collectMatrixAssignments(params: {
     inactiveReason:
       "Matrix channel is disabled or access-token auth is configured for the default Matrix account.",
     apply: (value) => {
+      matrix.password = value;
     },
   });
   if (!surface.hasExplicitAccounts) {
@@ -643,6 +674,7 @@ function collectMatrixAssignments(params: {
     if (hasOwnProperty(account, "accessToken")) {
       collectSecretInputAssignment({
         value: account.accessToken,
+        path: `channels.matrix.accounts.${accountId}.accessToken`,
         expected: "string",
         defaults: params.defaults,
         context: params.context,
@@ -669,6 +701,7 @@ function collectMatrixAssignments(params: {
       (baseAccessTokenConfigured || envAccessTokenConfigured);
     collectSecretInputAssignment({
       value: account.password,
+      path: `channels.matrix.accounts.${accountId}.password`,
       expected: "string",
       defaults: params.defaults,
       context: params.context,

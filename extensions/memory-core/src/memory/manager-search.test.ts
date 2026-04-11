@@ -29,6 +29,7 @@ describe("searchKeyword trigram fallback", () => {
     const db = createTrigramDb();
     try {
       const insert = db.prepare(
+        "INSERT INTO chunks_fts (text, id, path, source, model, start_line, end_line) VALUES (?, ?, ?, ?, ?, ?, ?)",
       );
       for (const row of params.rows) {
         insert.run(row.text, row.id, row.path, "memory", "mock-embed", 1, 1);

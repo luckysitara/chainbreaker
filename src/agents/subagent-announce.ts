@@ -83,6 +83,7 @@ export function buildSubagentSystemPrompt(params: {
   const canSpawn = childDepth < maxSpawnDepth;
   const parentLabel = childDepth >= 2 ? "parent orchestrator" : "main agent";
 
+  const lines = [
     "# Subagent Context",
     "",
     `You are a **subagent** spawned by the ${parentLabel} for a specific task.`,
@@ -116,6 +117,7 @@ export function buildSubagentSystemPrompt(params: {
   ];
 
   if (canSpawn) {
+    lines.push(
       "## Sub-Agent Spawning",
       "You CAN spawn your own sub-agents for parallel or complex work using `sessions_spawn`.",
       "Use the `subagents` tool to steer, kill, or do an on-demand status check for your spawned sub-agents.",
@@ -141,12 +143,14 @@ export function buildSubagentSystemPrompt(params: {
       "",
     );
   } else if (childDepth >= 2) {
+    lines.push(
       "## Sub-Agent Spawning",
       "You are a leaf worker and CANNOT spawn further sub-agents. Focus on your assigned task.",
       "",
     );
   }
 
+  lines.push(
     "## Session Context",
     ...[
       params.label ? `- Label: ${params.label}` : undefined,
@@ -157,8 +161,10 @@ export function buildSubagentSystemPrompt(params: {
         ? `- Requester channel: ${params.requesterOrigin.channel}.`
         : undefined,
       `- Your session: ${params.childSessionKey}.`,
+    ].filter((line): line is string => line !== undefined),
     "",
   );
+  return lines.join("\n");
 }
 
 export { captureSubagentCompletionReply } from "./subagent-announce-output.js";
@@ -231,7 +237,9 @@ async function wakeSubagentRunAfterDescendants(params: {
   taskLabel: string;
   findings: string;
   announceId: string;
+  signal?: AbortSignal;
 }): Promise<boolean> {
+  if (params.signal?.aborted) {
     return false;
   }
 
@@ -251,6 +259,7 @@ async function wakeSubagentRunAfterDescendants(params: {
   try {
     const wakeResponse = await runAnnounceDeliveryWithRetry<{ runId?: string }>({
       operation: "descendant wake agent call",
+      signal: params.signal,
       run: async () =>
         await subagentAnnounceDeps.callGateway({
           method: "agent",
@@ -310,6 +319,7 @@ export async function runSubagentAnnounceFlow(params: {
   expectsCompletionMessage?: boolean;
   spawnMode?: SpawnSubagentMode;
   wakeOnDescendantSettle?: boolean;
+  signal?: AbortSignal;
   bestEffortDeliver?: boolean;
 }): Promise<boolean> {
   let didAnnounce = false;
@@ -425,6 +435,7 @@ export async function runSubagentAnnounceFlow(params: {
         taskLabel: params.label || params.task || "task",
         findings: childCompletionFindings,
         announceId: wakeAnnounceId,
+        signal: params.signal,
       });
       if (woke) {
         shouldDeleteChildSession = false;
@@ -600,6 +611,7 @@ export async function runSubagentAnnounceFlow(params: {
       expectsCompletionMessage: expectsCompletionMessage,
       bestEffortDeliver: params.bestEffortDeliver,
       directIdempotencyKey,
+      signal: params.signal,
     });
     didAnnounce = delivery.delivered;
     if (!delivery.delivered && delivery.path === "direct" && delivery.error) {

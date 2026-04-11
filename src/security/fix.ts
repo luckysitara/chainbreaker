@@ -290,6 +290,10 @@ function applyConfigFixes(params: { cfg: ChainbreakerConfig; env: NodeJS.Process
   for (const channel of [
     "telegram",
     "whatsapp",
+    "discord",
+    "signal",
+    "imessage",
+    "slack",
     "msteams",
   ]) {
     setGroupPolicyAllowlist({ cfg: next, channel, changes, policyFlips });
@@ -321,6 +325,7 @@ async function chmodCredentialsAndAgentState(params: {
       continue;
     }
     const p = path.join(credsDir, entry.name);
+    // eslint-disable-next-line no-await-in-loop
     params.actions.push(await safeChmod({ path: p, mode: 0o600, require: "file" }));
   }
 
@@ -344,20 +349,26 @@ async function chmodCredentialsAndAgentState(params: {
     const agentDir = path.join(agentRoot, "agent");
     const sessionsDir = path.join(agentRoot, "sessions");
 
+    // eslint-disable-next-line no-await-in-loop
     params.actions.push(await safeChmod({ path: agentRoot, mode: 0o700, require: "dir" }));
+    // eslint-disable-next-line no-await-in-loop
     params.actions.push(await params.applyPerms({ path: agentDir, mode: 0o700, require: "dir" }));
 
     const authPath = path.join(agentDir, "auth-profiles.json");
+    // eslint-disable-next-line no-await-in-loop
     params.actions.push(await params.applyPerms({ path: authPath, mode: 0o600, require: "file" }));
 
+    // eslint-disable-next-line no-await-in-loop
     params.actions.push(
       await params.applyPerms({ path: sessionsDir, mode: 0o700, require: "dir" }),
     );
 
     const storePath = path.join(sessionsDir, "sessions.json");
+    // eslint-disable-next-line no-await-in-loop
     params.actions.push(await params.applyPerms({ path: storePath, mode: 0o600, require: "file" }));
 
     // Fix permissions on session transcript files (*.jsonl)
+    // eslint-disable-next-line no-await-in-loop
     const sessionEntries = await fs.readdir(sessionsDir, { withFileTypes: true }).catch(() => []);
     for (const entry of sessionEntries) {
       if (!entry.isFile()) {
@@ -367,6 +378,7 @@ async function chmodCredentialsAndAgentState(params: {
         continue;
       }
       const p = path.join(sessionsDir, entry.name);
+      // eslint-disable-next-line no-await-in-loop
       params.actions.push(await params.applyPerms({ path: p, mode: 0o600, require: "file" }));
     }
   }
@@ -438,6 +450,7 @@ export async function fixSecurityFootguns(opts?: {
       parsed: snap.parsed,
     }).catch(() => []);
     for (const p of includePaths) {
+      // eslint-disable-next-line no-await-in-loop
       actions.push(await applyPerms({ path: p, mode: 0o600, require: "file" }));
     }
   }

@@ -212,6 +212,8 @@ export type InitiateCallInput = {
   to: string;
   webhookUrl: string;
   clientState?: Record<string, string>;
+  /** Inline TwiML to execute (skips webhook, used for notify mode) */
+  inlineTwiml?: string;
 };
 
 export type InitiateCallResult = {

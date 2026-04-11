@@ -267,10 +267,7 @@ function setResolvedFirecrawlApiKey(params: {
   firecrawl.apiKey = params.value;
 }
 
-function setResolvedXSearchApiKey(params: {
-  resolvedConfig: ChainbreakerConfig;
-  value: string;
-}): void {
+function setResolvedXSearchApiKey(params: { resolvedConfig: ChainbreakerConfig; value: string }): void {
   const tools = ensureObject(params.resolvedConfig as Record<string, unknown>, "tools");
   const web = ensureObject(tools, "web");
   const xSearch = ensureObject(web, "x_search");
@@ -684,7 +681,10 @@ export async function resolveRuntimeWebTools(params: {
       fallbackUsedAfterRefFailure: false,
     };
   } else {
+    const configuredInlineValue = normalizeSecretInput(xSearch?.apiKey);
+    if (configuredInlineValue) {
       xSearchResolution = {
+        value: configuredInlineValue,
         source: "config",
         secretRefConfigured: false,
         fallbackUsedAfterRefFailure: false,
@@ -785,7 +785,10 @@ export async function resolveRuntimeWebTools(params: {
         fallbackUsedAfterRefFailure: false,
       };
     } else {
+      const configuredInlineValue = normalizeSecretInput(firecrawl?.apiKey);
+      if (configuredInlineValue) {
         firecrawlResolution = {
+          value: configuredInlineValue,
           source: "config",
           secretRefConfigured: false,
           fallbackUsedAfterRefFailure: false,

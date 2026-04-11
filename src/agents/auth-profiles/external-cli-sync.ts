@@ -70,6 +70,7 @@ export function shouldReplaceStoredOAuthCredential(
 const EXTERNAL_CLI_SYNC_PROVIDERS: ExternalCliSyncProvider[] = [
   {
     profileId: MINIMAX_CLI_PROFILE_ID,
+    provider: "minimax-portal",
     readCredentials: () => readMiniMaxCliCredentialsCached({ ttlMs: EXTERNAL_CLI_SYNC_TTL_MS }),
   },
   {

@@ -118,14 +118,11 @@ export class PlaywrightDiffScreenshotter implements DiffScreenshotter {
             if (document.documentElement.dataset.chainbreakerDiffsReady === "true") {
               return true;
             }
-            return [...document.querySelectorAll("[data-chainbreaker-diff-host]")].every(
-              (element) => {
-                return (
-                  element instanceof HTMLElement &&
-                  element.shadowRoot?.querySelector("[data-diffs]")
-                );
-              },
-            );
+            return [...document.querySelectorAll("[data-chainbreaker-diff-host]")].every((element) => {
+              return (
+                element instanceof HTMLElement && element.shadowRoot?.querySelector("[data-diffs]")
+              );
+            });
           },
           {
             timeout: 10_000,
@@ -281,9 +278,7 @@ function injectBaseHref(html: string): string {
   return html.replace("<head>", `<head><base href="${LOCAL_VIEWER_BASE_HREF}" />`);
 }
 
-async function resolveBrowserExecutablePath(
-  config: ChainbreakerConfig,
-): Promise<string | undefined> {
+async function resolveBrowserExecutablePath(config: ChainbreakerConfig): Promise<string | undefined> {
   const cacheKey = JSON.stringify({
     configPath: config.browser?.executablePath?.trim() || "",
     env: [

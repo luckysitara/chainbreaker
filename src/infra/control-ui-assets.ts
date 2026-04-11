@@ -3,10 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runCommandWithTimeout } from "../process/exec.js";
 import { defaultRuntime, type RuntimeEnv } from "../runtime.js";
-import {
-  resolveChainbreakerPackageRoot,
-  resolveChainbreakerPackageRootSync,
-} from "./chainbreaker-root.js";
+import { resolveChainbreakerPackageRoot, resolveChainbreakerPackageRootSync } from "./chainbreaker-root.js";
 
 const CONTROL_UI_DIST_PATH_SEGMENTS = ["dist", "control-ui", "index.html"] as const;
 
@@ -278,11 +275,14 @@ export type EnsureControlUiAssetsResult = {
 };
 
 function summarizeCommandOutput(text: string): string | undefined {
+  const lines = text
     .split(/\r?\n/g)
     .map((l) => l.trim())
     .filter(Boolean);
+  if (!lines.length) {
     return undefined;
   }
+  const last = lines.at(-1);
   if (!last) {
     return undefined;
   }

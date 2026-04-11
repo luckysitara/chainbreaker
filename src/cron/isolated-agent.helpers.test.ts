@@ -16,6 +16,7 @@ describe("resolveCronPayloadOutcome", () => {
     const result = resolveCronPayloadOutcome({
       payloads: [
         {
+          text: "⚠️ 🛠️ Exec failed: /bin/bash: line 1: python: command not found",
           isError: true,
         },
       ],
@@ -62,10 +63,14 @@ describe("resolveCronPayloadOutcome", () => {
   it("preserves all successful deliverable payloads for announce delivery", () => {
     const result = resolveCronPayloadOutcome({
       payloads: [
+        { text: "line 1" },
         { text: "temporary error", isError: true },
+        { text: "line 2" },
       ],
     });
 
+    expect(result.deliveryPayloads).toEqual([{ text: "line 1" }, { text: "line 2" }]);
+    expect(result.deliveryPayload).toEqual({ text: "line 2" });
   });
 
   it("keeps structured-content detection scoped to the last delivery payload", () => {

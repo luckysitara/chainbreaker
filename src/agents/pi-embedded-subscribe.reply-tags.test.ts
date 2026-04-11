@@ -20,6 +20,7 @@ describe("subscribeEmbeddedPiSession reply tags", () => {
       blockReplyChunking: {
         minChars: 1,
         maxChars: 50,
+        breakPreference: "newline",
       },
     });
 

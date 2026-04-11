@@ -239,6 +239,8 @@ describe("providerSupportsNativePdf", () => {
     expect(providerSupportsNativePdf("openai")).toBe(false);
   });
 
+  it("returns false for minimax", () => {
+    expect(providerSupportsNativePdf("minimax")).toBe(false);
   });
 
   it("is case-insensitive", () => {
@@ -639,6 +641,7 @@ describe("native PDF provider API calls", () => {
     expect(url).toContain("gemini-2.5-pro");
     const body = JSON.parse(opts.body);
     expect(body.contents[0].parts).toHaveLength(2);
+    expect(body.contents[0].parts[0].inline_data.mime_type).toBe("application/pdf");
     expect(body.contents[0].parts[1].text).toBe("Summarize this");
   });
 

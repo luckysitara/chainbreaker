@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { withTempHome } from "../../test/helpers/temp-home.js";
+import { resolveMatrixAccountStorageRoot } from "../infra/matrix-config-helpers.js";
 import * as noteModule from "../terminal/note.js";
 import { loadAndMaybeMigrateDoctorConfig } from "./doctor-config-flow.js";
 import { runDoctorConfigWithInput } from "./doctor-config-flow.test-utils.js";
@@ -95,6 +96,7 @@ describe("doctor config flow", () => {
   it("does not warn on mutable account allowlists when dangerous name matching is inherited", async () => {
     const doctorWarnings = await collectDoctorWarnings({
       channels: {
+        slack: {
           dangerouslyAllowNameMatching: true,
           accounts: {
             work: {
@@ -104,6 +106,7 @@ describe("doctor config flow", () => {
         },
       },
     });
+    expect(doctorWarnings.some((line) => line.includes("mutable allowlist"))).toBe(false);
   });
 
   it("does not warn about sender-based group allowlist for googlechat", async () => {
@@ -122,6 +125,7 @@ describe("doctor config flow", () => {
 
     expect(
       doctorWarnings.some(
+        (line) => line.includes('groupPolicy is "allowlist"') && line.includes("groupAllowFrom"),
       ),
     ).toBe(false);
   });
@@ -138,10 +142,17 @@ describe("doctor config flow", () => {
 
     expect(
       doctorWarnings.some(
+        (line) =>
+          line.includes('channels.telegram.groupPolicy is "allowlist"') &&
+          line.includes("groupAllowFrom"),
       ),
     ).toBe(false);
     expect(
       doctorWarnings.some(
+        (line) =>
+          line.includes("channels.telegram: Telegram is in first-time setup mode.") &&
+          line.includes("DMs use pairing mode") &&
+          line.includes("channels.telegram.groups"),
       ),
     ).toBe(true);
   });
@@ -162,12 +173,19 @@ describe("doctor config flow", () => {
 
     expect(
       doctorWarnings.some(
+        (line) =>
+          line.includes('channels.telegram.accounts.default.groupPolicy is "allowlist"') &&
+          line.includes("groupAllowFrom"),
       ),
     ).toBe(false);
     expect(
       doctorWarnings.some(
+        (line) =>
+          line.includes(
             "channels.telegram.accounts.default: Telegram is in first-time setup mode.",
           ) &&
+          line.includes("DMs use pairing mode") &&
+          line.includes("channels.telegram.accounts.default.groups"),
       ),
     ).toBe(true);
   });
@@ -190,10 +208,13 @@ describe("doctor config flow", () => {
     });
 
     expect(
+      doctorWarnings.some((line) =>
+        line.includes(
           'channels.telegram: channel is configured, but plugin "telegram" is disabled by plugins.entries.telegram.enabled=false.',
         ),
       ),
     ).toBe(true);
+    expect(doctorWarnings.some((line) => line.includes("first-time setup mode"))).toBe(false);
   });
 
   it("shows plugin-blocked guidance instead of first-time Telegram guidance when plugins are disabled globally", async () => {
@@ -210,10 +231,13 @@ describe("doctor config flow", () => {
     });
 
     expect(
+      doctorWarnings.some((line) =>
+        line.includes(
           "channels.telegram: channel is configured, but plugins.enabled=false blocks channel plugins globally.",
         ),
       ),
     ).toBe(true);
+    expect(doctorWarnings.some((line) => line.includes("first-time setup mode"))).toBe(false);
   });
 
   it("warns on mutable Zalouser group entries when dangerous name matching is disabled", async () => {
@@ -229,6 +253,8 @@ describe("doctor config flow", () => {
 
     expect(
       doctorWarnings.some(
+        (line) =>
+          line.includes("mutable allowlist") && line.includes("channels.zalouser.groups: Ops Room"),
       ),
     ).toBe(true);
   });
@@ -245,10 +271,13 @@ describe("doctor config flow", () => {
       },
     });
 
+    expect(doctorWarnings.some((line) => line.includes("channels.zalouser.groups"))).toBe(false);
   });
 
+  it("warns when imessage group allowlist is empty even if allowFrom is set", async () => {
     const doctorWarnings = await collectDoctorWarnings({
       channels: {
+        imessage: {
           groupPolicy: "allowlist",
           allowFrom: ["+15551234567"],
         },
@@ -257,6 +286,9 @@ describe("doctor config flow", () => {
 
     expect(
       doctorWarnings.some(
+        (line) =>
+          line.includes('channels.imessage.groupPolicy is "allowlist"') &&
+          line.includes("does not fall back to allowFrom"),
       ),
     ).toBe(true);
   });
@@ -327,10 +359,13 @@ describe("doctor config flow", () => {
     try {
       await withTempHome(async (home) => {
         const stateDir = path.join(home, ".chainbreaker");
+        await fs.mkdir(path.join(stateDir, "matrix"), { recursive: true });
         await fs.writeFile(
           path.join(stateDir, "chainbreaker.json"),
           JSON.stringify({
             channels: {
+              matrix: {
+                homeserver: "https://matrix.example.org",
                 userId: "@bot:example.org",
                 accessToken: "tok-123",
               },
@@ -338,6 +373,7 @@ describe("doctor config flow", () => {
           }),
         );
         await fs.writeFile(
+          path.join(stateDir, "matrix", "bot-storage.json"),
           '{"next_batch":"s1"}',
         );
         await loadAndMaybeMigrateDoctorConfig({
@@ -367,6 +403,7 @@ describe("doctor config flow", () => {
         const stateDir = path.join(home, ".chainbreaker");
         const { rootDir: accountRoot } = resolveMatrixAccountStorageRoot({
           stateDir,
+          homeserver: "https://matrix.example.org",
           userId: "@bot:example.org",
           accessToken: "tok-123",
         });
@@ -375,6 +412,8 @@ describe("doctor config flow", () => {
           path.join(stateDir, "chainbreaker.json"),
           JSON.stringify({
             channels: {
+              matrix: {
+                homeserver: "https://matrix.example.org",
                 userId: "@bot:example.org",
                 accessToken: "tok-123",
               },
@@ -408,10 +447,13 @@ describe("doctor config flow", () => {
     try {
       await withTempHome(async (home) => {
         const stateDir = path.join(home, ".chainbreaker");
+        await fs.mkdir(path.join(stateDir, "matrix"), { recursive: true });
         await fs.writeFile(
           path.join(stateDir, "chainbreaker.json"),
           JSON.stringify({
             channels: {
+              matrix: {
+                homeserver: "https://matrix.example.org",
                 userId: "@bot:example.org",
                 accessToken: "tok-123",
               },
@@ -419,6 +461,7 @@ describe("doctor config flow", () => {
           }),
         );
         await fs.writeFile(
+          path.join(stateDir, "matrix", "bot-storage.json"),
           '{"next_batch":"s1"}',
         );
         await loadAndMaybeMigrateDoctorConfig({
@@ -428,8 +471,10 @@ describe("doctor config flow", () => {
 
         const migratedRoot = path.join(
           stateDir,
+          "matrix",
           "accounts",
           "default",
+          "matrix.example.org__bot_example.org",
         );
         const migratedChildren = await fs.readdir(migratedRoot);
         expect(migratedChildren.length).toBe(1);
@@ -441,6 +486,7 @@ describe("doctor config flow", () => {
         ).toBe(true);
         expect(
           await fs
+            .access(path.join(stateDir, "matrix", "bot-storage.json"))
             .then(() => true)
             .catch(() => false),
         ).toBe(false);
@@ -461,16 +507,20 @@ describe("doctor config flow", () => {
   it("creates a Matrix migration snapshot before doctor repair mutates Matrix state", async () => {
     await withTempHome(async (home) => {
       const stateDir = path.join(home, ".chainbreaker");
+      await fs.mkdir(path.join(stateDir, "matrix"), { recursive: true });
       await fs.writeFile(
         path.join(stateDir, "chainbreaker.json"),
         JSON.stringify({
           channels: {
+            matrix: {
+              homeserver: "https://matrix.example.org",
               userId: "@bot:example.org",
               accessToken: "tok-123",
             },
           },
         }),
       );
+      await fs.writeFile(path.join(stateDir, "matrix", "bot-storage.json"), '{"next_batch":"s1"}');
 
       await loadAndMaybeMigrateDoctorConfig({
         options: { nonInteractive: true, repair: true },
@@ -482,6 +532,7 @@ describe("doctor config flow", () => {
       expect(snapshotEntries.some((entry) => entry.endsWith(".tar.gz"))).toBe(true);
 
       const marker = JSON.parse(
+        await fs.readFile(path.join(stateDir, "matrix", "migration-snapshot.json"), "utf8"),
       ) as {
         archivePath: string;
       };
@@ -492,12 +543,17 @@ describe("doctor config flow", () => {
   it("warns when Matrix is installed from a stale custom path", async () => {
     const doctorWarnings = await collectDoctorWarnings({
       channels: {
+        matrix: {
+          homeserver: "https://matrix.example.org",
           accessToken: "tok-123",
         },
       },
       plugins: {
         installs: {
+          matrix: {
             source: "path",
+            sourcePath: "/tmp/chainbreaker-matrix-missing",
+            installPath: "/tmp/chainbreaker-matrix-missing",
           },
         },
       },
@@ -505,21 +561,26 @@ describe("doctor config flow", () => {
 
     expect(
       doctorWarnings.some(
+        (line) => line.includes("custom path") && line.includes("/tmp/chainbreaker-matrix-missing"),
       ),
     ).toBe(true);
   });
 
   it("warns when Matrix is installed from an existing custom path", async () => {
     await withTempHome(async (home) => {
+      const pluginPath = path.join(home, "matrix-plugin");
       await fs.mkdir(pluginPath, { recursive: true });
 
       const doctorWarnings = await collectDoctorWarnings({
         channels: {
+          matrix: {
+            homeserver: "https://matrix.example.org",
             accessToken: "tok-123",
           },
         },
         plugins: {
           installs: {
+            matrix: {
               source: "path",
               sourcePath: pluginPath,
               installPath: pluginPath,
@@ -529,8 +590,10 @@ describe("doctor config flow", () => {
       });
 
       expect(
+        doctorWarnings.some((line) => line.includes("Matrix is installed from a custom path")),
       ).toBe(true);
       expect(
+        doctorWarnings.some((line) => line.includes("will not automatically replace that plugin")),
       ).toBe(true);
     });
   });
@@ -557,16 +620,20 @@ describe("doctor config flow", () => {
         .filter((call) => call[1] === "Doctor changes")
         .map((call) => String(call[0]));
       expect(
+        messages.some((line) => line.includes('browser.profiles.chromeLive.driver "extension"')),
       ).toBe(true);
+      expect(messages.some((line) => line.includes("browser.relayBindHost"))).toBe(true);
     } finally {
       noteSpy.mockRestore();
     }
   });
 
+  it("preserves discord streaming intent while stripping unsupported keys on repair", async () => {
     const result = await runDoctorConfigWithInput({
       repair: true,
       config: {
         channels: {
+          discord: {
             streaming: true,
             lifecycle: {
               enabled: true,
@@ -586,12 +653,16 @@ describe("doctor config flow", () => {
 
     const cfg = result.cfg as {
       channels: {
+        discord: {
           streamMode?: string;
           streaming?: string;
           lifecycle?: unknown;
         };
       };
     };
+    expect(cfg.channels.discord.streaming).toBe("partial");
+    expect(cfg.channels.discord.streamMode).toBeUndefined();
+    expect(cfg.channels.discord.lifecycle).toEqual({
       enabled: true,
       reactions: {
         queued: "⏳",
@@ -620,6 +691,7 @@ describe("doctor config flow", () => {
                 },
               },
             },
+            slack: {
               accounts: {
                 work: {
                   allowFrom: ["alice\u001b[31m\nforged"],
@@ -644,16 +716,27 @@ describe("doctor config flow", () => {
       const outputs = noteSpy.mock.calls
         .filter((call) => call[1] === "Doctor warnings" || call[1] === "Doctor changes")
         .map((call) => String(call[0]));
+      expect(outputs.filter((line) => line.includes("\u001b"))).toEqual([]);
+      expect(outputs.filter((line) => line.includes("\nforged"))).toEqual([]);
       expect(
         outputs.some(
+          (line) =>
+            line.includes("channels.slack.accounts.work.allowFrom: aliceforged") &&
+            line.includes("mutable allowlist"),
         ),
       ).toBe(true);
       expect(
         outputs.some(
+          (line) =>
+            line.includes('channels.slack.accounts.opsopen.allowFrom: set to ["*"]') &&
+            line.includes('required by dmPolicy="open"'),
         ),
       ).toBe(true);
       expect(
         outputs.some(
+          (line) =>
+            line.includes('channels.whatsapp.accounts.opsempty.groupPolicy is "allowlist"') &&
+            line.includes("groupAllowFrom"),
         ),
       ).toBe(true);
     } finally {
@@ -718,6 +801,7 @@ describe("doctor config flow", () => {
     }
   });
 
+  it("converts numeric discord ids to strings on repair", async () => {
     await withTempHome(async (home) => {
       const configDir = path.join(home, ".chainbreaker");
       await fs.mkdir(configDir, { recursive: true });
@@ -726,6 +810,7 @@ describe("doctor config flow", () => {
         JSON.stringify(
           {
             channels: {
+              discord: {
                 allowFrom: [123],
                 dm: { allowFrom: [456], groupChannels: [789] },
                 execApprovals: { approvers: [321] },
@@ -770,6 +855,7 @@ describe("doctor config flow", () => {
 
       const cfg = result.cfg as unknown as {
         channels: {
+          discord: Omit<RepairedDiscordPolicy, "allowFrom"> & {
             allowFrom?: string[];
             accounts: Record<string, DiscordAccountRule> & {
               default: { allowFrom: string[] };
@@ -784,8 +870,25 @@ describe("doctor config flow", () => {
         };
       };
 
+      expect(cfg.channels.discord.allowFrom).toBeUndefined();
+      expect(cfg.channels.discord.dm.allowFrom).toEqual(["456"]);
+      expect(cfg.channels.discord.dm.groupChannels).toEqual(["789"]);
+      expect(cfg.channels.discord.execApprovals.approvers).toEqual(["321"]);
+      expect(cfg.channels.discord.guilds["100"].users).toEqual(["111"]);
+      expect(cfg.channels.discord.guilds["100"].roles).toEqual(["222"]);
+      expect(cfg.channels.discord.guilds["100"].channels.general.users).toEqual(["333"]);
+      expect(cfg.channels.discord.guilds["100"].channels.general.roles).toEqual(["444"]);
+      expect(cfg.channels.discord.accounts.default.allowFrom).toEqual(["123"]);
+      expect(cfg.channels.discord.accounts.work.allowFrom).toEqual(["555"]);
+      expect(cfg.channels.discord.accounts.work.dm.allowFrom).toEqual(["666"]);
+      expect(cfg.channels.discord.accounts.work.dm.groupChannels).toEqual(["777"]);
+      expect(cfg.channels.discord.accounts.work.execApprovals.approvers).toEqual(["888"]);
+      expect(cfg.channels.discord.accounts.work.guilds["200"].users).toEqual(["999"]);
+      expect(cfg.channels.discord.accounts.work.guilds["200"].roles).toEqual(["1010"]);
+      expect(cfg.channels.discord.accounts.work.guilds["200"].channels.help.users).toEqual([
         "1111",
       ]);
+      expect(cfg.channels.discord.accounts.work.guilds["200"].channels.help.roles).toEqual([
         "1212",
       ]);
     });
@@ -796,7 +899,10 @@ describe("doctor config flow", () => {
       repair: true,
       config: {
         channels: {
+          discord: {
             accounts: {
+              default: { token: "discord-default-token", allowFrom: ["123"] },
+              work: { token: "discord-work-token" },
             },
           },
         },
@@ -806,12 +912,15 @@ describe("doctor config flow", () => {
 
     const cfg = result.cfg as {
       channels: {
+        discord: {
           allowFrom?: string[];
           accounts: Record<string, { allowFrom?: string[] }>;
         };
       };
     };
 
+    expect(cfg.channels.discord.allowFrom).toBeUndefined();
+    expect(cfg.channels.discord.accounts.default.allowFrom).toEqual(["123"]);
   });
 
   it('adds allowFrom ["*"] when dmPolicy="open" and allowFrom is missing on repair', async () => {
@@ -819,6 +928,7 @@ describe("doctor config flow", () => {
       repair: true,
       config: {
         channels: {
+          discord: {
             token: "test-token",
             dmPolicy: "open",
             groupPolicy: "open",
@@ -829,7 +939,10 @@ describe("doctor config flow", () => {
     });
 
     const cfg = result.cfg as unknown as {
+      channels: { discord: { allowFrom: string[]; dmPolicy: string } };
     };
+    expect(cfg.channels.discord.allowFrom).toEqual(["*"]);
+    expect(cfg.channels.discord.dmPolicy).toBe("open");
   });
 
   it("adds * to existing allowFrom array when dmPolicy is open on repair", async () => {
@@ -837,6 +950,7 @@ describe("doctor config flow", () => {
       repair: true,
       config: {
         channels: {
+          slack: {
             botToken: "xoxb-test",
             appToken: "xapp-test",
             dmPolicy: "open",
@@ -848,7 +962,10 @@ describe("doctor config flow", () => {
     });
 
     const cfg = result.cfg as unknown as {
+      channels: { slack: { allowFrom: string[] } };
     };
+    expect(cfg.channels.slack.allowFrom).toContain("*");
+    expect(cfg.channels.slack.allowFrom).toContain("U123");
   });
 
   it("repairs nested dm.allowFrom when top-level allowFrom is absent on repair", async () => {
@@ -856,6 +973,7 @@ describe("doctor config flow", () => {
       repair: true,
       config: {
         channels: {
+          discord: {
             token: "test-token",
             dmPolicy: "open",
             dm: { allowFrom: ["123"] },
@@ -866,11 +984,16 @@ describe("doctor config flow", () => {
     });
 
     const cfg = result.cfg as unknown as {
+      channels: { discord: { dm: { allowFrom: string[] }; allowFrom?: string[] } };
     };
     // When dmPolicy is set at top level but allowFrom only exists nested in dm,
     // the repair adds "*" to dm.allowFrom
+    if (cfg.channels.discord.dm) {
+      expect(cfg.channels.discord.dm.allowFrom).toContain("*");
+      expect(cfg.channels.discord.dm.allowFrom).toContain("123");
     } else {
       // If doctor flattened the config, allowFrom should be at top level
+      expect(cfg.channels.discord.allowFrom).toContain("*");
     }
   });
 
@@ -879,6 +1002,7 @@ describe("doctor config flow", () => {
       repair: true,
       config: {
         channels: {
+          discord: {
             token: "test-token",
             dmPolicy: "open",
             allowFrom: ["*"],
@@ -889,7 +1013,9 @@ describe("doctor config flow", () => {
     });
 
     const cfg = result.cfg as unknown as {
+      channels: { discord: { allowFrom: string[] } };
     };
+    expect(cfg.channels.discord.allowFrom).toEqual(["*"]);
   });
 
   it("repairs per-account dmPolicy open without allowFrom on repair", async () => {
@@ -897,6 +1023,7 @@ describe("doctor config flow", () => {
       repair: true,
       config: {
         channels: {
+          discord: {
             token: "test-token",
             accounts: {
               work: {
@@ -912,8 +1039,10 @@ describe("doctor config flow", () => {
 
     const cfg = result.cfg as unknown as {
       channels: {
+        discord: { accounts: { work: { allowFrom: string[]; dmPolicy: string } } };
       };
     };
+    expect(cfg.channels.discord.accounts.work.allowFrom).toEqual(["*"]);
   });
 
   it('repairs dmPolicy="allowlist" by restoring allowFrom from pairing store on repair', async () => {

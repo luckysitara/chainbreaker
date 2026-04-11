@@ -1,4 +1,5 @@
 import type { ExecApprovalReplyDecision } from "chainbreaker/plugin-sdk/approval-runtime";
+import type { TelegramInlineButtons } from "./button-types.js";
 
 const MAX_CALLBACK_DATA_BYTES = 64;
 
@@ -8,6 +9,7 @@ function fitsCallbackData(value: string): boolean {
 
 export function buildTelegramExecApprovalButtons(
   approvalId: string,
+): TelegramInlineButtons | undefined {
   return buildTelegramExecApprovalButtonsForDecisions(approvalId, [
     "allow-once",
     "allow-always",
@@ -18,6 +20,7 @@ export function buildTelegramExecApprovalButtons(
 function buildTelegramExecApprovalButtonsForDecisions(
   approvalId: string,
   allowedDecisions: readonly ExecApprovalReplyDecision[],
+): TelegramInlineButtons | undefined {
   const allowOnce = `/approve ${approvalId} allow-once`;
   if (!allowedDecisions.includes("allow-once") || !fitsCallbackData(allowOnce)) {
     return undefined;

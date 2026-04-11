@@ -15,6 +15,7 @@ export const LogsTailResultSchema = Type.Object(
     file: NonEmptyString,
     cursor: Type.Integer({ minimum: 0 }),
     size: Type.Integer({ minimum: 0 }),
+    lines: Type.Array(Type.String()),
     truncated: Type.Optional(Type.Boolean()),
     reset: Type.Optional(Type.Boolean()),
   },

@@ -292,6 +292,7 @@ export async function evaluateViaPlaywright(opts: {
   fn: string;
   ref?: string;
   timeoutMs?: number;
+  signal?: AbortSignal;
 }): Promise<unknown> {
   const fnText = String(opts.fn ?? "").trim();
   if (!fnText) {
@@ -311,15 +312,18 @@ export async function evaluateViaPlaywright(opts: {
   let evaluateTimeout = Math.max(1000, Math.min(120_000, outerTimeout - 500));
   evaluateTimeout = Math.min(evaluateTimeout, outerTimeout);
 
+  const signal = opts.signal;
   let abortListener: (() => void) | undefined;
   let abortReject: ((reason: unknown) => void) | undefined;
   let abortPromise: Promise<never> | undefined;
+  if (signal) {
     abortPromise = new Promise((_, reject) => {
       abortReject = reject;
     });
     // Ensure the abort promise never becomes an unhandled rejection if we throw early.
     void abortPromise.catch(() => {});
   }
+  if (signal) {
     const disconnect = () => {
       void forceDisconnectPlaywrightForTarget({
         cdpUrl: opts.cdpUrl,
@@ -327,18 +331,26 @@ export async function evaluateViaPlaywright(opts: {
         reason: "evaluate aborted",
       }).catch(() => {});
     };
+    if (signal.aborted) {
       disconnect();
+      throw signal.reason ?? new Error("aborted");
     }
     abortListener = () => {
       disconnect();
+      abortReject?.(signal.reason ?? new Error("aborted"));
     };
+    signal.addEventListener("abort", abortListener, { once: true });
+    // If the signal aborted between the initial check and listener registration, handle it.
+    if (signal.aborted) {
       abortListener();
+      throw signal.reason ?? new Error("aborted");
     }
   }
 
   try {
     if (opts.ref) {
       const locator = refLocator(page, opts.ref);
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval -- required for browser-context eval
       const elementEvaluator = new Function(
         "el",
         "args",
@@ -369,6 +381,7 @@ export async function evaluateViaPlaywright(opts: {
       return await awaitEvalWithAbort(evalPromise, abortPromise);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval -- required for browser-context eval
     const browserEvaluator = new Function(
       "args",
       `
@@ -397,6 +410,8 @@ export async function evaluateViaPlaywright(opts: {
     });
     return await awaitEvalWithAbort(evalPromise, abortPromise);
   } finally {
+    if (signal && abortListener) {
+      signal.removeEventListener("abort", abortListener);
     }
   }
 }
@@ -613,6 +628,7 @@ export async function screenshotWithLabelsViaPlaywright(opts: {
           tag.style.background = "#ffb020";
           tag.style.color = "#1a1a1a";
           tag.style.fontSize = "12px";
+          tag.style.lineHeight = "14px";
           tag.style.padding = "1px 4px";
           tag.style.borderRadius = "3px";
           tag.style.boxShadow = "0 1px 2px rgba(0,0,0,0.35)";

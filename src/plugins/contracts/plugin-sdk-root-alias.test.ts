@@ -316,6 +316,7 @@ describe("plugin-sdk root alias", () => {
       exports?: Record<string, unknown>;
     };
 
+    expect(packageJson.exports?.["./plugin-sdk/discord"]).toBeDefined();
   });
 
   it("preserves reflection semantics for lazily resolved exports", { timeout: 240_000 }, () => {

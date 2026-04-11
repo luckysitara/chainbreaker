@@ -51,6 +51,8 @@ export type DeviceAuthTokenSummary = {
 
 export type RotateDeviceTokenDenyReason =
   | "unknown-device-or-role"
+  | "missing-approved-scope-baseline"
+  | "scope-outside-approved-baseline";
 
 export type RotateDeviceTokenResult =
   | { ok: true; entry: DeviceAuthToken }
@@ -352,10 +354,15 @@ function buildDeviceAuthToken(params: {
   };
 }
 
+function resolveApprovedDeviceScopeBaseline(device: PairedDevice): string[] | null {
+  const baseline = device.approvedScopes ?? device.scopes;
+  if (!Array.isArray(baseline)) {
     return null;
   }
+  return normalizeDeviceAuthScopes(baseline);
 }
 
+function scopesWithinApprovedDeviceBaseline(params: {
   role: string;
   scopes: readonly string[];
   approvedScopes: readonly string[] | null;
@@ -665,7 +672,9 @@ export async function verifyDeviceToken(params: {
     if (!verifyPairingToken(params.token, entry.token)) {
       return { ok: false, reason: "token-mismatch" };
     }
+    const approvedScopes = resolveApprovedDeviceScopeBaseline(device);
     if (
+      !scopesWithinApprovedDeviceBaseline({
         role,
         scopes: entry.scopes,
         approvedScopes,
@@ -704,7 +713,9 @@ export async function ensureDeviceToken(params: {
       return null;
     }
     const { device, role, tokens, existing } = context;
+    const approvedScopes = resolveApprovedDeviceScopeBaseline(device);
     if (
+      !scopesWithinApprovedDeviceBaseline({
         role,
         scopes: requestedScopes,
         approvedScopes,
@@ -713,6 +724,7 @@ export async function ensureDeviceToken(params: {
       return null;
     }
     if (existing && !existing.revokedAtMs) {
+      const existingWithinApproved = scopesWithinApprovedDeviceBaseline({
         role,
         scopes: existing.scopes,
         approvedScopes,
@@ -783,14 +795,18 @@ export async function rotateDeviceToken(params: {
     const requestedScopes = normalizeDeviceAuthScopes(
       params.scopes ?? existing?.scopes ?? device.scopes,
     );
+    const approvedScopes = resolveApprovedDeviceScopeBaseline(device);
     if (!approvedScopes) {
+      return { ok: false, reason: "missing-approved-scope-baseline" };
     }
     if (
+      !scopesWithinApprovedDeviceBaseline({
         role,
         scopes: requestedScopes,
         approvedScopes,
       })
     ) {
+      return { ok: false, reason: "scope-outside-approved-baseline" };
     }
     const now = Date.now();
     const next = buildDeviceAuthToken({

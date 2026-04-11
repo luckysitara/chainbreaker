@@ -28,10 +28,13 @@ const flush = async (): Promise<void> => {
   await new Promise((resolve) => setTimeout(resolve, 0));
 };
 
+const waitForAbort = (signal: AbortSignal): Promise<void> =>
   new Promise((resolve) => {
+    if (signal.aborted) {
       resolve();
       return;
     }
+    signal.addEventListener("abort", () => resolve(), { once: true });
   });
 
 const withTimeout = async <T>(promise: Promise<T>, timeoutMs = 2000): Promise<T> => {
@@ -140,7 +143,9 @@ describe("MediaStreamHandler TTS queue", () => {
     let queuedRan = false;
     const started: string[] = [];
 
+    const active = handler.queueTts("stream-1", async (signal) => {
       started.push("active");
+      await waitForAbort(signal);
     });
     void handler.queueTts("stream-1", async () => {
       queuedRan = true;
@@ -227,9 +232,11 @@ describe("MediaStreamHandler security hardening", () => {
   });
 
   it("sanitizes websocket close reason before logging", () => {
+    const reason = sanitizeLogText("forged\nline\r\tentry", 120);
     expect(reason).not.toContain("\n");
     expect(reason).not.toContain("\r");
     expect(reason).not.toContain("\t");
+    expect(reason).toContain("forged line entry");
   });
 
   it("closes idle pre-start connections after timeout", async () => {

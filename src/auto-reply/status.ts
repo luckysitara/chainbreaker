@@ -278,6 +278,7 @@ const readUsageFromSessionLog = (
       fs.closeSync(fd);
     }
     const tail = buf.toString("utf-8");
+    const lines = (offset > 0 ? tail.slice(tail.indexOf("\n") + 1) : tail).split(/\n+/);
 
     let input = 0;
     let output = 0;
@@ -285,9 +286,12 @@ const readUsageFromSessionLog = (
     let model: string | undefined;
     let lastUsage: ReturnType<typeof normalizeUsage> | undefined;
 
+    for (const line of lines) {
+      if (!line.trim()) {
         continue;
       }
       try {
+        const parsed = JSON.parse(line) as {
           message?: {
             usage?: UsageLike;
             model?: string;
@@ -302,6 +306,7 @@ const readUsageFromSessionLog = (
         }
         model = parsed.message?.model ?? parsed.model ?? model;
       } catch {
+        // ignore bad lines (including a truncated first tail line)
       }
     }
 
@@ -864,7 +869,11 @@ function groupCommandsByCategory(
 }
 
 export function buildHelpMessage(cfg?: ChainbreakerConfig): string {
+  const lines = ["ℹ️ Help", ""];
 
+  lines.push("Session");
+  lines.push("  /new  |  /reset  |  /compact [instructions]  |  /stop");
+  lines.push("");
 
   const optionParts = ["/think <level>", "/model <id>", "/fast status|on|off", "/verbose on|off"];
   if (isCommandFlagEnabled(cfg, "config")) {
@@ -873,10 +882,21 @@ export function buildHelpMessage(cfg?: ChainbreakerConfig): string {
   if (isCommandFlagEnabled(cfg, "debug")) {
     optionParts.push("/debug");
   }
+  lines.push("Options");
+  lines.push(`  ${optionParts.join("  |  ")}`);
+  lines.push("");
 
+  lines.push("Status");
+  lines.push("  /status  |  /tasks  |  /whoami  |  /context");
+  lines.push("");
 
+  lines.push("Skills");
+  lines.push("  /skill <name> [input]");
 
+  lines.push("");
+  lines.push("More: /commands for full list, /tools for available capabilities");
 
+  return lines.join("\n");
 }
 
 const COMMANDS_PER_PAGE = 8;
@@ -947,27 +967,36 @@ export function buildToolsMessage(
     .filter((group) => group.tools.length > 0);
 
   if (groups.length === 0) {
+    const lines = [
       "No tools are available for this agent right now.",
       "",
       `Profile: ${result.profile}`,
     ];
+    return lines.join("\n");
   }
 
   const verbose = options?.verbose === true;
+  const lines = verbose
     ? ["Available tools", "", `Profile: ${result.profile}`, "What this agent can use right now:"]
     : ["Available tools", "", `Profile: ${result.profile}`];
 
   for (const group of groups) {
+    lines.push("", group.label);
     if (verbose) {
       for (const tool of group.tools) {
+        lines.push(`  ${tool.name} - ${formatVerboseToolDescription(tool)}`);
       }
       continue;
     }
+    lines.push(`  ${group.tools.map((tool) => formatCompactToolEntry(tool)).join(", ")}`);
   }
 
   if (verbose) {
+    lines.push("", "Tool availability depends on this agent's configuration.");
   } else {
+    lines.push("", "Use /tools verbose for descriptions.");
   }
+  return lines.join("\n");
 }
 
 function formatCommandEntry(command: ChatCommandDefinition): string {
@@ -1027,15 +1056,21 @@ function buildCommandItems(
 }
 
 function formatCommandList(items: CommandsListItem[]): string {
+  const lines: string[] = [];
   let currentLabel: string | null = null;
 
   for (const item of items) {
     if (item.label !== currentLabel) {
+      if (lines.length > 0) {
+        lines.push("");
       }
+      lines.push(item.label);
       currentLabel = item.label;
     }
+    lines.push(`  ${item.text}`);
   }
 
+  return lines.join("\n");
 }
 
 export function buildCommandsMessage(
@@ -1063,7 +1098,11 @@ export function buildCommandsMessagePaginated(
   const items = buildCommandItems(commands, pluginCommands);
 
   if (!isTelegram) {
+    const lines = ["ℹ️ Slash commands", ""];
+    lines.push(formatCommandList(items));
+    lines.push("", "More: /tools for available capabilities");
     return {
+      text: lines.join("\n").trim(),
       totalPages: 1,
       currentPage: 1,
       hasNext: false,
@@ -1078,8 +1117,11 @@ export function buildCommandsMessagePaginated(
   const endIndex = startIndex + COMMANDS_PER_PAGE;
   const pageItems = items.slice(startIndex, endIndex);
 
+  const lines = [`ℹ️ Commands (${currentPage}/${totalPages})`, ""];
+  lines.push(formatCommandList(pageItems));
 
   return {
+    text: lines.join("\n").trim(),
     totalPages,
     currentPage,
     hasNext: currentPage < totalPages,

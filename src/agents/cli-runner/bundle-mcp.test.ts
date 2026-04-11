@@ -45,9 +45,7 @@ describe("prepareCliBundleMcpConfig", () => {
     const env = captureEnv(["HOME"]);
     try {
       const homeDir = await tempHarness.createTempDir("chainbreaker-cli-bundle-mcp-home-");
-      const workspaceDir = await tempHarness.createTempDir(
-        "chainbreaker-cli-bundle-mcp-workspace-",
-      );
+      const workspaceDir = await tempHarness.createTempDir("chainbreaker-cli-bundle-mcp-workspace-");
       process.env.HOME = homeDir;
 
       const { serverPath } = await createBundleProbePlugin(homeDir);

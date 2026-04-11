@@ -68,6 +68,7 @@ describe("provider-usage.format", () => {
     expect(summary).toBe("Over 0% left ⏱1m · Under 100% left");
   });
 
+  it("formats summary line from highest-usage window and provider cap", () => {
     const summary: UsageSummary = {
       updatedAt: now,
       providers: [
@@ -80,6 +81,7 @@ describe("provider-usage.format", () => {
           ],
         },
         {
+          provider: "zai",
           displayName: "z.ai",
           windows: [{ label: "Day", usedPercent: 10 }],
         },
@@ -91,6 +93,7 @@ describe("provider-usage.format", () => {
     );
   });
 
+  it("returns null summary line when providers are errored or have no windows", () => {
     expect(
       formatUsageSummaryLine({
         updatedAt: now,
@@ -102,6 +105,7 @@ describe("provider-usage.format", () => {
             error: "HTTP 401",
           },
           {
+            provider: "zai",
             displayName: "z.ai",
             windows: [],
           },
@@ -140,6 +144,7 @@ describe("provider-usage.format", () => {
       expected: ["Usage:", "  Codex (Plus): Token expired", "  Xiaomi: no data"],
     },
     {
+      name: "formats detailed report lines with reset windows",
       summary: {
         updatedAt: now,
         providers: [

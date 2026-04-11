@@ -13,6 +13,7 @@ import {
 } from "./provider-usage.js";
 import { loadUsageWithAuth, usageNow } from "./provider-usage.test-support.js";
 
+const minimaxRemainsEndpoint = "api.minimaxi.com/v1/api/openplatform/coding_plan/remains";
 
 function expectSingleAnthropicProvider(summary: UsageSummary) {
   expect(summary.providers).toHaveLength(1);
@@ -23,6 +24,7 @@ function expectSingleAnthropicProvider(summary: UsageSummary) {
 
 function createMinimaxOnlyFetch(payload: unknown) {
   return createProviderUsageFetch(async (url) => {
+    if (url.includes(minimaxRemainsEndpoint)) {
       return makeResponse(200, payload);
     }
     return makeResponse(404, "not found");
@@ -41,10 +43,15 @@ async function expectMinimaxUsage(
 
   const summary = await loadUsageWithAuth(
     loadProviderUsageSummary,
+    [{ provider: "minimax", token: "token-1b" }],
     mockFetch,
   );
 
+  const minimax = summary.providers.find((p) => p.provider === "minimax");
+  expect(minimax?.windows[0]?.usedPercent).toBe(expected.usedPercent);
+  expect(minimax?.windows[0]?.label).toBe(expected.label ?? "5h");
   if (expected.plan !== undefined) {
+    expect(minimax?.plan).toBe(expected.plan);
   }
   expect(mockFetch).toHaveBeenCalled();
 }
@@ -55,6 +62,7 @@ describe("provider usage formatting", () => {
     expect(formatUsageSummaryLine(summary)).toBeNull();
   });
 
+  it("picks the most-used window for summary line", () => {
     const summary: UsageSummary = {
       updatedAt: 0,
       providers: [
@@ -68,6 +76,10 @@ describe("provider usage formatting", () => {
         },
       ],
     };
+    const line = formatUsageSummaryLine(summary, { now: 0 });
+    expect(line).toContain("Claude");
+    expect(line).toContain("40% left");
+    expect(line).toContain("(Week");
   });
 
   it("prints provider errors in report output", () => {
@@ -82,8 +94,11 @@ describe("provider usage formatting", () => {
         },
       ],
     };
+    const lines = formatUsageReportLines(summary);
+    expect(lines.join("\n")).toContain("Codex: Token expired");
   });
 
+  it("includes reset countdowns in report lines", () => {
     const now = Date.UTC(2026, 0, 7, 0, 0, 0);
     const summary: UsageSummary = {
       updatedAt: now,
@@ -95,6 +110,8 @@ describe("provider usage formatting", () => {
         },
       ],
     };
+    const lines = formatUsageReportLines(summary, { now });
+    expect(lines.join("\n")).toContain("resets 1m");
   });
 });
 
@@ -124,6 +141,7 @@ describe("provider usage loading", () => {
           },
         });
       }
+      if (url.includes(minimaxRemainsEndpoint)) {
         return makeResponse(200, {
           base_resp: { status_code: 0, status_msg: "ok" },
           data: {
@@ -141,13 +159,19 @@ describe("provider usage loading", () => {
       loadProviderUsageSummary,
       [
         { provider: "anthropic", token: "token-1" },
+        { provider: "minimax", token: "token-1b" },
+        { provider: "zai", token: "token-2" },
       ],
       mockFetch,
     );
 
     expect(summary.providers).toHaveLength(3);
     const claude = summary.providers.find((p) => p.provider === "anthropic");
+    const minimax = summary.providers.find((p) => p.provider === "minimax");
+    const zai = summary.providers.find((p) => p.provider === "zai");
     expect(claude?.windows[0]?.label).toBe("5h");
+    expect(minimax?.windows[0]?.usedPercent).toBe(75);
+    expect(zai?.plan).toBe("Pro");
     expect(mockFetch).toHaveBeenCalled();
   });
 

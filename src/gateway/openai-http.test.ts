@@ -98,6 +98,9 @@ async function expectChatCompletionsDisabled(
 function parseSseDataLines(text: string): string[] {
   return text
     .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("data: "))
+    .map((line) => line.slice("data: ".length));
 }
 
 describe("OpenAI-compatible HTTP API (e2e)", () => {
@@ -136,8 +139,12 @@ describe("OpenAI-compatible HTTP API (e2e)", () => {
       expected: { history: string[]; current: string[] },
     ) => {
       expect(message).toContain(HISTORY_CONTEXT_MARKER);
+      for (const line of expected.history) {
+        expect(message).toContain(line);
       }
       expect(message).toContain(CURRENT_MESSAGE_MARKER);
+      for (const line of expected.current) {
+        expect(message).toContain(line);
       }
     };
     const getFirstAgentCall = () =>
@@ -693,6 +700,7 @@ describe("OpenAI-compatible HTTP API (e2e)", () => {
       mode: "token",
       token: "secret",
       rateLimit: { maxAttempts: 1, windowMs: 60_000, lockoutMs: 60_000, exemptLoopback: false },
+      // oxlint-disable-next-line typescript/no-explicit-any
     } as any;
     await withGatewayServer(
       async ({ port }) => {

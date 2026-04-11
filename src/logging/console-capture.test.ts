@@ -79,6 +79,7 @@ describe("enableConsoleCapture", () => {
   });
 
   it.each(["DiscordMessageListener", "DiscordReactionListener", "DiscordReactionRemoveListener"])(
+    "suppresses discord EventQueue slow listener duplicates for %s",
     (listener) => {
       setLoggerOverride({ level: "info", file: tempLogPath() });
       const warn = vi.fn();

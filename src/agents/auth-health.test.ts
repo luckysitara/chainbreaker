@@ -122,10 +122,12 @@ describe("buildAuthHealthSummary", () => {
     const store = {
       version: 1,
       profiles: {
+        "zai:dot": {
           type: "api_key" as const,
           provider: "z.ai",
           key: "sk-dot",
         },
+        "zai:dash": {
           type: "api_key" as const,
           provider: "z-ai",
           key: "sk-dash",
@@ -135,12 +137,16 @@ describe("buildAuthHealthSummary", () => {
 
     const summary = buildAuthHealthSummary({
       store,
+      providers: ["zai"],
     });
 
     expect(summary.profiles.map((profile) => [profile.profileId, profile.provider])).toEqual([
+      ["zai:dash", "zai"],
+      ["zai:dot", "zai"],
     ]);
     expect(summary.providers).toEqual([
       {
+        provider: "zai",
         status: "static",
         profiles: summary.profiles,
       },

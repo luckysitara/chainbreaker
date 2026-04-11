@@ -46,11 +46,14 @@ describe("thread-ownership plugin", () => {
     async function sendSlackThreadMessage() {
       return await hooks.message_sending(
         { content: "hello", metadata: { threadTs: "1234.5678", channelId: "C123" }, to: "C123" },
+        { channelId: "slack", conversationId: "C123" },
       );
     }
 
+    it("allows non-slack channels", async () => {
       const result = await hooks.message_sending(
         { content: "hello", metadata: { threadTs: "1234.5678", channelId: "C123" }, to: "C123" },
+        { channelId: "discord", conversationId: "C123" },
       );
 
       expect(result).toBeUndefined();
@@ -60,6 +63,7 @@ describe("thread-ownership plugin", () => {
     it("allows top-level messages (no threadTs)", async () => {
       const result = await hooks.message_sending(
         { content: "hello", metadata: {}, to: "C123" },
+        { channelId: "slack", conversationId: "C123" },
       );
 
       expect(result).toBeUndefined();
@@ -115,20 +119,24 @@ describe("thread-ownership plugin", () => {
       // Simulate receiving a message that @-mentions the agent.
       await hooks.message_received(
         { content: "Hey @TestBot help me", metadata: { threadTs: "9999.0001", channelId: "C456" } },
+        { channelId: "slack", conversationId: "C456" },
       );
 
       // Now send in the same thread -- should skip the ownership HTTP call.
       const result = await hooks.message_sending(
         { content: "Sure!", metadata: { threadTs: "9999.0001", channelId: "C456" }, to: "C456" },
+        { channelId: "slack", conversationId: "C456" },
       );
 
       expect(result).toBeUndefined();
       expect(globalThis.fetch).not.toHaveBeenCalled();
     });
 
+    it("ignores @-mentions on non-slack channels", async () => {
       // Use a unique thread key so module-level state from other tests doesn't interfere.
       await hooks.message_received(
         { content: "Hey @TestBot", metadata: { threadTs: "7777.0001", channelId: "C999" } },
+        { channelId: "discord", conversationId: "C999" },
       );
 
       // The mention should not have been tracked, so sending should still call fetch.
@@ -138,6 +146,7 @@ describe("thread-ownership plugin", () => {
 
       await hooks.message_sending(
         { content: "Sure!", metadata: { threadTs: "7777.0001", channelId: "C999" }, to: "C999" },
+        { channelId: "slack", conversationId: "C999" },
       );
 
       expect(globalThis.fetch).toHaveBeenCalled();
@@ -146,10 +155,12 @@ describe("thread-ownership plugin", () => {
     it("tracks bot user ID mentions via <@U999> syntax", async () => {
       await hooks.message_received(
         { content: "Hey <@U999> help", metadata: { threadTs: "8888.0001", channelId: "C789" } },
+        { channelId: "slack", conversationId: "C789" },
       );
 
       const result = await hooks.message_sending(
         { content: "On it!", metadata: { threadTs: "8888.0001", channelId: "C789" }, to: "C789" },
+        { channelId: "slack", conversationId: "C789" },
       );
 
       expect(result).toBeUndefined();

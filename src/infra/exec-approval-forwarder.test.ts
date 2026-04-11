@@ -39,8 +39,10 @@ function isDiscordExecApprovalClientEnabledForTest(params: {
   accountId?: string | null;
 }): boolean {
   const accountId = params.accountId?.trim();
+  const rootConfig = params.cfg.channels?.discord?.execApprovals;
   const accountConfig =
     accountId && accountId !== "default"
+      ? params.cfg.channels?.discordAccounts?.[accountId]?.execApprovals
       : undefined;
   const config = accountConfig ?? rootConfig;
   return Boolean(config?.enabled && (config.approvers?.length ?? 0) > 0);
@@ -140,12 +142,15 @@ const telegramApprovalPlugin: Pick<
     },
   },
 };
+const discordApprovalPlugin: Pick<
   ChannelPlugin,
   "id" | "meta" | "capabilities" | "config" | "approvals"
 > = {
+  ...createChannelTestPluginBase({ id: "discord" }),
   approvals: {
     delivery: {
       shouldSuppressForwardingFallback: ({ cfg, target }) =>
+        target.channel === "discord" &&
         isDiscordExecApprovalClientEnabledForTest({ cfg, accountId: target.accountId }),
     },
   },
@@ -157,6 +162,8 @@ const defaultRegistry = createTestRegistry([
     source: "test",
   },
   {
+    pluginId: "discord",
+    plugin: discordApprovalPlugin,
     source: "test",
   },
 ]);
@@ -180,6 +187,7 @@ function makeTargetsCfg(targets: Array<{ channel: string; to: string }>): Chainb
   } as ChainbreakerConfig;
 }
 
+const TARGETS_CFG = makeTargetsCfg([{ channel: "slack", to: "U123" }]);
 
 function createForwarder(params: {
   cfg: ChainbreakerConfig;
@@ -202,11 +210,12 @@ function createForwarder(params: {
   return { deliver, forwarder };
 }
 
-function makeSessionCfg(
-): ChainbreakerConfig {
+function makeSessionCfg(options: { discordExecApprovalsEnabled?: boolean } = {}): ChainbreakerConfig {
   return {
+    ...(options.discordExecApprovalsEnabled
       ? {
           channels: {
+            discord: {
               execApprovals: {
                 enabled: true,
                 approvers: ["123"],
@@ -227,6 +236,7 @@ async function expectDiscordSessionTargetRequest(params: {
   vi.useFakeTimers();
   const { deliver, forwarder } = createForwarder({
     cfg: params.cfg,
+    resolveSessionTarget: () => ({ channel: "discord", to: "channel:123" }),
   });
 
   await expect(forwarder.handleRequested(baseRequest)).resolves.toBe(params.expectedAccepted);
@@ -255,6 +265,7 @@ async function expectSessionFilterRequestResult(params: {
 
   const { deliver, forwarder } = createForwarder({
     cfg,
+    resolveSessionTarget: () => ({ channel: "slack", to: "U1" }),
   });
 
   const request = {
@@ -302,6 +313,7 @@ describe("exec approval forwarder", () => {
 
     const { deliver, forwarder } = createForwarder({
       cfg,
+      resolveSessionTarget: () => ({ channel: "slack", to: "U1" }),
     });
 
     await expect(forwarder.handleRequested(baseRequest)).resolves.toBe(true);
@@ -310,6 +322,7 @@ describe("exec approval forwarder", () => {
     await forwarder.handleResolved({
       id: baseRequest.id,
       decision: "allow-once",
+      resolvedBy: "slack:U1",
       ts: 2000,
     });
     expect(deliver).toHaveBeenCalledTimes(2);
@@ -340,10 +353,14 @@ describe("exec approval forwarder", () => {
           source: "test",
         },
         {
+          pluginId: "discord",
+          plugin: discordApprovalPlugin,
           source: "test",
         },
         {
+          pluginId: "slack",
           plugin: {
+            ...createChannelTestPluginBase({ id: "slack" as ChannelPlugin["id"] }),
             outbound: {
               deliveryMode: "direct",
               beforeDeliverPayload,
@@ -361,6 +378,7 @@ describe("exec approval forwarder", () => {
     expect(beforeDeliverPayload).toHaveBeenCalledWith(
       expect.objectContaining({
         hint: { kind: "approval-pending", approvalKind: "exec" },
+        target: expect.objectContaining({ channel: "slack", to: "U123" }),
       }),
     );
   });
@@ -417,6 +435,7 @@ describe("exec approval forwarder", () => {
         ...baseRequest,
         request: {
           ...baseRequest.request,
+          turnSourceChannel: "discord",
           turnSourceTo: "channel:123",
         },
       }),
@@ -464,6 +483,7 @@ describe("exec approval forwarder", () => {
     );
   });
 
+  it("formats single-line commands as inline code", async () => {
     vi.useFakeTimers();
     const { deliver, forwarder } = createForwarder({ cfg: TARGETS_CFG });
     await expect(forwarder.handleRequested(baseRequest)).resolves.toBe(true);
@@ -508,6 +528,8 @@ describe("exec approval forwarder", () => {
       expectedDeliveryCount: 0,
     },
     {
+      sessionFilter: ["discord:tail$"],
+      sessionKey: `${"x".repeat(5000)}discord:tail`,
       expectedAccepted: true,
       expectedDeliveryCount: 1,
     },
@@ -517,6 +539,7 @@ describe("exec approval forwarder", () => {
 
   it.each([
     {
+      cfg: makeSessionCfg({ discordExecApprovalsEnabled: true }),
       expectedAccepted: false,
       expectedDeliveryCount: 0,
     },
@@ -525,6 +548,7 @@ describe("exec approval forwarder", () => {
       expectedAccepted: true,
       expectedDeliveryCount: 1,
     },
+  ])("handles discord session target forwarding case %j", async (params) => {
     await expectDiscordSessionTargetRequest(params);
   });
 

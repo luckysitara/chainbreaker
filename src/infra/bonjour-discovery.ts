@@ -116,11 +116,15 @@ function parseDigShortLines(stdout: string): string[] {
 }
 
 function parseDigTxt(stdout: string): string[] {
+  // dig +short TXT prints one or more lines of quoted strings:
   // "k=v" "k2=v2"
   const tokens: string[] = [];
   for (const raw of stdout.split("\n")) {
+    const line = raw.trim();
+    if (!line) {
       continue;
     }
+    const matches = Array.from(line.matchAll(/"([^"]*)"/g), (m) => m[1] ?? "");
     for (const m of matches) {
       const unescaped = m.replaceAll("\\\\", "\\").replaceAll('\\"', '"').replaceAll("\\n", "\n");
       tokens.push(unescaped);
@@ -131,11 +135,14 @@ function parseDigTxt(stdout: string): string[] {
 
 function parseDigSrv(stdout: string): { host: string; port: number } | null {
   // dig +short SRV: "0 0 18790 host.domain."
+  const line = stdout
     .split("\n")
     .map((l) => l.trim())
     .find(Boolean);
+  if (!line) {
     return null;
   }
+  const parts = line.split(/\s+/).filter(Boolean);
   if (parts.length < 4) {
     return null;
   }
@@ -214,10 +221,14 @@ function parseTxtTokens(tokens: string[]): Record<string, string> {
 function parseDnsSdBrowse(stdout: string): string[] {
   const instances = new Set<string>();
   for (const raw of stdout.split("\n")) {
+    const line = raw.trim();
+    if (!line || !line.includes(GATEWAY_SERVICE_TYPE)) {
       continue;
     }
+    if (!line.includes("Add")) {
       continue;
     }
+    const match = line.match(/_chainbreaker-gw\._tcp\.?\s+(.+)$/);
     if (match?.[1]) {
       instances.add(decodeDnsSdEscapes(match[1].trim()));
     }
@@ -230,9 +241,13 @@ function parseDnsSdResolve(stdout: string, instanceName: string): GatewayBonjour
   const beacon: GatewayBonjourBeacon = { instanceName: decodedInstanceName };
   let txt: Record<string, string> = {};
   for (const raw of stdout.split("\n")) {
+    const line = raw.trim();
+    if (!line) {
       continue;
     }
 
+    if (line.includes("can be reached at")) {
+      const match = line.match(/can be reached at\s+([^\s:]+):(\d+)/i);
       if (match?.[1]) {
         beacon.host = match[1].replace(/\.$/, "");
       }
@@ -242,6 +257,8 @@ function parseDnsSdResolve(stdout: string, instanceName: string): GatewayBonjour
       continue;
     }
 
+    if (line.startsWith("txt") || line.includes("txtvers=")) {
+      const tokens = line.split(/\s+/).filter(Boolean);
       txt = parseTxtTokens(tokens);
     }
   }
@@ -366,9 +383,12 @@ async function discoverWideAreaViaTailnetDns(
           ["dig", "+short", "+time=1", "+tries=1", `@${ip}`, probeName, "PTR"],
           { timeoutMs: Math.max(1, Math.min(250, budget)) },
         );
+        const lines = parseDigShortLines(probe.stdout);
+        if (lines.length === 0) {
           continue;
         }
         nameserver = ip;
+        ptrs = lines;
         return;
       } catch {
         // ignore
@@ -461,12 +481,17 @@ function parseAvahiBrowse(stdout: string): GatewayBonjourBeacon[] {
   let current: GatewayBonjourBeacon | null = null;
 
   for (const raw of stdout.split("\n")) {
+    const line = raw.trimEnd();
+    if (!line) {
       continue;
     }
+    if (line.startsWith("=") && line.includes(GATEWAY_SERVICE_TYPE)) {
       if (current) {
         results.push(current);
       }
       const marker = ` ${GATEWAY_SERVICE_TYPE}`;
+      const idx = line.indexOf(marker);
+      const left = idx >= 0 ? line.slice(0, idx).trim() : line;
       const parts = left.split(/\s+/);
       const instanceName = parts.length > 3 ? parts.slice(3).join(" ") : left;
       current = {
@@ -480,6 +505,7 @@ function parseAvahiBrowse(stdout: string): GatewayBonjourBeacon[] {
       continue;
     }
 
+    const trimmed = line.trim();
     if (trimmed.startsWith("hostname =")) {
       const match = trimmed.match(/hostname\s*=\s*\[([^\]]+)\]/);
       if (match?.[1]) {

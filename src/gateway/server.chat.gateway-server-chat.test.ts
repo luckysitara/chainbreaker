@@ -77,6 +77,8 @@ describe("gateway server chat", () => {
     messages: Array<Record<string, unknown>>,
   ): Promise<unknown[]> => {
     return withMainSessionStore(async (dir) => {
+      const lines = messages.map((message) => JSON.stringify({ message }));
+      await fs.writeFile(path.join(dir, "sess-main.jsonl"), lines.join("\n"), "utf-8");
 
       const res = await rpcReq<{ messages?: unknown[] }>(ws, "chat.history", {
         sessionKey: "main",
@@ -293,6 +295,7 @@ describe("gateway server chat", () => {
 
     const sanitizedRes = await rpcReq(ws, "chat.send", {
       sessionKey: "main",
+      message: "Cafe\u0301\u0007\tline",
       idempotencyKey: "idem-sanitized-1",
     });
     expect(sanitizedRes.ok).toBe(true);
@@ -354,6 +357,7 @@ describe("gateway server chat", () => {
           rules: [
             {
               action: "deny",
+              match: { channel: "discord", chatType: "group" },
             },
           ],
         },
@@ -361,13 +365,17 @@ describe("gateway server chat", () => {
 
       await writeSessionStore({
         entries: {
+          "discord:group:dev": {
+            sessionId: "sess-discord",
             updatedAt: Date.now(),
             chatType: "group",
+            channel: "discord",
           },
         },
       });
 
       const blockedRes = await rpcReq(ws, "chat.send", {
+        sessionKey: "discord:group:dev",
         message: "hello",
         idempotencyKey: "idem-1",
       });
@@ -487,7 +495,9 @@ describe("gateway server chat", () => {
         },
       });
 
+      const lines: string[] = [];
       for (let i = 0; i < 300; i += 1) {
+        lines.push(
           JSON.stringify({
             message: {
               role: "user",
@@ -497,6 +507,7 @@ describe("gateway server chat", () => {
           }),
         );
       }
+      await fs.writeFile(path.join(historyDir, "sess-main.jsonl"), lines.join("\n"), "utf-8");
 
       const defaultRes = await rpcReq<{ messages?: unknown[] }>(ws, "chat.history", {
         sessionKey: "main",

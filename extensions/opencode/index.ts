@@ -4,6 +4,7 @@ import { matchesExactOrPrefix } from "chainbreaker/plugin-sdk/provider-model-sha
 import { applyOpencodeZenConfig, OPENCODE_ZEN_DEFAULT_MODEL } from "./api.js";
 
 const PROVIDER_ID = "opencode";
+const MINIMAX_MODERN_MODEL_MATCHERS = ["minimax-m2.7"] as const;
 
 function isModernOpencodeModel(modelId: string): boolean {
   const lower = modelId.trim().toLowerCase();

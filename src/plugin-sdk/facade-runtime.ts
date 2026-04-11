@@ -28,8 +28,7 @@ function resolveSourceFirstPublicSurfacePath(params: {
   artifactBasename: string;
 }): string | null {
   const sourceBaseName = params.artifactBasename.replace(/\.js$/u, "");
-  const sourceRoot =
-    params.bundledPluginsDir ?? path.resolve(CHAINBREAKER_PACKAGE_ROOT, "extensions");
+  const sourceRoot = params.bundledPluginsDir ?? path.resolve(CHAINBREAKER_PACKAGE_ROOT, "extensions");
   for (const ext of PUBLIC_SURFACE_SOURCE_EXTENSIONS) {
     const candidate = path.resolve(sourceRoot, params.dirName, `${sourceBaseName}${ext}`);
     if (fs.existsSync(candidate)) {

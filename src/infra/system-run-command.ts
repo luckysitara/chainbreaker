@@ -8,6 +8,8 @@ import {
 import {
   POSIX_INLINE_COMMAND_FLAGS,
   POWERSHELL_INLINE_COMMAND_FLAGS,
+  resolveInlineCommandMatch,
+} from "./shell-inline-command.js";
 
 export type SystemRunCommandValidation =
   | {
@@ -79,6 +81,7 @@ function unwrapShellWrapperArgv(argv: string[]): string[] {
   return shellMultiplexer.kind === "unwrapped" ? shellMultiplexer.argv : dispatchUnwrapped;
 }
 
+function hasTrailingPositionalArgvAfterInlineCommand(argv: string[]): boolean {
   const wrapperArgv = unwrapShellWrapperArgv(argv);
   const token0 = wrapperArgv[0]?.trim();
   if (!token0) {
@@ -90,16 +93,22 @@ function unwrapShellWrapperArgv(argv: string[]): string[] {
     return false;
   }
 
+  const inlineCommandIndex =
     wrapper === "powershell" || wrapper === "pwsh"
+      ? resolveInlineCommandMatch(wrapperArgv, POWERSHELL_INLINE_COMMAND_FLAGS).valueTokenIndex
+      : resolveInlineCommandMatch(wrapperArgv, POSIX_INLINE_COMMAND_FLAGS, {
           allowCombinedC: true,
         }).valueTokenIndex;
+  if (inlineCommandIndex === null) {
     return false;
   }
+  return wrapperArgv.slice(inlineCommandIndex + 1).some((entry) => entry.trim().length > 0);
 }
 
 function buildSystemRunCommandDisplay(argv: string[]): SystemRunCommandDisplay {
   const shellWrapperResolution = extractShellWrapperCommand(argv);
   const shellPayload = shellWrapperResolution.command;
+  const shellWrapperPositionalArgv = hasTrailingPositionalArgvAfterInlineCommand(argv);
   const envManipulationBeforeShellWrapper =
     shellWrapperResolution.isWrapper && hasEnvManipulationBeforeShellWrapper(argv);
   const formattedArgv = formatExecCommand(argv);

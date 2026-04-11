@@ -2,11 +2,14 @@ import { devices as playwrightDevices } from "playwright-core";
 import { ensurePageState, getPageForTargetId } from "./pw-session.js";
 import { withPageScopedCdpClient } from "./pw-session.page-cdp.js";
 
+export async function setOfflineViaPlaywright(opts: {
   cdpUrl: string;
   targetId?: string;
+  offline: boolean;
 }): Promise<void> {
   const page = await getPageForTargetId(opts);
   ensurePageState(page);
+  await page.context().setOffline(Boolean(opts.offline));
 }
 
 export async function setExtraHTTPHeadersViaPlaywright(opts: {

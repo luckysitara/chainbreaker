@@ -30,6 +30,8 @@ function unescapeCmdSetAssignmentComponent(value: string): string {
   return out;
 }
 
+export function parseCmdSetAssignment(line: string): CmdSetAssignment | null {
+  const raw = line.trim();
   if (!raw) {
     return null;
   }

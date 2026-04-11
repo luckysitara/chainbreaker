@@ -17,6 +17,7 @@ export type SandboxBackendCommandParams = {
   args?: string[];
   stdin?: Buffer | string;
   allowFailure?: boolean;
+  signal?: AbortSignal;
 };
 
 export type SandboxBackendCommandResult = {

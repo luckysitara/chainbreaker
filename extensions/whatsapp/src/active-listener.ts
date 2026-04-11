@@ -30,6 +30,7 @@ export type ActiveWebListener = {
 
 // WhatsApp shares a live Baileys socket between inbound and outbound runtime
 // chunks. Keep this on a direct globalThis symbol lookup; the generic
+// singleton helper was previously inlined during code-splitting and split the
 // listener state back into per-chunk Maps.
 const WHATSAPP_ACTIVE_LISTENER_STATE_KEY = Symbol.for("chainbreaker.whatsapp.activeListenerState");
 

@@ -212,24 +212,30 @@ describe("getApiKeyForModel", () => {
         let error: unknown = null;
         try {
           await resolveApiKeyForProvider({
+            provider: "zai",
             store: { version: 1, profiles: {} },
           });
         } catch (err) {
           error = err;
         }
 
+        expect(String(error)).toContain('No API key found for provider "zai".');
       },
     );
   });
 
+  it("accepts legacy Z_AI_API_KEY for zai", async () => {
     await withEnvAsync(
       {
         ZAI_API_KEY: undefined,
+        Z_AI_API_KEY: "zai-test-key", // pragma: allowlist secret
       },
       async () => {
         const resolved = await resolveApiKeyForProvider({
+          provider: "zai",
           store: { version: 1, profiles: {} },
         });
+        expect(resolved.apiKey).toBe("zai-test-key");
         expect(resolved.source).toContain("Z_AI_API_KEY");
       },
     );
@@ -261,6 +267,7 @@ describe("getApiKeyForModel", () => {
       async () => {
         await expect(
           hasAvailableAuthForProvider({
+            provider: "zai",
             store: { version: 1, profiles: {} },
           }),
         ).resolves.toBe(false);
@@ -489,11 +496,15 @@ describe("getApiKeyForModel", () => {
     );
   });
 
+  it("resolveEnvApiKey('minimax-portal') accepts MINIMAX_OAUTH_TOKEN", async () => {
     await withEnvAsync(
       {
+        MINIMAX_OAUTH_TOKEN: "minimax-oauth-token",
         MINIMAX_API_KEY: undefined,
       },
       async () => {
+        const resolved = resolveEnvApiKey("minimax-portal");
+        expect(resolved?.apiKey).toBe("minimax-oauth-token");
         expect(resolved?.source).toContain("MINIMAX_OAUTH_TOKEN");
       },
     );

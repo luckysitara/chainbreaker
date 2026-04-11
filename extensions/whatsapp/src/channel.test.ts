@@ -381,6 +381,7 @@ describe("whatsapp setup wizard", () => {
     expect(hoisted.loginWeb).toHaveBeenCalledWith(false, undefined, runtime, DEFAULT_ACCOUNT_ID);
   });
 
+  it("skips relink note when already linked and relink is declined", async () => {
     hoisted.pathExists.mockResolvedValue(true);
     const harness = createSeparatePhoneHarness({
       selectValues: ["separate", "disabled"],
@@ -431,6 +432,7 @@ describe("whatsapp group policy", () => {
           },
         },
       },
+      // oxlint-disable-next-line typescript/no-explicit-any
     } as any;
 
     expect(resolveWhatsAppGroupRequireMention({ cfg, groupId: "1203630@g.us" })).toBe(false);

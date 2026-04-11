@@ -34,6 +34,7 @@ const GOOGLE_SUPPORTED_ASPECT_RATIOS = [
   "21:9",
 ] as const;
 
+type GoogleInlineDataPart = {
   mimeType?: string;
   mime_type?: string;
   data?: string;
@@ -44,6 +45,8 @@ type GoogleGenerateImageResponse = {
     content?: {
       parts?: Array<{
         text?: string;
+        inlineData?: GoogleInlineDataPart;
+        inline_data?: GoogleInlineDataPart;
       }>;
     };
   }>;
@@ -137,6 +140,7 @@ export function buildGoogleImageGenerationProvider(): ImageGenerationProvider {
       const headers = new Headers(authHeaders.headers);
       const imageConfig = mapSizeToImageConfig(req.size);
       const inputParts = (req.inputImages ?? []).map((image) => ({
+        inlineData: {
           mimeType: image.mimeType,
           data: image.buffer.toString("base64"),
         },
@@ -177,9 +181,12 @@ export function buildGoogleImageGenerationProvider(): ImageGenerationProvider {
         const images = (payload.candidates ?? [])
           .flatMap((candidate) => candidate.content?.parts ?? [])
           .map((part) => {
+            const inline = part.inlineData ?? part.inline_data;
+            const data = inline?.data?.trim();
             if (!data) {
               return null;
             }
+            const mimeType = inline?.mimeType ?? inline?.mime_type ?? DEFAULT_OUTPUT_MIME;
             const extension = mimeType.includes("jpeg") ? "jpg" : (mimeType.split("/")[1] ?? "png");
             imageIndex += 1;
             return {

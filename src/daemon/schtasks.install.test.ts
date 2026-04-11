@@ -102,6 +102,7 @@ describe("installScheduledTask", () => {
     });
   });
 
+  it("rejects line breaks in command arguments, env vars, and descriptions", async () => {
     await withUserProfileDir(async (_tmpDir, env) => {
       await expect(
         installScheduledTask({
@@ -117,6 +118,7 @@ describe("installScheduledTask", () => {
           env,
           stdout: new PassThrough(),
           programArguments: ["node", "gateway.js"],
+          environment: { BAD: "line1\r\nline2" },
         }),
       ).rejects.toThrow(/Environment variable value cannot contain CR or LF/);
 

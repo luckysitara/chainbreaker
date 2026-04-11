@@ -50,6 +50,7 @@ const PATH_REGEX_SOURCE =
  *
  * Explicitly excluded from the ID segment:
  *   ]      — closes the surrounding [media attached: ...] bracket
+ *   \s     — any whitespace (space, newline, tab) — terminates the token
  *   /      — forward slash path separator (traversal prevention)
  *   \      — back slash path separator (traversal prevention)
  *   \x00   — null byte (path injection prevention)
@@ -62,6 +63,7 @@ const PATH_REGEX_SOURCE =
  *   "photo---1c77ce17-20b9-4546-be64-6e36a9adcb2c.png"
  *   "图片---1c77ce17-20b9-4546-be64-6e36a9adcb2c.png"
  */
+// eslint-disable-next-line no-control-regex
 const MEDIA_URI_REGEX = /\bmedia:\/\/inbound\/([^\]\s/\\\x00]+)/;
 
 /**
@@ -99,8 +101,11 @@ export function mergePromptAttachmentImages(params: {
   const offloadedImages = params.offloadedImages ?? [];
 
   if (params.imageOrder && params.imageOrder.length > 0) {
+    let inlineIndex = 0;
     let offloadedIndex = 0;
     for (const entry of params.imageOrder) {
+      if (entry === "inline") {
+        const image = existingImages[inlineIndex++];
         if (image) {
           promptImages.push(image);
         }
@@ -111,6 +116,8 @@ export function mergePromptAttachmentImages(params: {
         promptImages.push(image);
       }
     }
+    while (inlineIndex < existingImages.length) {
+      promptImages.push(existingImages[inlineIndex++]);
     }
     while (offloadedIndex < offloadedImages.length) {
       const image = offloadedImages[offloadedIndex++];
@@ -136,9 +143,14 @@ function extractTrailingAttachmentMediaUris(prompt: string, count: number): stri
     return [];
   }
 
+  const lines = prompt.split(/\r?\n/);
   const uris: string[] = [];
+  for (let index = lines.length - 1; index >= 0 && uris.length < count; index--) {
+    const line = lines[index]?.trim();
+    if (!line || line.includes("\0")) {
       break;
     }
+    const match = line.match(/^\[media attached:\s*(media:\/\/inbound\/[^\]\s/\\]+)\]$/);
     if (!match?.[1]) {
       break;
     }
@@ -236,6 +248,7 @@ export function detectImageReferences(prompt: string): DetectedImageRef[] {
 
   // Pattern for [media attached: path (type) | url] or [media attached N/M: path (type) | url] format
   // Each bracket = ONE file. The | separates path from URL, not multiple files.
+  // Multi-file format uses separate brackets on separate lines.
   const mediaAttachedPattern = /\[media attached(?:\s+\d+\/\d+)?:\s*([^\]]+)\]/gi;
   const mediaAttachedPathPattern = new RegExp(MEDIA_ATTACHED_PATH_REGEX_SOURCE, "i");
   const messageImagePattern = new RegExp(MESSAGE_IMAGE_REGEX_SOURCE, "gi");
@@ -245,6 +258,7 @@ export function detectImageReferences(prompt: string): DetectedImageRef[] {
   while ((match = mediaAttachedPattern.exec(prompt)) !== null) {
     const content = match[1];
 
+    // Skip "[media attached: N files]" header lines
     if (/^\d+\s+files?$/i.test(content.trim())) {
       continue;
     }

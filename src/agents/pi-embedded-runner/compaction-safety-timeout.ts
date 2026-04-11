@@ -5,6 +5,8 @@ export const EMBEDDED_COMPACTION_TIMEOUT_MS = 900_000;
 
 const MAX_SAFE_TIMEOUT_MS = 2_147_000_000;
 
+function createAbortError(signal: AbortSignal): Error {
+  const reason = "reason" in signal ? signal.reason : undefined;
   if (reason instanceof Error) {
     return reason;
   }

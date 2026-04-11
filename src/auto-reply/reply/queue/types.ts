@@ -89,4 +89,6 @@ export type ResolveQueueSettingsParams = {
   cfg: ChainbreakerConfig;
   channel?: string;
   sessionEntry?: SessionEntry;
+  inlineMode?: QueueMode;
+  inlineOptions?: Partial<QueueSettings>;
 };

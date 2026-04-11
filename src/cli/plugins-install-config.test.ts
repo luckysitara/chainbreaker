@@ -19,9 +19,11 @@ vi.mock("../config/config.js", () => ({
   readConfigFileSnapshot: () => readConfigFileSnapshotMock(),
 }));
 
+vi.mock("../commands/doctor/providers/matrix.js", () => ({
   cleanStaleMatrixPluginConfig: (cfg: ChainbreakerConfig) => cleanStaleMatrixPluginConfigMock(cfg),
 }));
 
+const MATRIX_REPO_INSTALL_SPEC = repoInstallSpec("matrix");
 
 function makeSnapshot(overrides: Partial<ConfigFileSnapshot> = {}): ConfigFileSnapshot {
   return {
@@ -35,6 +37,7 @@ function makeSnapshot(overrides: Partial<ConfigFileSnapshot> = {}): ConfigFileSn
     runtimeConfig: { plugins: {} } as ConfigFileSnapshot["runtimeConfig"],
     config: { plugins: {} } as ChainbreakerConfig,
     hash: "abc",
+    issues: [{ path: "plugins.installs.matrix", message: "stale path" }],
     warnings: [],
     legacyIssues: [],
     ...overrides,
@@ -42,6 +45,9 @@ function makeSnapshot(overrides: Partial<ConfigFileSnapshot> = {}): ConfigFileSn
 }
 
 describe("loadConfigForInstall", () => {
+  const matrixNpmRequest = {
+    rawSpec: "@chainbreaker/matrix",
+    normalizedSpec: "@chainbreaker/matrix",
   };
 
   beforeEach(() => {
@@ -56,8 +62,10 @@ describe("loadConfigForInstall", () => {
   });
 
   it("returns the config directly when loadConfig succeeds", async () => {
+    const cfg = { plugins: { entries: { matrix: { enabled: true } } } } as ChainbreakerConfig;
     loadConfigMock.mockReturnValue(cfg);
 
+    const result = await loadConfigForInstall(matrixNpmRequest);
     expect(result).toBe(cfg);
     expect(readConfigFileSnapshotMock).not.toHaveBeenCalled();
   });
@@ -66,6 +74,7 @@ describe("loadConfigForInstall", () => {
     const cfg = { plugins: {} } as ChainbreakerConfig;
     loadConfigMock.mockReturnValue(cfg);
 
+    const result = await loadConfigForInstall(matrixNpmRequest);
     expect(cleanStaleMatrixPluginConfigMock).not.toHaveBeenCalled();
     expect(result).toBe(cfg);
   });
@@ -78,16 +87,20 @@ describe("loadConfigForInstall", () => {
     });
 
     const snapshotCfg = {
+      plugins: { installs: { matrix: { source: "path", installPath: "/gone" } } },
     } as unknown as ChainbreakerConfig;
     readConfigFileSnapshotMock.mockResolvedValue(
       makeSnapshot({
+        parsed: { plugins: { installs: { matrix: {} } } },
         config: snapshotCfg,
         issues: [
+          { path: "channels.matrix", message: "unknown channel id: matrix" },
           { path: "plugins.load.paths", message: "plugin: plugin path not found: /gone" },
         ],
       }),
     );
 
+    const result = await loadConfigForInstall(matrixNpmRequest);
     expect(readConfigFileSnapshotMock).toHaveBeenCalled();
     expect(cleanStaleMatrixPluginConfigMock).toHaveBeenCalledWith(snapshotCfg);
     expect(result).toBe(snapshotCfg);
@@ -104,12 +117,14 @@ describe("loadConfigForInstall", () => {
     readConfigFileSnapshotMock.mockResolvedValue(
       makeSnapshot({
         config: snapshotCfg,
+        issues: [{ path: "channels.matrix", message: "unknown channel id: matrix" }],
       }),
     );
 
     const result = await loadConfigForInstall({
       rawSpec: MATRIX_REPO_INSTALL_SPEC,
       normalizedSpec: MATRIX_REPO_INSTALL_SPEC,
+      resolvedPath: bundledPluginRootAt("/tmp/repo", "matrix"),
     });
     expect(result).toBe(snapshotCfg);
   });
@@ -127,6 +142,7 @@ describe("loadConfigForInstall", () => {
       }),
     );
 
+    await expect(loadConfigForInstall(matrixNpmRequest)).rejects.toThrow(
       "Config invalid outside the Matrix upgrade recovery path",
     );
   });
@@ -161,6 +177,7 @@ describe("loadConfigForInstall", () => {
       }),
     );
 
+    await expect(loadConfigForInstall(matrixNpmRequest)).rejects.toThrow(
       "Config file could not be parsed; run `chainbreaker doctor` to repair it.",
     );
   });
@@ -174,6 +191,7 @@ describe("loadConfigForInstall", () => {
 
     readConfigFileSnapshotMock.mockResolvedValue(makeSnapshot({ exists: false, parsed: {} }));
 
+    await expect(loadConfigForInstall(matrixNpmRequest)).rejects.toThrow(
       "Config file could not be parsed; run `chainbreaker doctor` to repair it.",
     );
   });
@@ -185,6 +203,7 @@ describe("loadConfigForInstall", () => {
       throw fsErr;
     });
 
+    await expect(loadConfigForInstall(matrixNpmRequest)).rejects.toThrow(
       "EACCES: permission denied",
     );
     expect(readConfigFileSnapshotMock).not.toHaveBeenCalled();

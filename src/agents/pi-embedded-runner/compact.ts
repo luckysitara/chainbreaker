@@ -466,6 +466,7 @@ export async function compactEmbeddedPiSessionDirect(
       agentDir,
       workspaceDir: effectiveWorkspace,
       config: params.config,
+      abortSignal: runAbortController.signal,
       modelProvider: model.provider,
       modelId,
       modelCompat: effectiveModel.compat,
@@ -797,6 +798,7 @@ export async function compactEmbeddedPiSessionDirect(
 
         const compactStartedAt = Date.now();
         // Measure compactedCount from the original pre-limiting transcript so compaction
+        // lifecycle metrics represent total reduction through the compaction pipeline.
         const messageCountCompactionInput = messageCountOriginal;
         // Estimate full session tokens BEFORE compaction (including system prompt,
         // bootstrap context, workspace files, and all history). This is needed for

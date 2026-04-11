@@ -77,6 +77,7 @@ type ApplyPatchOptions = {
   sandbox?: SandboxApplyPatchConfig;
   /** Restrict patch paths to the workspace root (cwd). Default: true. Set false to opt out. */
   workspaceOnly?: boolean;
+  signal?: AbortSignal;
 };
 
 const applyPatchSchema = Type.Object({
@@ -98,11 +99,13 @@ export function createApplyPatchTool(
     description:
       "Apply a patch to one or more files using the apply_patch format. The input should include *** Begin Patch and *** End Patch markers.",
     parameters: applyPatchSchema,
+    execute: async (_toolCallId, args, signal) => {
       const params = args as { input?: string };
       const input = typeof params.input === "string" ? params.input : "";
       if (!input.trim()) {
         throw new Error("Provide a patch input.");
       }
+      if (signal?.aborted) {
         const err = new Error("Aborted");
         err.name = "AbortError";
         throw err;
@@ -112,6 +115,7 @@ export function createApplyPatchTool(
         cwd,
         sandbox,
         workspaceOnly,
+        signal,
       });
 
       return {
@@ -144,6 +148,7 @@ export async function applyPatch(
   const fileOps = resolvePatchFileOps(options);
 
   for (const hunk of parsed.hunks) {
+    if (options.signal?.aborted) {
       const err = new Error("Aborted");
       err.name = "AbortError";
       throw err;
@@ -205,12 +210,17 @@ function recordSummary(
 }
 
 function formatSummary(summary: ApplyPatchSummary): string {
+  const lines = ["Success. Updated the following files:"];
   for (const file of summary.added) {
+    lines.push(`A ${file}`);
   }
   for (const file of summary.modified) {
+    lines.push(`M ${file}`);
   }
   for (const file of summary.deleted) {
+    lines.push(`D ${file}`);
   }
+  return lines.join("\n");
 }
 
 type PatchFileOps = {
@@ -369,25 +379,37 @@ function parsePatchText(input: string): { hunks: Hunk[]; patch: string } {
     throw new Error("Invalid patch: input is empty.");
   }
 
+  const lines = trimmed.split(/\r?\n/);
+  const validated = checkPatchBoundariesLenient(lines);
   const hunks: Hunk[] = [];
 
   const lastLineIndex = validated.length - 1;
   let remaining = validated.slice(1, lastLineIndex);
+  let lineNumber = 2;
 
   while (remaining.length > 0) {
+    const { hunk, consumed } = parseOneHunk(remaining, lineNumber);
     hunks.push(hunk);
+    lineNumber += consumed;
     remaining = remaining.slice(consumed);
   }
 
   return { hunks, patch: validated.join("\n") };
 }
 
+function checkPatchBoundariesLenient(lines: string[]): string[] {
+  const strictError = checkPatchBoundariesStrict(lines);
   if (!strictError) {
+    return lines;
   }
 
+  if (lines.length < 4) {
     throw new Error(strictError);
   }
+  const first = lines[0];
+  const last = lines[lines.length - 1];
   if ((first === "<<EOF" || first === "<<'EOF'" || first === '<<"EOF"') && last.endsWith("EOF")) {
+    const inner = lines.slice(1, lines.length - 1);
     const innerError = checkPatchBoundariesStrict(inner);
     if (!innerError) {
       return inner;
@@ -398,19 +420,29 @@ function parsePatchText(input: string): { hunks: Hunk[]; patch: string } {
   throw new Error(strictError);
 }
 
+function checkPatchBoundariesStrict(lines: string[]): string | null {
+  const firstLine = lines[0]?.trim();
+  const lastLine = lines[lines.length - 1]?.trim();
 
   if (firstLine === BEGIN_PATCH_MARKER && lastLine === END_PATCH_MARKER) {
     return null;
   }
   if (firstLine !== BEGIN_PATCH_MARKER) {
+    return "The first line of the patch must be '*** Begin Patch'";
   }
+  return "The last line of the patch must be '*** End Patch'";
 }
 
+function parseOneHunk(lines: string[], lineNumber: number): { hunk: Hunk; consumed: number } {
+  if (lines.length === 0) {
+    throw new Error(`Invalid patch hunk at line ${lineNumber}: empty hunk`);
   }
+  const firstLine = lines[0].trim();
   if (firstLine.startsWith(ADD_FILE_MARKER)) {
     const targetPath = firstLine.slice(ADD_FILE_MARKER.length);
     let contents = "";
     let consumed = 1;
+    for (const addLine of lines.slice(1)) {
       if (addLine.startsWith("+")) {
         contents += `${addLine.slice(1)}\n`;
         consumed += 1;
@@ -434,6 +466,7 @@ function parsePatchText(input: string): { hunks: Hunk[]; patch: string } {
 
   if (firstLine.startsWith(UPDATE_FILE_MARKER)) {
     const targetPath = firstLine.slice(UPDATE_FILE_MARKER.length);
+    let remaining = lines.slice(1);
     let consumed = 1;
     let movePath: string | undefined;
 
@@ -456,6 +489,7 @@ function parsePatchText(input: string): { hunks: Hunk[]; patch: string } {
       }
       const { chunk, consumed: chunkLines } = parseUpdateFileChunk(
         remaining,
+        lineNumber + consumed,
         chunks.length === 0,
       );
       chunks.push(chunk);
@@ -465,6 +499,7 @@ function parsePatchText(input: string): { hunks: Hunk[]; patch: string } {
 
     if (chunks.length === 0) {
       throw new Error(
+        `Invalid patch hunk at line ${lineNumber}: Update file hunk for path '${targetPath}' is empty`,
       );
     }
 
@@ -480,26 +515,37 @@ function parsePatchText(input: string): { hunks: Hunk[]; patch: string } {
   }
 
   throw new Error(
+    `Invalid patch hunk at line ${lineNumber}: '${lines[0]}' is not a valid hunk header. Valid hunk headers: '*** Add File: {path}', '*** Delete File: {path}', '*** Update File: {path}'`,
   );
 }
 
 function parseUpdateFileChunk(
+  lines: string[],
+  lineNumber: number,
   allowMissingContext: boolean,
 ): { chunk: UpdateFileChunk; consumed: number } {
+  if (lines.length === 0) {
     throw new Error(
+      `Invalid patch hunk at line ${lineNumber}: Update hunk does not contain any lines`,
     );
   }
 
   let changeContext: string | undefined;
   let startIndex = 0;
+  if (lines[0] === EMPTY_CHANGE_CONTEXT_MARKER) {
     startIndex = 1;
+  } else if (lines[0].startsWith(CHANGE_CONTEXT_MARKER)) {
+    changeContext = lines[0].slice(CHANGE_CONTEXT_MARKER.length);
     startIndex = 1;
   } else if (!allowMissingContext) {
     throw new Error(
+      `Invalid patch hunk at line ${lineNumber}: Expected update hunk to start with a @@ context marker, got: '${lines[0]}'`,
     );
   }
 
+  if (startIndex >= lines.length) {
     throw new Error(
+      `Invalid patch hunk at line ${lineNumber + 1}: Update hunk does not contain any lines`,
     );
   }
 
@@ -511,8 +557,11 @@ function parseUpdateFileChunk(
   };
 
   let parsedLines = 0;
+  for (const line of lines.slice(startIndex)) {
+    if (line === EOF_MARKER) {
       if (parsedLines === 0) {
         throw new Error(
+          `Invalid patch hunk at line ${lineNumber + 1}: Update hunk does not contain any lines`,
         );
       }
       chunk.isEndOfFile = true;
@@ -520,6 +569,7 @@ function parseUpdateFileChunk(
       break;
     }
 
+    const marker = line[0];
     if (!marker) {
       chunk.oldLines.push("");
       chunk.newLines.push("");
@@ -528,22 +578,26 @@ function parseUpdateFileChunk(
     }
 
     if (marker === " ") {
+      const content = line.slice(1);
       chunk.oldLines.push(content);
       chunk.newLines.push(content);
       parsedLines += 1;
       continue;
     }
     if (marker === "+") {
+      chunk.newLines.push(line.slice(1));
       parsedLines += 1;
       continue;
     }
     if (marker === "-") {
+      chunk.oldLines.push(line.slice(1));
       parsedLines += 1;
       continue;
     }
 
     if (parsedLines === 0) {
       throw new Error(
+        `Invalid patch hunk at line ${lineNumber + 1}: Unexpected line found in update hunk: '${line}'. Every line should start with ' ' (context line), '+' (added line), or '-' (removed line)`,
       );
     }
     break;

@@ -77,6 +77,7 @@ const CONFIG_SET_EXAMPLE_VALUE = formatCliCommand(
   "chainbreaker config set gateway.port 19001 --strict-json",
 );
 const CONFIG_SET_EXAMPLE_REF = formatCliCommand(
+  "chainbreaker config set channels.discord.token --ref-provider default --ref-source env --ref-id DISCORD_BOT_TOKEN",
 );
 const CONFIG_SET_EXAMPLE_PROVIDER = formatCliCommand(
   "chainbreaker config set secrets.providers.vault --provider-source file --provider-path /etc/chainbreaker/secrets.json --provider-mode json",
@@ -183,11 +184,14 @@ function formatDoctorHint(message: string): string {
 }
 
 function formatUnsupportedSecretRefPolicyFailureMessage(issues: string[]): string {
+  const lines = [
     "Config policy validation failed: unsupported SecretRef usage was detected.",
     ...issues.slice(0, CONFIG_SET_POLICY_ERROR_MAX_ISSUES).map((issue) => `- ${issue}`),
   ];
   if (issues.length > CONFIG_SET_POLICY_ERROR_MAX_ISSUES) {
+    lines.push(`- ... ${issues.length - CONFIG_SET_POLICY_ERROR_MAX_ISSUES} more`);
   }
+  return lines.join("\n");
 }
 
 function validatePathSegments(path: PathSegment[]): void {
@@ -322,6 +326,8 @@ async function loadValidConfig(runtime: RuntimeEnv = defaultRuntime) {
     return snapshot;
   }
   runtime.error(`Config invalid at ${shortenHomePath(snapshot.path)}.`);
+  for (const line of formatConfigIssueLines(snapshot.issues, "-", { normalizeRoot: true })) {
+    runtime.error(line);
   }
   runtime.error(formatDoctorHint("to repair, then retry."));
   runtime.exit(1);
@@ -944,22 +950,30 @@ function formatDryRunFailureMessage(params: {
   const { errors, skippedExecRefs } = params;
   const schemaErrors = errors.filter((error) => error.kind === "schema");
   const resolveErrors = errors.filter((error) => error.kind === "resolvability");
+  const lines: string[] = [];
   if (schemaErrors.length > 0) {
+    lines.push("Dry run failed: config schema validation failed.");
+    lines.push(...schemaErrors.map((error) => `- ${error.message}`));
   }
   if (resolveErrors.length > 0) {
+    lines.push(
       `Dry run failed: ${resolveErrors.length} SecretRef assignment(s) could not be resolved.`,
     );
+    lines.push(
       ...resolveErrors
         .slice(0, 5)
         .map((error) => `- ${error.ref ?? "<unknown-ref>"} -> ${error.message}`),
     );
     if (resolveErrors.length > 5) {
+      lines.push(`- ... ${resolveErrors.length - 5} more`);
     }
   }
   if (skippedExecRefs > 0) {
+    lines.push(
       `Dry run note: skipped ${skippedExecRefs} exec SecretRef resolvability check(s). Re-run with --allow-exec to execute exec providers during dry-run.`,
     );
   }
+  return lines.join("\n");
 }
 
 export async function runConfigSet(opts: {
@@ -1012,6 +1026,7 @@ export async function runConfigSet(opts: {
     const nextConfig = next as ChainbreakerConfig;
     const policyIssues = collectUnsupportedSecretRefPolicyIssues(nextConfig);
     const policyIssueLines = formatConfigIssueLines(policyIssues, "", { normalizeRoot: true }).map(
+      (line) => line.trim(),
     );
 
     if (opts.cliOptions.dryRun) {
@@ -1264,6 +1279,8 @@ export async function runConfigValidate(opts: { json?: boolean; runtime?: Runtim
         writeRuntimeJson(runtime, { valid: false, path: outputPath, issues });
       } else {
         runtime.error(danger(`Config invalid at ${shortPath}:`));
+        for (const line of formatConfigIssueLines(issues, danger("×"), { normalizeRoot: true })) {
+          runtime.error(`  ${line}`);
         }
         runtime.error("");
         runtime.error(formatDoctorHint("to repair, or fix the keys above manually."));

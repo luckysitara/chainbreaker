@@ -16,6 +16,7 @@ describe("live model error helpers", () => {
     expect(isModelNotFoundErrorMessage("request ended without sending any chunks")).toBe(false);
   });
 
+  it("detects bare minimax 404 page-not-found responses", () => {
     expect(isMiniMaxModelNotFoundErrorMessage("404 page not found")).toBe(true);
     expect(isMiniMaxModelNotFoundErrorMessage("Error: 404 404 page not found")).toBe(true);
     expect(isMiniMaxModelNotFoundErrorMessage("request ended without sending any chunks")).toBe(

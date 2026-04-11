@@ -195,6 +195,8 @@ describe("subagent registry lifecycle error grace", () => {
         "agent:main:main": {
           sessionId: "sess-main",
           updatedAt: 1,
+          channel: "discord",
+          lastChannel: "discord",
           to: "user-1",
           accountId: "default",
         },

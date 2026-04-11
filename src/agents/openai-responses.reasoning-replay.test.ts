@@ -97,6 +97,7 @@ async function runAbortedOpenAIResponsesStream(params: {
     },
     {
       apiKey: "test",
+      signal: controller.signal,
       onPayload: (nextPayload) => {
         payload = nextPayload as Record<string, unknown>;
       },

@@ -398,6 +398,7 @@ describe("dispatchCronDelivery — double-announce guard", () => {
     const params = makeBaseParams({ synthesizedText: "Briefing ready." });
     const state = await dispatchCronDelivery(params);
 
+    // Delivery was attempted; direct fallback picked up the slack
     expect(state.deliveryAttempted).toBe(true);
     expect(state.delivered).toBe(true);
 

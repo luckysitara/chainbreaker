@@ -97,9 +97,7 @@ export function resolveNormalizedProviderModelMaxTokens(params: {
   return Math.min(safeMaxTokens, params.contextWindow);
 }
 
-function resolveAnthropicDefaultAuthMode(
-  cfg: ChainbreakerConfig,
-): AnthropicAuthDefaultsMode | null {
+function resolveAnthropicDefaultAuthMode(cfg: ChainbreakerConfig): AnthropicAuthDefaultsMode | null {
   const profiles = cfg.auth?.profiles ?? {};
   const anthropicProfiles = Object.entries(profiles).filter(
     ([, profile]) => profile?.provider === "anthropic",

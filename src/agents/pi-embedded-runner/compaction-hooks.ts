@@ -8,9 +8,7 @@ import { resolveSessionAgentId } from "../agent-scope.js";
 import { resolveMemorySearchConfig } from "../memory-search.js";
 import { log } from "./logger.js";
 
-function resolvePostCompactionIndexSyncMode(
-  config?: ChainbreakerConfig,
-): "off" | "async" | "await" {
+function resolvePostCompactionIndexSyncMode(config?: ChainbreakerConfig): "off" | "async" | "await" {
   const mode = config?.agents?.defaults?.compaction?.postIndexSync;
   if (mode === "off" || mode === "async" || mode === "await") {
     return mode;
@@ -236,8 +234,11 @@ export function estimateTokensAfterCompaction(params: {
   if (tokensAfter === undefined) {
     return undefined;
   }
+  const sanityCheckBaseline = params.observedTokenCount ?? params.fullSessionTokensBefore;
   if (
+    sanityCheckBaseline > 0 &&
     tokensAfter >
+      (params.observedTokenCount !== undefined ? sanityCheckBaseline : sanityCheckBaseline * 1.1)
   ) {
     return undefined;
   }

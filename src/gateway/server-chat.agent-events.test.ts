@@ -127,6 +127,7 @@ describe("agent event handler", () => {
   const FALLBACK_LIFECYCLE_DATA = {
     phase: "fallback",
     selectedProvider: "fireworks",
+    selectedModel: "fireworks/minimax-m2p5",
     activeProvider: "deepinfra",
     activeModel: "moonshotai/Kimi-K2.5",
   } as const;
@@ -200,6 +201,7 @@ describe("agent event handler", () => {
     nowSpy?.mockRestore();
   });
 
+  it("strips inline directives from assistant chat events", () => {
     const { broadcast, nodeSendToSession, nowSpy } = emitRun1AssistantText(
       createHarness({ now: 1_000 }),
       "Hello [[reply_to_current]] world [[audio_as_voice]]",
@@ -1087,6 +1089,7 @@ describe("agent event handler", () => {
       seq: 1,
       stream: "assistant",
       ts: Date.now(),
+      data: { text: "Reply from imessage" },
     });
     emitLifecycleEnd(handler, "run-hidden", 2);
 

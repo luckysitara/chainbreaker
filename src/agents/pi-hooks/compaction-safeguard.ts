@@ -190,11 +190,14 @@ function formatToolFailuresSection(failures: ToolFailure[]): string {
   if (failures.length === 0) {
     return "";
   }
+  const lines = failures.slice(0, MAX_TOOL_FAILURES).map((failure) => {
     const meta = failure.meta ? ` (${failure.meta})` : "";
     return `- ${failure.toolName}${meta}: ${failure.summary}`;
   });
   if (failures.length > MAX_TOOL_FAILURES) {
+    lines.push(`- ...and ${failures.length - MAX_TOOL_FAILURES} more`);
   }
+  return `\n\n## Tool Failures\n${lines.join("\n")}`;
 }
 
 function computeFileLists(fileOps: FileOperations): {
@@ -214,19 +217,26 @@ function formatFileOperations(readFiles: string[], modifiedFiles: string[]): str
     }
     const openTag = `<${tag}>\n`;
     const closeTag = `\n</${tag}>`;
+    const lines: string[] = [];
     let usedChars = openTag.length + closeTag.length;
 
     for (let i = 0; i < files.length; i++) {
+      const line = `${files[i]}\n`;
       const remaining = files.length - i - 1;
       const overflowLine = remaining > 0 ? `...and ${remaining} more\n` : "";
+      const projected = usedChars + line.length + overflowLine.length;
       if (projected > maxChars) {
         const overflow = `...and ${files.length - i} more\n`;
         if (usedChars + overflow.length <= maxChars) {
+          lines.push(overflow);
         }
         break;
       }
+      lines.push(line);
+      usedChars += line.length;
     }
 
+    return lines.length > 0 ? `${openTag}${lines.join("")}${closeTag}` : "";
   }
 
   const sections: string[] = [];
@@ -446,6 +456,7 @@ function formatPreservedTurnsSection(messages: AgentMessage[]): string {
   if (messages.length === 0) {
     return "";
   }
+  const lines = messages
     .map((message) => {
       let roleLabel: string;
       if (message.role === "assistant") {
@@ -474,8 +485,11 @@ function formatPreservedTurnsSection(messages: AgentMessage[]): string {
           : rendered;
       return `- ${roleLabel}: ${trimmed}`;
     })
+    .filter((line): line is string => Boolean(line));
+  if (lines.length === 0) {
     return "";
   }
+  return `\n\n## Recent turns preserved verbatim\n${lines.join("\n")}`;
 }
 
 function extractLatestUserAsk(messages: AgentMessage[]): string | null {
@@ -545,6 +559,7 @@ async function readWorkspaceContextForSummary(): Promise<string> {
 
 export default function compactionSafeguardExtension(api: ExtensionAPI): void {
   api.on("session_before_compact", async (event, ctx) => {
+    const { preparation, customInstructions: eventInstructions, signal } = event;
     const hasRealSummarizable = preparation.messagesToSummarize.some((message, index, messages) =>
       isRealConversationMessage(message, messages, index),
     );
@@ -720,6 +735,7 @@ export default function compactionSafeguardExtension(api: ExtensionAPI): void {
                   model,
                   apiKey: apiKey ?? "",
                   headers,
+                  signal,
                   reserveTokens: Math.max(1, Math.floor(preparation.settings.reserveTokens)),
                   maxChunkTokens: droppedMaxChunkTokens,
                   contextWindow: contextWindowTokens,
@@ -791,6 +807,7 @@ export default function compactionSafeguardExtension(api: ExtensionAPI): void {
                   model,
                   apiKey: apiKey ?? "",
                   headers,
+                  signal,
                   reserveTokens,
                   maxChunkTokens,
                   contextWindow: contextWindowTokens,
@@ -807,6 +824,7 @@ export default function compactionSafeguardExtension(api: ExtensionAPI): void {
               model,
               apiKey: apiKey ?? "",
               headers,
+              signal,
               reserveTokens,
               maxChunkTokens,
               contextWindow: contextWindowTokens,
@@ -892,6 +910,7 @@ export default function compactionSafeguardExtension(api: ExtensionAPI): void {
       const workspaceContext = await readWorkspaceContextForSummary();
       const fullReservedSuffix = appendSummarySection(reservedSuffix, workspaceContext);
       // Ensure leading separator so suffix does not merge with body (e.g. when body
+      // ends without newline from buildStructuredFallbackSummary: "...## Exact identifiers## Tool Failures").
       const normalizedSuffix =
         fullReservedSuffix && !/^\s/.test(fullReservedSuffix)
           ? `\n\n${fullReservedSuffix}`

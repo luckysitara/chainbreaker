@@ -19,6 +19,7 @@ import {
   resolveTelegramPollActionGateState,
 } from "./accounts.js";
 import { handleTelegramAction } from "./action-runtime.js";
+import { isTelegramInlineButtonsEnabled } from "./inline-buttons.js";
 import { createTelegramPollExtraToolSchemas } from "./message-tool-schema.js";
 
 export const telegramMessageActionRuntime = {
@@ -60,6 +61,7 @@ function resolveTelegramActionDiscovery(cfg: Parameters<typeof listEnabledTelegr
     return resolveTelegramPollActionGateState(accountGate).enabled;
   });
   const buttonsEnabled = accounts.some((account) =>
+    isTelegramInlineButtonsEnabled({ cfg, accountId: account.accountId }),
   );
   return {
     isEnabled: (key: keyof TelegramActionConfig, defaultValue = true) =>

@@ -24,6 +24,7 @@ export function buildAuthUrl(challenge: string, verifier: string): string {
     code_challenge: challenge,
     code_challenge_method: "S256",
     state: verifier,
+    access_type: "offline",
     prompt: "consent",
   });
   return `${AUTH_URL}?${params.toString()}`;

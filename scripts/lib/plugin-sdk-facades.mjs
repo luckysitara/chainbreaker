@@ -566,7 +566,7 @@ export const GENERATED_PLUGIN_SDK_FACADES = [
       "WebListenerCloseReason",
       "WebMonitorTuning",
     ],
-  },
+  }
 ];
 
 export const GENERATED_PLUGIN_SDK_FACADES_BY_SUBPATH = Object.fromEntries(

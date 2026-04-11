@@ -85,6 +85,7 @@ describe("queue summary helpers", () => {
     const state = {
       dropPolicy: "summarize" as const,
       droppedCount: 1,
+      summaryLines: ["line"],
     };
 
     const prompt = buildQueueSummaryPrompt({

@@ -35,13 +35,17 @@ function mapTarVerboseTypeChar(typeChar: string): string {
   }
 }
 
+function parseTarVerboseSize(line: string): number {
+  const tokens = line.trim().split(/\s+/).filter(Boolean);
   if (tokens.length < 6) {
+    throw new Error(`unable to parse tar verbose metadata: ${line}`);
   }
 
   let dateIndex = tokens.findIndex((token) => TAR_VERBOSE_MONTHS.has(token));
   if (dateIndex > 0) {
     const size = Number.parseInt(tokens[dateIndex - 1] ?? "", 10);
     if (!Number.isFinite(size) || size < 0) {
+      throw new Error(`unable to parse tar entry size: ${line}`);
     }
     return size;
   }
@@ -50,20 +54,27 @@ function mapTarVerboseTypeChar(typeChar: string): string {
   if (dateIndex > 0) {
     const size = Number.parseInt(tokens[dateIndex - 1] ?? "", 10);
     if (!Number.isFinite(size) || size < 0) {
+      throw new Error(`unable to parse tar entry size: ${line}`);
     }
     return size;
   }
 
+  throw new Error(`unable to parse tar verbose metadata: ${line}`);
 }
 
 export function parseTarVerboseMetadata(stdout: string): Array<{ type: string; size: number }> {
+  const lines = stdout
     .split("\n")
+    .map((line) => line.trim())
     .filter(Boolean);
+  return lines.map((line) => {
+    const typeChar = line[0] ?? "";
     if (!typeChar) {
       throw new Error("unable to parse tar entry type");
     }
     return {
       type: mapTarVerboseTypeChar(typeChar),
+      size: parseTarVerboseSize(line),
     };
   });
 }

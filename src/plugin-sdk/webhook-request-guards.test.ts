@@ -5,6 +5,7 @@ import { createMockServerResponse } from "../test-utils/mock-http-response.js";
 import { createFixedWindowRateLimiter } from "./webhook-memory-guards.js";
 import {
   applyBasicWebhookRequestGuards,
+  beginWebhookRequestPipelineOrReject,
   createWebhookInFlightLimiter,
   isJsonContentType,
   readWebhookBodyOrReject,
@@ -212,12 +213,14 @@ describe("readWebhookBodyOrReject", () => {
   });
 });
 
+describe("beginWebhookRequestPipelineOrReject", () => {
   it("enforces in-flight request limits and releases slots", () => {
     const limiter = createWebhookInFlightLimiter({
       maxInFlightPerKey: 1,
       maxTrackedKeys: 10,
     });
 
+    const first = beginWebhookRequestPipelineOrReject({
       req: createMockRequest({ method: "POST" }),
       res: createMockServerResponse(),
       allowMethods: ["POST"],
@@ -227,6 +230,7 @@ describe("readWebhookBodyOrReject", () => {
     expect(first.ok).toBe(true);
 
     const secondRes = createMockServerResponse();
+    const second = beginWebhookRequestPipelineOrReject({
       req: createMockRequest({ method: "POST" }),
       res: secondRes,
       allowMethods: ["POST"],
@@ -240,6 +244,7 @@ describe("readWebhookBodyOrReject", () => {
       first.release();
     }
 
+    const third = beginWebhookRequestPipelineOrReject({
       req: createMockRequest({ method: "POST" }),
       res: createMockServerResponse(),
       allowMethods: ["POST"],

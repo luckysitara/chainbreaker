@@ -8,9 +8,14 @@ const IGNORED_CHANNEL_CONFIG_KEYS = new Set(["defaults", "modelByChannel"]);
 
 const CHANNEL_ENV_PREFIXES = [
   ["BLUEBUBBLES_", "bluebubbles"],
+  ["DISCORD_", "discord"],
   ["GOOGLECHAT_", "googlechat"],
   ["IRC_", "irc"],
+  ["LINE_", "line"],
+  ["MATRIX_", "matrix"],
   ["MSTEAMS_", "msteams"],
+  ["SIGNAL_", "signal"],
+  ["SLACK_", "slack"],
   ["TELEGRAM_", "telegram"],
   ["WHATSAPP_", "whatsapp"],
   ["ZALOUSER_", "zalouser"],

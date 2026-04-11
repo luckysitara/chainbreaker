@@ -282,6 +282,8 @@ export async function statusCommand(
     const { buildGatewayConnectionDetails } = await loadGatewayCallModule();
     const details = buildGatewayConnectionDetails({ config: scan.cfg });
     runtime.log(info("Gateway connection:"));
+    for (const line of details.message.split("\n")) {
+      runtime.log(`  ${line}`);
     }
     runtime.log("");
   }
@@ -544,9 +546,7 @@ export async function statusCommand(
   if (summary.taskAudit.errors > 0) {
     runtime.log("");
     runtime.log(
-      theme.muted(
-        `Task maintenance: ${formatCliCommand("chainbreaker tasks maintenance --apply")}`,
-      ),
+      theme.muted(`Task maintenance: ${formatCliCommand("chainbreaker tasks maintenance --apply")}`),
     );
   }
 
@@ -572,9 +572,7 @@ export async function statusCommand(
         ),
       );
     }
-    runtime.log(
-      theme.muted(`Fallback: ${formatCliCommand("chainbreaker devices approve --latest")}`),
-    );
+    runtime.log(theme.muted(`Fallback: ${formatCliCommand("chainbreaker devices approve --latest")}`));
     runtime.log(theme.muted(`Inspect: ${formatCliCommand("chainbreaker devices list")}`));
   }
 
@@ -720,9 +718,13 @@ export async function statusCommand(
       Detail: `${health.durationMs}ms`,
     });
 
+    for (const line of formatHealthChannelLines(health, { accountMode: "all" })) {
+      const colon = line.indexOf(":");
       if (colon === -1) {
         continue;
       }
+      const item = line.slice(0, colon).trim();
+      const detail = line.slice(colon + 1).trim();
       const normalized = detail.toLowerCase();
       const status = (() => {
         if (normalized.startsWith("ok")) {
@@ -765,6 +767,8 @@ export async function statusCommand(
     const { formatUsageReportLines } = await loadProviderUsage();
     runtime.log("");
     runtime.log(theme.heading("Usage"));
+    for (const line of formatUsageReportLines(usage)) {
+      runtime.log(line);
     }
   }
 

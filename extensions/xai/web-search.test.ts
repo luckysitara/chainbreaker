@@ -11,6 +11,7 @@ import { __testing, createXaiWebSearchProvider } from "./web-search.js";
 
 const {
   extractXaiWebSearchContent,
+  resolveXaiInlineCitations,
   resolveXaiToolSearchConfig,
   resolveXaiWebSearchCredential,
   resolveXaiWebSearchModel,
@@ -20,6 +21,7 @@ describe("xai web search config resolution", () => {
   it("prefers configured api keys and resolves grok scoped defaults", () => {
     expect(resolveXaiWebSearchCredential({ grok: { apiKey: "xai-secret" } })).toBe("xai-secret");
     expect(resolveXaiWebSearchModel()).toBe("grok-4-1-fast");
+    expect(resolveXaiInlineCitations()).toBe(false);
   });
 
   it("uses config apiKey when provided", () => {
@@ -60,6 +62,7 @@ describe("xai web search config resolution", () => {
               config: {
                 webSearch: {
                   apiKey: "plugin-key",
+                  inlineCitations: true,
                   model: "grok-4-fast-reasoning",
                 },
               },
@@ -71,6 +74,7 @@ describe("xai web search config resolution", () => {
     });
 
     expect(resolveXaiWebSearchCredential(searchConfig)).toBe("plugin-key");
+    expect(resolveXaiInlineCitations(searchConfig)).toBe(true);
     expect(resolveXaiWebSearchModel(searchConfig)).toBe("grok-4-fast");
   });
 
@@ -281,10 +285,17 @@ describe("xai web search config resolution", () => {
     ).toBe("grok-4.20-beta-latest-non-reasoning");
   });
 
+  it("defaults inlineCitations to false", () => {
+    expect(resolveXaiInlineCitations({})).toBe(false);
+    expect(resolveXaiInlineCitations(undefined)).toBe(false);
   });
 
+  it("respects inlineCitations config", () => {
+    expect(resolveXaiInlineCitations({ grok: { inlineCitations: true } })).toBe(true);
+    expect(resolveXaiInlineCitations({ grok: { inlineCitations: false } })).toBe(false);
   });
 
+  it("builds wrapped payloads with optional inline citations", () => {
     expect(
       __testing.buildXaiWebSearchPayload({
         query: "q",

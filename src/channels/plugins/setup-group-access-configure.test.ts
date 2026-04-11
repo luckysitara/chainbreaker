@@ -23,6 +23,7 @@ async function runConfigureChannelAccess<TResolved>(params: {
 }) {
   return await configureChannelAccessWithAllowlist({
     cfg: params.cfg,
+    // oxlint-disable-next-line typescript/no-explicit-any
     prompter: params.prompter as any,
     label: params.label ?? "Slack channels",
     currentPolicy: "allowlist",
@@ -66,6 +67,7 @@ describe("configureChannelAccessWithAllowlist", () => {
     const setPolicy = vi.fn(
       (next: ChainbreakerConfig, policy: ChannelAccessPolicy): ChainbreakerConfig => ({
         ...next,
+        channels: { discord: { groupPolicy: policy } },
       }),
     );
     const resolveAllowlist = vi.fn(async () => ["ignored"]);
@@ -81,6 +83,7 @@ describe("configureChannelAccessWithAllowlist", () => {
       applyAllowlist,
     });
 
+    expect(next.channels?.discord?.groupPolicy).toBe("open");
     expect(setPolicy).toHaveBeenCalledWith(cfg, "open");
     expect(resolveAllowlist).not.toHaveBeenCalled();
     expect(applyAllowlist).not.toHaveBeenCalled();
@@ -103,6 +106,7 @@ describe("configureChannelAccessWithAllowlist", () => {
 
     const next = await configureChannelAccessWithAllowlist({
       cfg,
+      // oxlint-disable-next-line typescript/no-explicit-any
       prompter: prompter as any,
       label: "Twitch chat",
       currentPolicy: "disabled",
@@ -128,28 +132,28 @@ describe("configureChannelAccessWithAllowlist", () => {
       text: "#general, #support",
     });
     const calls: string[] = [];
-    const setPolicy = vi.fn(
-      (next: ChainbreakerConfig, policy: ChannelAccessPolicy): ChainbreakerConfig => {
-        calls.push("setPolicy");
-        return {
-          ...next,
-        };
-      },
-    );
-    const resolveAllowlist = vi.fn(
-      async (params: { cfg: ChainbreakerConfig; entries: string[] }) => {
-        calls.push("resolve");
-        expect(params.cfg).toBe(cfg);
-        expect(params.entries).toEqual(["#general", "#support"]);
-        return ["C1", "C2"];
-      },
-    );
+    const setPolicy = vi.fn((next: ChainbreakerConfig, policy: ChannelAccessPolicy): ChainbreakerConfig => {
+      calls.push("setPolicy");
+      return {
+        ...next,
+        channels: { slack: { groupPolicy: policy } },
+      };
+    });
+    const resolveAllowlist = vi.fn(async (params: { cfg: ChainbreakerConfig; entries: string[] }) => {
+      calls.push("resolve");
+      expect(params.cfg).toBe(cfg);
+      expect(params.entries).toEqual(["#general", "#support"]);
+      return ["C1", "C2"];
+    });
     const applyAllowlist = vi.fn((params: { cfg: ChainbreakerConfig; resolved: string[] }) => {
       calls.push("apply");
+      expect(params.cfg.channels?.slack?.groupPolicy).toBe("allowlist");
       return {
         ...params.cfg,
         channels: {
           ...params.cfg.channels,
+          slack: {
+            ...params.cfg.channels?.slack,
             channels: Object.fromEntries(params.resolved.map((id) => [id, { allow: true }])),
           },
         },
@@ -165,6 +169,7 @@ describe("configureChannelAccessWithAllowlist", () => {
     });
 
     expect(calls).toEqual(["resolve", "setPolicy", "apply"]);
+    expect(next.channels?.slack?.channels).toEqual({
       C1: { allow: true },
       C2: { allow: true },
     });

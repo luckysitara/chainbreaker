@@ -98,6 +98,7 @@ const UPDATE_QUIPS = [
   "New version installed. Old version sends its regards.",
   "Firmware fresh. Brain wrinkles: increased.",
   "I've seen things you wouldn't believe. Anyway, I'm updated.",
+  "Back online. The changelog is long but our friendship is longer.",
   "Upgraded! Peter fixed stuff. Blame him if it breaks.",
   "Molting complete. Please don't look at my soft shell phase.",
   "Version bump! Same chaos energy, fewer crashes (probably).",
@@ -698,6 +699,8 @@ async function maybeRestartService(params: {
           defaultRuntime.log(theme.success("Daemon restart completed."));
         } else {
           defaultRuntime.log(theme.warn("Gateway did not become healthy after restart."));
+          for (const line of renderRestartDiagnostics(health)) {
+            defaultRuntime.log(theme.muted(line));
           }
           defaultRuntime.log(
             theme.muted(

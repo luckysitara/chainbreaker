@@ -14,6 +14,7 @@ import {
 } from "../../plugins/provider-runtime.js";
 import { resolveChainbreakerAgentDir } from "../agent-paths.js";
 import { DEFAULT_CONTEXT_TOKENS } from "../defaults.js";
+import { buildModelAliasLines } from "../model-alias-lines.js";
 import { isSecretRefHeaderValueMarker } from "../model-auth-markers.js";
 import { findNormalizedProviderValue, normalizeProviderId } from "../model-selection.js";
 import {
@@ -23,11 +24,13 @@ import {
 import { discoverAuthStorage, discoverModels } from "../pi-model-discovery.js";
 import { normalizeResolvedProviderModel } from "./model.provider-normalization.js";
 
+type InlineModelEntry = Omit<ModelDefinitionConfig, "api"> & {
   api?: Api;
   provider: string;
   baseUrl?: string;
   headers?: Record<string, string>;
 };
+type InlineProviderConfig = {
   baseUrl?: string;
   api?: ModelDefinitionConfig["api"];
   models?: ModelDefinitionConfig[];
@@ -89,12 +92,14 @@ function resolveRuntimeHooks(params?: {
 function normalizeResolvedTransportApi(api: unknown): ModelDefinitionConfig["api"] | undefined {
   switch (api) {
     case "anthropic-messages":
+    case "bedrock-converse-stream":
     case "github-copilot":
     case "google-generative-ai":
     case "ollama":
     case "openai-codex-responses":
     case "openai-completions":
     case "openai-responses":
+    case "azure-openai-responses":
       return api;
     default:
       return undefined;
@@ -241,15 +246,20 @@ function resolveProviderTransport(params: {
   };
 }
 
+function findInlineModelMatch(params: {
+  providers: Record<string, InlineProviderConfig>;
   provider: string;
   modelId: string;
 }) {
+  const inlineModels = buildInlineProviderModels(params.providers);
+  const exact = inlineModels.find(
     (entry) => entry.provider === params.provider && entry.id === params.modelId,
   );
   if (exact) {
     return exact;
   }
   const normalizedProvider = normalizeProviderId(params.provider);
+  return inlineModels.find(
     (entry) =>
       normalizeProviderId(entry.provider) === normalizedProvider && entry.id === params.modelId,
   );
@@ -260,6 +270,7 @@ export { buildModelAliasLines };
 function resolveConfiguredProviderConfig(
   cfg: ChainbreakerConfig | undefined,
   provider: string,
+): InlineProviderConfig | undefined {
   const configuredProviders = cfg?.models?.providers;
   if (!configuredProviders) {
     return undefined;
@@ -274,6 +285,7 @@ function resolveConfiguredProviderConfig(
 function applyConfiguredProviderOverrides(params: {
   provider: string;
   discoveredModel: Model<Api>;
+  providerConfig?: InlineProviderConfig;
   modelId: string;
   cfg?: ChainbreakerConfig;
   runtimeHooks?: ProviderRuntimeHooks;
@@ -339,6 +351,9 @@ function applyConfiguredProviderOverrides(params: {
   };
 }
 
+export function buildInlineProviderModels(
+  providers: Record<string, InlineProviderConfig>,
+): InlineModelEntry[] {
   return Object.entries(providers).flatMap(([providerId, entry]) => {
     const trimmed = providerId.trim();
     if (!trimmed) {
@@ -359,6 +374,7 @@ function applyConfiguredProviderOverrides(params: {
         baseUrl: transport.baseUrl,
         api: transport.api ?? model.api,
         headers: (() => {
+          const modelHeaders = sanitizeModelHeaders((model as InlineModelEntry).headers, {
             stripSecretRefMarkers: true,
           });
           if (!providerHeaders && !modelHeaders) {
@@ -387,16 +403,19 @@ function resolveExplicitModelWithRegistry(params: {
     return { kind: "suppressed" };
   }
   const providerConfig = resolveConfiguredProviderConfig(cfg, provider);
+  const inlineMatch = findInlineModelMatch({
     providers: cfg?.models?.providers ?? {},
     provider,
     modelId,
   });
+  if (inlineMatch?.api) {
     return {
       kind: "resolved",
       model: normalizeResolvedModel({
         provider,
         cfg,
         agentDir,
+        model: inlineMatch as Model<Api>,
         runtimeHooks,
       }),
     };
@@ -424,16 +443,19 @@ function resolveExplicitModelWithRegistry(params: {
   }
 
   const providers = cfg?.models?.providers ?? {};
+  const fallbackInlineMatch = findInlineModelMatch({
     providers,
     provider,
     modelId,
   });
+  if (fallbackInlineMatch?.api) {
     return {
       kind: "resolved",
       model: normalizeResolvedModel({
         provider,
         cfg,
         agentDir,
+        model: fallbackInlineMatch as Model<Api>,
         runtimeHooks,
       }),
     };

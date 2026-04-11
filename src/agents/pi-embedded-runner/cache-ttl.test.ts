@@ -7,9 +7,11 @@ vi.mock("../../plugins/provider-runtime.js", () => ({
     if (params.context.provider === "anthropic") {
       return true;
     }
+    if (params.context.provider === "moonshot" || params.context.provider === "zai") {
       return true;
     }
     if (params.context.provider === "openrouter") {
+      return ["anthropic/", "moonshot/", "moonshotai/", "zai/"].some((prefix) =>
         params.context.modelId.startsWith(prefix),
       );
     }
@@ -24,7 +26,9 @@ describe("isCacheTtlEligibleProvider", () => {
     expect(isCacheTtlEligibleProvider("anthropic", "claude-sonnet-4-20250514")).toBe(true);
   });
 
+  it("allows moonshot and zai providers", () => {
     expect(isCacheTtlEligibleProvider("moonshot", "kimi-k2.5")).toBe(true);
+    expect(isCacheTtlEligibleProvider("zai", "glm-5")).toBe(true);
   });
 
   it("is case-insensitive for native providers", () => {
@@ -36,6 +40,7 @@ describe("isCacheTtlEligibleProvider", () => {
     expect(isCacheTtlEligibleProvider("openrouter", "anthropic/claude-sonnet-4")).toBe(true);
     expect(isCacheTtlEligibleProvider("openrouter", "moonshotai/kimi-k2.5")).toBe(true);
     expect(isCacheTtlEligibleProvider("openrouter", "moonshot/kimi-k2.5")).toBe(true);
+    expect(isCacheTtlEligibleProvider("openrouter", "zai/glm-5")).toBe(true);
   });
 
   it("rejects unsupported providers and models", () => {

@@ -209,17 +209,23 @@ export class SearchableSelectList implements Component {
   }
 
   render(width: number): string[] {
+    const lines: string[] = [];
 
+    // Search input line
     const promptText = "search: ";
     const prompt = this.theme.searchPrompt(promptText);
     const inputWidth = Math.max(1, width - visibleWidth(prompt));
     const inputLines = this.searchInput.render(inputWidth);
     const inputText = inputLines[0] ?? "";
+    lines.push(`${prompt}${this.theme.searchInput(inputText)}`);
+    lines.push(""); // Spacer
 
     const query = this.searchInput.getValue().trim();
 
     // If no items match filter, show message
     if (this.filteredItems.length === 0) {
+      lines.push(this.theme.noMatch("  No matches"));
+      return lines;
     }
 
     // Calculate visible range with scrolling
@@ -239,13 +245,16 @@ export class SearchableSelectList implements Component {
         continue;
       }
       const isSelected = i === this.selectedIndex;
+      lines.push(this.renderItemLine(item, isSelected, width, query));
     }
 
     // Show scroll indicator if needed
     if (this.filteredItems.length > this.maxVisible) {
       const scrollInfo = `${this.selectedIndex + 1}/${this.filteredItems.length}`;
+      lines.push(this.theme.scrollInfo(`  ${scrollInfo}`));
     }
 
+    return lines;
   }
 
   private renderItemLine(
@@ -275,6 +284,8 @@ export class SearchableSelectList implements Component {
           // Highlight plain text first, then apply theme styling to avoid corrupting ANSI codes
           const highlightedDesc = this.highlightMatch(truncatedDesc, query);
           const descText = isSelected ? highlightedDesc : this.theme.description(highlightedDesc);
+          const line = `${prefix}${valueText}${spacing}${descText}`;
+          return isSelected ? this.theme.selectedText(line) : line;
         }
       }
     }
@@ -282,6 +293,8 @@ export class SearchableSelectList implements Component {
     const maxWidth = width - prefixWidth - 2;
     const truncatedValue = truncateToWidth(displayValue, maxWidth, "");
     const valueText = this.highlightMatch(truncatedValue, query);
+    const line = `${prefix}${valueText}`;
+    return isSelected ? this.theme.selectedText(line) : line;
   }
 
   private getDescriptionLayout(

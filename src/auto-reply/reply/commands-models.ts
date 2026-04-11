@@ -268,6 +268,7 @@ export async function resolveModelsCommandReply(params: {
     }
 
     // Text fallback for non-Telegram surfaces
+    const lines: string[] = [
       "Providers:",
       ...providers.map((p) =>
         formatProviderLine({ provider: p, count: byProvider.get(p)?.size ?? 0 }),
@@ -276,9 +277,11 @@ export async function resolveModelsCommandReply(params: {
       "Use: /models <provider>",
       "Switch: /model <provider/model>",
     ];
+    return { text: lines.join("\n") };
   }
 
   if (!byProvider.has(provider)) {
+    const lines: string[] = [
       `Unknown provider: ${provider}`,
       "",
       "Available providers:",
@@ -286,6 +289,7 @@ export async function resolveModelsCommandReply(params: {
       "",
       "Use: /models <provider>",
     ];
+    return { text: lines.join("\n") };
   }
 
   const models = [...(byProvider.get(provider) ?? new Set<string>())].toSorted();
@@ -298,13 +302,16 @@ export async function resolveModelsCommandReply(params: {
   });
 
   if (total === 0) {
+    const lines: string[] = [
       `Models (${providerLabel}) — none`,
       "",
       "Browse: /models",
       "Switch: /model <provider/model>",
     ];
+    return { text: lines.join("\n") };
   }
 
+  // For Telegram: use button-based model list with inline keyboard pagination
   if (isTelegram) {
     const telegramPageSize = getModelsPageSize();
     const totalPages = calculateTotalPages(total, telegramPageSize);
@@ -339,11 +346,13 @@ export async function resolveModelsCommandReply(params: {
   const safePage = all ? 1 : Math.max(1, Math.min(page, pageCount));
 
   if (!all && page !== safePage) {
+    const lines: string[] = [
       `Page out of range: ${page} (valid: 1-${pageCount})`,
       "",
       `Try: /models ${provider} ${safePage}`,
       `All: /models ${provider} all`,
     ];
+    return { text: lines.join("\n") };
   }
 
   const startIndex = (safePage - 1) * effectivePageSize;
@@ -352,14 +361,20 @@ export async function resolveModelsCommandReply(params: {
 
   const header = `Models (${providerLabel}) — showing ${startIndex + 1}-${endIndexExclusive} of ${total} (page ${safePage}/${pageCount})`;
 
+  const lines: string[] = [header];
   for (const id of pageModels) {
+    lines.push(`- ${provider}/${id}`);
   }
 
+  lines.push("", "Switch: /model <provider/model>");
   if (!all && safePage < pageCount) {
+    lines.push(`More: /models ${provider} ${safePage + 1}`);
   }
   if (!all) {
+    lines.push(`All: /models ${provider} all`);
   }
 
+  const payload: ReplyPayload = { text: lines.join("\n") };
   return payload;
 }
 

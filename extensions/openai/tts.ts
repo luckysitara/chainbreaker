@@ -144,6 +144,7 @@ export async function openaiTTS(params: {
         ...(speed != null && { speed }),
         ...(effectiveInstructions != null && { instructions: effectiveInstructions }),
       }),
+      signal: controller.signal,
     });
 
     if (!response.ok) {

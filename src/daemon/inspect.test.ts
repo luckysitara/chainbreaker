@@ -16,6 +16,8 @@ vi.mock("./schtasks-exec.js", () => ({
 const GATEWAY_SERVICE_CONTENTS = `\
 [Unit]
 Description=Chainbreaker Gateway (v2026.3.8)
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 ExecStart=/usr/bin/node /home/chainbreaker/.npm-global/lib/node_modules/chainbreaker/dist/entry.js gateway --port 18789
@@ -52,6 +54,7 @@ Environment=HOME=/home/clawdbot
 `;
 
 describe("detectMarkerLineWithGateway", () => {
+  it("returns null for chainbreaker-test.service (chainbreaker only in description, no gateway on same line)", () => {
     expect(detectMarkerLineWithGateway(TEST_SERVICE_CONTENTS)).toBeNull();
   });
 
@@ -63,6 +66,7 @@ describe("detectMarkerLineWithGateway", () => {
     expect(detectMarkerLineWithGateway(CLAWDBOT_GATEWAY_CONTENTS)).toBe("clawdbot");
   });
 
+  it("handles line continuations — marker and gateway split across physical lines", () => {
     const contents = `[Service]\nExecStart=/usr/bin/node /opt/chainbreaker/dist/entry.js \\\n  gateway --port 18789\n`;
     expect(detectMarkerLineWithGateway(contents)).toBe("chainbreaker");
   });
@@ -74,24 +78,18 @@ describe("findExtraGatewayServices (linux / scanSystemdDir) — real filesystem"
   // Only runs on Linux/macOS where the linux branch of findExtraGatewayServices is active.
   const isLinux = process.platform === "linux";
 
-  it.skipIf(!isLinux)(
-    "does not report chainbreaker-test.service as a gateway service",
-    async () => {
-      const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), "chainbreaker-test-"));
-      const systemdDir = path.join(tmpHome, ".config", "systemd", "user");
-      try {
-        await fs.mkdir(systemdDir, { recursive: true });
-        await fs.writeFile(
-          path.join(systemdDir, "chainbreaker-test.service"),
-          TEST_SERVICE_CONTENTS,
-        );
-        const result = await findExtraGatewayServices({ HOME: tmpHome });
-        expect(result).toEqual([]);
-      } finally {
-        await fs.rm(tmpHome, { recursive: true, force: true });
-      }
-    },
-  );
+  it.skipIf(!isLinux)("does not report chainbreaker-test.service as a gateway service", async () => {
+    const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), "chainbreaker-test-"));
+    const systemdDir = path.join(tmpHome, ".config", "systemd", "user");
+    try {
+      await fs.mkdir(systemdDir, { recursive: true });
+      await fs.writeFile(path.join(systemdDir, "chainbreaker-test.service"), TEST_SERVICE_CONTENTS);
+      const result = await findExtraGatewayServices({ HOME: tmpHome });
+      expect(result).toEqual([]);
+    } finally {
+      await fs.rm(tmpHome, { recursive: true, force: true });
+    }
+  });
 
   it.skipIf(!isLinux)(
     "does not report the canonical chainbreaker-gateway.service as an extra service",

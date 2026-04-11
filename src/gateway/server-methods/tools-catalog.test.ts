@@ -20,6 +20,8 @@ vi.mock("../../plugins/tools.js", () => ({
   resolvePluginTools: vi.fn(() => [
     { name: "voice_call", label: "voice_call", description: "Plugin calling tool" },
     {
+      name: "matrix_room",
+      label: "matrix_room",
       displaySummary: "Summarized Matrix room helper.",
       description: "Matrix room helper\n\nACTIONS:\n- join\n- leave",
     },
@@ -49,6 +51,7 @@ describe("tools.catalog handler", () => {
   beforeEach(() => {
     pluginToolMetaState.clear();
     pluginToolMetaState.set("voice_call", { pluginId: "voice-call", optional: true });
+    pluginToolMetaState.set("matrix_room", { pluginId: "matrix", optional: false });
   });
 
   it("rejects invalid params", async () => {
@@ -137,8 +140,11 @@ describe("tools.catalog handler", () => {
           }>;
         }
       | undefined;
+    const matrixRoom = (payload?.groups ?? [])
       .filter((group) => group.source === "plugin")
       .flatMap((group) => group.tools)
+      .find((tool) => tool.id === "matrix_room");
+    expect(matrixRoom?.description).toBe("Summarized Matrix room helper.");
   });
 
   it("opts plugin tool catalog loads into gateway subagent binding", async () => {

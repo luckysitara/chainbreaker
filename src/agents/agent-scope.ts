@@ -23,6 +23,7 @@ function getLog(): ReturnType<typeof createSubsystemLogger> {
 
 /** Strip null bytes from paths to prevent ENOTDIR errors. */
 function stripNullBytes(s: string): string {
+  // eslint-disable-next-line no-control-regex
   return s.replace(/\0/g, "");
 }
 
@@ -197,10 +198,7 @@ export function resolveAgentEffectiveModelPrimary(
 }
 
 // Backward-compatible alias. Prefer explicit/effective helpers at new call sites.
-export function resolveAgentModelPrimary(
-  cfg: ChainbreakerConfig,
-  agentId: string,
-): string | undefined {
+export function resolveAgentModelPrimary(cfg: ChainbreakerConfig, agentId: string): string | undefined {
   return resolveAgentExplicitModelPrimary(cfg, agentId);
 }
 

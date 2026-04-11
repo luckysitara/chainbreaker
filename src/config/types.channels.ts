@@ -1,6 +1,4 @@
 import type { GroupPolicy } from "./types.base.js";
-import type { TelegramConfig } from "./types.telegram.js";
-import type { WhatsAppConfig } from "./types.whatsapp.js";
 
 export type ChannelHeartbeatVisibilityConfig = {
   /** Show HEARTBEAT_OK acknowledgments in chat (default: false). */
@@ -50,7 +48,6 @@ export interface ChannelsConfig {
   /** Map provider -> channel id -> model override. */
   modelByChannel?: ChannelModelByChannelConfig;
   /** Channel sections are plugin-owned; concrete channel files augment this interface. */
-  whatsapp?: WhatsAppConfig;
-  telegram?: TelegramConfig;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }

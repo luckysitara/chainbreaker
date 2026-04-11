@@ -21,12 +21,10 @@ const managerMocks = vi.hoisted(() => ({
 }));
 
 const policyMocks = vi.hoisted(() => ({
-  resolveAcpDispatchPolicyError: vi.fn<(cfg: ChainbreakerConfig) => AcpRuntimeError | null>(
+  resolveAcpDispatchPolicyError: vi.fn<(cfg: ChainbreakerConfig) => AcpRuntimeError | null>(() => null),
+  resolveAcpAgentPolicyError: vi.fn<(cfg: ChainbreakerConfig, agent: string) => AcpRuntimeError | null>(
     () => null,
   ),
-  resolveAcpAgentPolicyError: vi.fn<
-    (cfg: ChainbreakerConfig, agent: string) => AcpRuntimeError | null
-  >(() => null),
 }));
 
 const routeMocks = vi.hoisted(() => ({
@@ -116,6 +114,8 @@ async function runDispatch(params: {
   const targetSessionKey = params.sessionKeyOverride ?? sessionKey;
   return tryDispatchAcpReply({
     ctx: buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
       SessionKey: targetSessionKey,
       BodyForAgent: params.bodyForAgent,
       ...params.ctxOverrides,
@@ -417,6 +417,7 @@ describe("tryDispatchAcpReply", () => {
         bodyForAgent: "   ",
         cfg: createAcpTestConfig({
           channels: {
+            imessage: {
               attachmentRoots: [tempDir],
             },
           },
@@ -626,9 +627,11 @@ describe("tryDispatchAcpReply", () => {
     });
     bindingServiceMocks.unbind.mockResolvedValueOnce([
       {
+        bindingId: "discord:default:thread-1",
         targetSessionKey: canonicalSessionKey,
         targetKind: "session",
         conversation: {
+          channel: "discord",
           accountId: "default",
           conversationId: "thread-1",
         },
@@ -701,9 +704,11 @@ describe("tryDispatchAcpReply", () => {
     );
     bindingServiceMocks.unbind.mockResolvedValueOnce([
       {
+        bindingId: "discord:default:thread-1",
         targetSessionKey: canonicalSessionKey,
         targetKind: "session",
         conversation: {
+          channel: "discord",
           accountId: "default",
           conversationId: "thread-1",
         },
@@ -751,9 +756,11 @@ describe("tryDispatchAcpReply", () => {
       targetSessionKey === canonicalSessionKey
         ? [
             {
+              bindingId: "discord:default:thread-1",
               targetSessionKey: canonicalSessionKey,
               targetKind: "session",
               conversation: {
+                channel: "discord",
                 accountId: "default",
                 conversationId: "thread-1",
               },

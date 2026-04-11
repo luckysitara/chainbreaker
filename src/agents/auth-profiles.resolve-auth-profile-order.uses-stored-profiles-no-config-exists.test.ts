@@ -11,6 +11,7 @@ describe("resolveAuthProfileOrder", () => {
 
   function resolveMinimaxOrderWithProfile(profile: {
     type: "token";
+    provider: "minimax";
     token?: string;
     tokenRef?: { source: "env" | "file" | "exec"; provider: string; id: string };
     expires?: number;
@@ -19,16 +20,19 @@ describe("resolveAuthProfileOrder", () => {
       cfg: {
         auth: {
           order: {
+            minimax: ["minimax:default"],
           },
         },
       },
       store: {
         version: 1,
         profiles: {
+          "minimax:default": {
             ...profile,
           },
         },
       },
+      provider: "minimax",
     });
   }
 
@@ -54,18 +58,23 @@ describe("resolveAuthProfileOrder", () => {
       cfg: {
         auth: {
           order: {
+            minimax: ["minimax:default", "minimax:prod"],
           },
         },
       },
       store: {
         version: 1,
         profiles: {
+          "minimax:prod": {
             type: "api_key",
+            provider: "minimax",
             key: "sk-prod",
           },
         },
       },
+      provider: "minimax",
     });
+    expect(order).toEqual(["minimax:prod"]);
   });
   it("falls back to stored provider profiles when config profile ids drift", () => {
     const order = resolveAuthProfileOrder({
@@ -140,6 +149,7 @@ describe("resolveAuthProfileOrder", () => {
       cfg: {
         auth: {
           order: {
+            minimax: ["openai:default", "minimax:prod"],
           },
         },
       },
@@ -151,18 +161,23 @@ describe("resolveAuthProfileOrder", () => {
             provider: "openai",
             key: "sk-openai",
           },
+          "minimax:prod": {
             type: "api_key",
+            provider: "minimax",
             key: "sk-mini",
           },
         },
       },
+      provider: "minimax",
     });
+    expect(order).toEqual(["minimax:prod"]);
   });
   it.each([
     {
       caseName: "drops token profiles with empty credentials",
       profile: {
         type: "token" as const,
+        provider: "minimax" as const,
         token: "   ",
       },
     },
@@ -170,6 +185,8 @@ describe("resolveAuthProfileOrder", () => {
       caseName: "drops token profiles that are already expired",
       profile: {
         type: "token" as const,
+        provider: "minimax" as const,
+        token: "sk-minimax",
         expires: Date.now() - 1000,
       },
     },
@@ -177,6 +194,8 @@ describe("resolveAuthProfileOrder", () => {
       caseName: "drops token profiles with invalid expires metadata",
       profile: {
         type: "token" as const,
+        provider: "minimax" as const,
+        token: "sk-minimax",
         expires: 0,
       },
     },
@@ -214,26 +233,35 @@ describe("resolveAuthProfileOrder", () => {
   it("keeps token profiles backed by tokenRef when expires is absent", () => {
     const order = resolveMinimaxOrderWithProfile({
       type: "token",
+      provider: "minimax",
       tokenRef: {
         source: "exec",
         provider: "keychain",
+        id: "minimax/default",
       },
     });
+    expect(order).toEqual(["minimax:default"]);
   });
   it("drops tokenRef profiles when expires is invalid", () => {
     const order = resolveMinimaxOrderWithProfile({
       type: "token",
+      provider: "minimax",
       tokenRef: {
         source: "exec",
         provider: "keychain",
+        id: "minimax/default",
       },
       expires: 0,
     });
     expect(order).toEqual([]);
   });
+  it("keeps token profiles with inline token when no expires is set", () => {
     const order = resolveMinimaxOrderWithProfile({
       type: "token",
+      provider: "minimax",
+      token: "sk-minimax",
     });
+    expect(order).toEqual(["minimax:default"]);
   });
   it("keeps oauth profiles that can refresh", () => {
     const order = resolveAuthProfileOrder({

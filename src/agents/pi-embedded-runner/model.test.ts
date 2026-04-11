@@ -23,6 +23,7 @@ vi.mock("./openrouter-model-capabilities.js", () => ({
 
 import type { ChainbreakerConfig } from "../../config/config.js";
 import { buildForwardCompatTemplate } from "./model.forward-compat.test-support.js";
+import { buildInlineProviderModels, resolveModel, resolveModelAsync } from "./model.js";
 import {
   buildOpenAICodexForwardCompatExpectation,
   makeModel,
@@ -47,6 +48,7 @@ function createRuntimeHooks() {
       "openai-codex",
       "openai",
       "anthropic",
+      "zai",
     ],
     getOpenRouterModelCapabilities: (modelId: string) =>
       mockGetOpenRouterModelCapabilities(modelId),
@@ -86,10 +88,14 @@ function resolveModelAsyncForTest(
   });
 }
 
+describe("buildInlineProviderModels", () => {
+  it("attaches provider ids to inline models", () => {
+    const providers: Parameters<typeof buildInlineProviderModels>[0] = {
       " alpha ": { baseUrl: "http://alpha.local", models: [makeModel("alpha-model")] },
       beta: { baseUrl: "http://beta.local", models: [makeModel("beta-model")] },
     };
 
+    const result = buildInlineProviderModels(providers);
 
     expect(result).toEqual([
       {
@@ -108,18 +114,21 @@ function resolveModelAsyncForTest(
   });
 
   it("inherits baseUrl from provider when model does not specify it", () => {
+    const providers: Parameters<typeof buildInlineProviderModels>[0] = {
       custom: {
         baseUrl: "http://localhost:8000",
         models: [makeModel("custom-model")],
       },
     };
 
+    const result = buildInlineProviderModels(providers);
 
     expect(result).toHaveLength(1);
     expect(result[0].baseUrl).toBe("http://localhost:8000");
   });
 
   it("inherits api from provider when model does not specify it", () => {
+    const providers: Parameters<typeof buildInlineProviderModels>[0] = {
       custom: {
         baseUrl: "http://localhost:8000",
         api: "anthropic-messages",
@@ -127,12 +136,14 @@ function resolveModelAsyncForTest(
       },
     };
 
+    const result = buildInlineProviderModels(providers);
 
     expect(result).toHaveLength(1);
     expect(result[0].api).toBe("anthropic-messages");
   });
 
   it("model-level api takes precedence over provider-level api", () => {
+    const providers: Parameters<typeof buildInlineProviderModels>[0] = {
       custom: {
         baseUrl: "http://localhost:8000",
         api: "openai-responses",
@@ -140,12 +151,14 @@ function resolveModelAsyncForTest(
       },
     };
 
+    const result = buildInlineProviderModels(providers);
 
     expect(result).toHaveLength(1);
     expect(result[0].api).toBe("anthropic-messages");
   });
 
   it("inherits both baseUrl and api from provider config", () => {
+    const providers: Parameters<typeof buildInlineProviderModels>[0] = {
       custom: {
         baseUrl: "http://localhost:10000",
         api: "anthropic-messages",
@@ -153,6 +166,7 @@ function resolveModelAsyncForTest(
       },
     };
 
+    const result = buildInlineProviderModels(providers);
 
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
@@ -164,6 +178,7 @@ function resolveModelAsyncForTest(
   });
 
   it("normalizes bare Google API hosts for custom Google Generative AI providers", () => {
+    const providers: Parameters<typeof buildInlineProviderModels>[0] = {
       "google-paid ": {
         baseUrl: "https://generativelanguage.googleapis.com",
         api: "google-generative-ai",
@@ -171,6 +186,7 @@ function resolveModelAsyncForTest(
       },
     };
 
+    const result = buildInlineProviderModels(providers);
 
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
@@ -180,6 +196,8 @@ function resolveModelAsyncForTest(
     });
   });
 
+  it("merges provider-level headers into inline models", () => {
+    const providers: Parameters<typeof buildInlineProviderModels>[0] = {
       proxy: {
         baseUrl: "https://proxy.example.com",
         api: "anthropic-messages",
@@ -188,23 +206,28 @@ function resolveModelAsyncForTest(
       },
     };
 
+    const result = buildInlineProviderModels(providers);
 
     expect(result).toHaveLength(1);
     expect(result[0].headers).toEqual({ "User-Agent": "custom-agent/1.0" });
   });
 
   it("omits headers when neither provider nor model specifies them", () => {
+    const providers: Parameters<typeof buildInlineProviderModels>[0] = {
       plain: {
         baseUrl: "http://localhost:8000",
         models: [makeModel("some-model")],
       },
     };
 
+    const result = buildInlineProviderModels(providers);
 
     expect(result).toHaveLength(1);
     expect(result[0].headers).toBeUndefined();
   });
 
+  it("drops SecretRef marker headers in inline provider models", () => {
+    const providers: Parameters<typeof buildInlineProviderModels>[0] = {
       custom: {
         headers: {
           Authorization: "secretref-env:OPENAI_HEADER_TOKEN",
@@ -215,6 +238,7 @@ function resolveModelAsyncForTest(
       },
     };
 
+    const result = buildInlineProviderModels(providers);
 
     expect(result).toHaveLength(1);
     expect(result[0].headers).toEqual({
@@ -531,6 +555,7 @@ describe("resolveModel", () => {
       },
     } as unknown as ChainbreakerConfig;
 
+    const models = buildInlineProviderModels(cfg.models?.providers ?? {});
     expect(models).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

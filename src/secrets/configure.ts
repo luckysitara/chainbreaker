@@ -136,9 +136,7 @@ function providerHint(provider: SecretProviderConfig): string {
   return `exec (${provider.jsonOnly === false ? "json+text" : "json"})`;
 }
 
-function toSourceChoices(
-  config: ChainbreakerConfig,
-): Array<{ value: SecretRefSource; label: string }> {
+function toSourceChoices(config: ChainbreakerConfig): Array<{ value: SecretRefSource; label: string }> {
   const hasSource = (source: SecretRefSource) =>
     Object.values(config.secrets?.providers ?? {}).some((provider) => provider?.source === source);
   const choices: Array<{ value: SecretRefSource; label: string }> = [
@@ -810,9 +808,7 @@ export async function runSecretsConfigureInteractive(
         value: configureCandidateKey(candidate),
         label: candidate.label,
         hint: [
-          candidate.configFile === "auth-profiles.json"
-            ? "auth-profiles.json"
-            : "chainbreaker.json",
+          candidate.configFile === "auth-profiles.json" ? "auth-profiles.json" : "chainbreaker.json",
           candidate.isDerived === true ? "derived" : undefined,
         ]
           .filter(Boolean)

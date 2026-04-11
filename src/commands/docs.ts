@@ -54,8 +54,12 @@ async function runTool(tool: string, toolArgs: string[], options: ToolRunOptions
   return await runNodeTool(tool, toolArgs, options);
 }
 
+function extractLine(lines: string[], prefix: string): string | undefined {
+  const line = lines.find((value) => value.startsWith(prefix));
+  if (!line) {
     return undefined;
   }
+  return line.slice(prefix.length).trim();
 }
 
 function normalizeSnippet(raw: string | undefined, fallback: string): string {
@@ -87,11 +91,17 @@ function parseSearchOutput(raw: string): DocResult[] {
 
   const results: DocResult[] = [];
   for (const block of blocks) {
+    const lines = block.split("\n");
+    const title = extractLine(lines, "Title:");
+    const link = extractLine(lines, "Link:");
     if (!title || !link) {
       continue;
     }
+    const content = extractLine(lines, "Content:");
+    const contentIndex = lines.findIndex((line) => line.startsWith("Content:"));
     const body =
       contentIndex >= 0
+        ? lines
             .slice(contentIndex + 1)
             .join("\n")
             .trim()
@@ -107,13 +117,18 @@ function escapeMarkdown(text: string): string {
 }
 
 function buildMarkdown(query: string, results: DocResult[]): string {
+  const lines: string[] = [`# Docs search: ${escapeMarkdown(query)}`, ""];
   if (results.length === 0) {
+    lines.push("_No results._");
+    return lines.join("\n");
   }
   for (const item of results) {
     const title = escapeMarkdown(item.title);
     const snippet = item.snippet ? escapeMarkdown(item.snippet) : "";
     const suffix = snippet ? ` - ${snippet}` : "";
+    lines.push(`- [${title}](${item.link})${suffix}`);
   }
+  return lines.join("\n");
 }
 
 function formatLinkLabel(link: string): string {
@@ -148,9 +163,7 @@ export async function docsSearchCommand(queryParts: string[], runtime: RuntimeEn
     const docs = formatDocsLink("/", "docs.chainbreaker.ai");
     if (isRich()) {
       runtime.log(`${theme.muted("Docs:")} ${docs}`);
-      runtime.log(
-        `${theme.muted("Search:")} ${formatCliCommand('chainbreaker docs "your query"')}`,
-      );
+      runtime.log(`${theme.muted("Search:")} ${formatCliCommand('chainbreaker docs "your query"')}`);
     } else {
       runtime.log("Docs: https://docs.chainbreaker.ai/");
       runtime.log(`Search: ${formatCliCommand('chainbreaker docs "your query"')}`);

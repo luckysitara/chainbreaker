@@ -13,6 +13,8 @@ export function installBrowserCommonMiddleware(app: Express) {
         abort();
       }
     });
+    // Make the signal available to browser route handlers (best-effort).
+    (req as unknown as { signal?: AbortSignal }).signal = ctrl.signal;
     next();
   });
   app.use(express.json({ limit: "1mb" }));

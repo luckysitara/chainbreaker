@@ -37,8 +37,10 @@ describe("session key backward compatibility", () => {
   it.each([
     "agent:main:telegram:dm:123456",
     "agent:main:whatsapp:dm:+15551234567",
+    "agent:main:discord:dm:user123",
     "agent:main:telegram:direct:123456",
     "agent:main:whatsapp:direct:+15551234567",
+    "agent:main:discord:direct:user123",
   ] as const)("classifies backward-compatible direct session key %s as valid", (key) => {
     expectBackwardCompatibleDirectSessionKey(key);
   });
@@ -70,9 +72,12 @@ describe("isCronSessionKey", () => {
 
 describe("deriveSessionChatType", () => {
   it.each([
+    { key: "agent:main:discord:direct:user1", expected: "direct" },
     { key: "agent:main:telegram:group:g1", expected: "group" },
+    { key: "agent:main:discord:channel:c1", expected: "channel" },
     { key: "agent:main:telegram:dm:123456", expected: "direct" },
     { key: "telegram:dm:123456", expected: "direct" },
+    { key: "discord:acc-1:guild-123:channel-456", expected: "channel" },
     { key: "agent:main:main", expected: "unknown" },
     { key: "agent:main", expected: "unknown" },
     { key: "", expected: "unknown" },
@@ -109,7 +114,9 @@ describe("thread session suffix parsing", () => {
 
   it("parses mixed-case :thread: markers without lowercasing the stored key", () => {
     expect(
+      parseThreadSessionSuffix("agent:main:slack:channel:General:Thread:1699999999.0001"),
     ).toEqual({
+      baseSessionKey: "agent:main:slack:channel:General",
       threadId: "1699999999.0001",
     });
   });

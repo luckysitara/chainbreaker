@@ -42,6 +42,7 @@ function combineAbortSignals(a?: AbortSignal, b?: AbortSignal): AbortSignal | un
   const onAbort = bindAbortRelay(controller);
   a?.addEventListener("abort", onAbort, { once: true });
   b?.addEventListener("abort", onAbort, { once: true });
+  return controller.signal;
 }
 
 export function wrapToolWithAbortSignal(
@@ -57,6 +58,8 @@ export function wrapToolWithAbortSignal(
   }
   const wrappedTool: AnyAgentTool = {
     ...tool,
+    execute: async (toolCallId, params, signal, onUpdate) => {
+      const combined = combineAbortSignals(signal, abortSignal);
       if (combined?.aborted) {
         throwAbortError();
       }

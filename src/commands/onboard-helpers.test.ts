@@ -13,10 +13,12 @@ const mocks = vi.hoisted(() => ({
     (
       argv: string[],
       options?: { timeoutMs?: number; windowsVerbatimArguments?: boolean },
+    ) => Promise<{ stdout: string; stderr: string; code: number; signal: null; killed: boolean }>
   >(async () => ({
     stdout: "",
     stderr: "",
     code: 0,
+    signal: null,
     killed: false,
   })),
   pickPrimaryTailnetIPv4: vi.fn<() => string | undefined>(() => undefined),

@@ -62,6 +62,7 @@ import {
   resolveTelegramGroupRequireMention,
   resolveTelegramGroupToolPolicy,
 } from "./group-policy.js";
+import { resolveTelegramInlineButtonsScope } from "./inline-buttons.js";
 import * as monitorModule from "./monitor.js";
 import { looksLikeTelegramTargetId, normalizeTelegramMessagingTarget } from "./normalize.js";
 import { sendTelegramPayloadMessages } from "./outbound-adapter.js";
@@ -514,9 +515,11 @@ export const telegramPlugin = createChatChannelPlugin({
     },
     agentPrompt: {
       messageToolCapabilities: ({ cfg, accountId }) => {
+        const inlineButtonsScope = resolveTelegramInlineButtonsScope({
           cfg,
           accountId: accountId ?? undefined,
         });
+        return inlineButtonsScope === "off" ? [] : ["inlineButtons"];
       },
       reactionGuidance: ({ cfg, accountId }) => {
         const level = resolveTelegramReactionLevel({
@@ -602,8 +605,10 @@ export const telegramPlugin = createChatChannelPlugin({
           apiRoot: account.config.apiRoot,
         }),
       formatCapabilitiesProbe: ({ probe }) => {
+        const lines = [];
         if (probe?.bot?.username) {
           const botId = probe.bot.id ? ` (${probe.bot.id})` : "";
+          lines.push({ text: `Bot: @${probe.bot.username}${botId}` });
         }
         const flags: string[] = [];
         if (typeof probe?.bot?.canJoinGroups === "boolean") {
@@ -612,11 +617,16 @@ export const telegramPlugin = createChatChannelPlugin({
         if (typeof probe?.bot?.canReadAllGroupMessages === "boolean") {
           flags.push(`readAllGroupMessages=${probe.bot.canReadAllGroupMessages}`);
         }
+        if (typeof probe?.bot?.supportsInlineQueries === "boolean") {
+          flags.push(`inlineQueries=${probe.bot.supportsInlineQueries}`);
         }
         if (flags.length > 0) {
+          lines.push({ text: `Flags: ${flags.join(" ")}` });
         }
         if (probe?.webhook?.url !== undefined) {
+          lines.push({ text: `Webhook: ${probe.webhook.url || "none"}` });
         }
+        return lines;
       },
       auditAccount: async ({ account, timeoutMs, probe, cfg }) => {
         const groups =

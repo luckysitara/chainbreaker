@@ -113,6 +113,7 @@ describe("legacy config detection", () => {
       agent: {
         model: "openai/gpt-5.2",
         tools: { allow: ["sessions.list"], deny: ["danger"] },
+        elevated: { enabled: true, allowFrom: { discord: ["user:1"] } },
         bash: { timeoutSec: 12 },
         sandbox: { tools: { allow: ["browser.open"] } },
         subagents: { tools: { deny: ["sandbox"] } },
@@ -335,10 +336,14 @@ describe("legacy config detection", () => {
       expectedIssuePath: "channels.whatsapp.allowFrom",
     },
     {
+      provider: "signal",
       allowFrom: ["+15555550123"],
+      expectedIssuePath: "channels.signal.allowFrom",
     },
     {
+      provider: "imessage",
       allowFrom: ["+15555550123"],
+      expectedIssuePath: "channels.imessage.allowFrom",
     },
   ] as const)(
     'enforces dmPolicy="open" allowFrom wildcard for $provider',
@@ -356,6 +361,7 @@ describe("legacy config detection", () => {
     180_000,
   );
 
+  it.each(["telegram", "whatsapp", "signal"] as const)(
     'accepts dmPolicy="open" with wildcard for %s',
     (provider) => {
       const res = validateConfigObject({
@@ -369,6 +375,7 @@ describe("legacy config detection", () => {
     },
   );
 
+  it.each(["telegram", "whatsapp", "signal"] as const)(
     "defaults dm/group policy for configured provider %s",
     (provider) => {
       const res = validateConfigObject({ channels: { [provider]: {} } });
@@ -430,48 +437,64 @@ describe("legacy config detection", () => {
   it.each([
     {
       name: "boolean streaming=true",
+      input: { channels: { discord: { streaming: true } } },
+      expectedChanges: ["Normalized channels.discord.streaming boolean → enum (partial)."],
       expectedStreaming: "partial",
     },
     {
       name: "streamMode with streaming boolean",
+      input: { channels: { discord: { streaming: false, streamMode: "block" } } },
       expectedChanges: [
+        "Moved channels.discord.streamMode → channels.discord.streaming (block).",
+        "Normalized channels.discord.streaming boolean → enum (block).",
       ],
       expectedStreaming: "block",
     },
   ] as const)(
+    "normalizes discord streaming fields during legacy migration: $name",
     ({ input, expectedChanges, expectedStreaming, name }) => {
       const res = migrateLegacyConfig(input);
       for (const expectedChange of expectedChanges) {
         expect(res.changes, name).toContain(expectedChange);
       }
+      expect(res.config?.channels?.discord?.streaming, name).toBe(expectedStreaming);
+      expect(res.config?.channels?.discord?.streamMode, name).toBeUndefined();
     },
   );
 
   it.each([
     {
       name: "streaming=true",
+      input: { channels: { discord: { streaming: true } } },
       expectedStreaming: "partial",
     },
     {
       name: "streaming=false",
+      input: { channels: { discord: { streaming: false } } },
       expectedStreaming: "off",
     },
     {
       name: "streamMode overrides streaming boolean",
+      input: { channels: { discord: { streamMode: "block", streaming: false } } },
       expectedStreaming: "block",
     },
   ] as const)(
+    "normalizes discord streaming fields during validation: $name",
     ({ input, expectedStreaming, name }) => {
       const res = validateConfigObject(input);
       expect(res.ok, name).toBe(true);
       if (res.ok) {
+        expect(res.config.channels?.discord?.streaming, name).toBe(expectedStreaming);
+        expect(res.config.channels?.discord?.streamMode, name).toBeUndefined();
       }
     },
   );
   it.each([
     {
+      name: "discord account streaming boolean",
       input: {
         channels: {
+          discord: {
             accounts: {
               work: {
                 streaming: true,
@@ -481,29 +504,41 @@ describe("legacy config detection", () => {
         },
       },
       assert: (config: NonNullable<ChainbreakerConfig>) => {
+        expect(config.channels?.discord?.accounts?.work?.streaming).toBe("partial");
+        expect(config.channels?.discord?.accounts?.work?.streamMode).toBeUndefined();
       },
     },
     {
+      name: "slack streamMode alias",
       input: {
         channels: {
+          slack: {
             streamMode: "status_final",
           },
         },
       },
       assert: (config: NonNullable<ChainbreakerConfig>) => {
+        expect(config.channels?.slack?.streaming).toBe("progress");
+        expect(config.channels?.slack?.streamMode).toBeUndefined();
+        expect(config.channels?.slack?.nativeStreaming).toBe(true);
       },
     },
     {
+      name: "slack streaming boolean legacy",
       input: {
         channels: {
+          slack: {
             streaming: false,
           },
         },
       },
       assert: (config: NonNullable<ChainbreakerConfig>) => {
+        expect(config.channels?.slack?.streaming).toBe("off");
+        expect(config.channels?.slack?.nativeStreaming).toBe(false);
       },
     },
   ] as const)(
+    "normalizes account-level discord/slack streaming alias: $name",
     ({ input, assert, name }) => {
       const res = validateConfigObject(input);
       expect(res.ok, name).toBe(true);
@@ -518,7 +553,11 @@ describe("legacy config detection", () => {
       channels: {
         whatsapp: { historyLimit: 9, accounts: { work: { historyLimit: 4 } } },
         telegram: { historyLimit: 8, accounts: { ops: { historyLimit: 3 } } },
+        slack: { historyLimit: 7, accounts: { ops: { historyLimit: 2 } } },
+        signal: { historyLimit: 6 },
+        imessage: { historyLimit: 5 },
         msteams: { historyLimit: 4 },
+        discord: { historyLimit: 3 },
       },
     });
     expect(res.ok).toBe(true);
@@ -527,7 +566,12 @@ describe("legacy config detection", () => {
       expect(res.config.channels?.whatsapp?.accounts?.work?.historyLimit).toBe(4);
       expect(res.config.channels?.telegram?.historyLimit).toBe(8);
       expect(res.config.channels?.telegram?.accounts?.ops?.historyLimit).toBe(3);
+      expect(res.config.channels?.slack?.historyLimit).toBe(7);
+      expect(res.config.channels?.slack?.accounts?.ops?.historyLimit).toBe(2);
+      expect(res.config.channels?.signal?.historyLimit).toBe(6);
+      expect(res.config.channels?.imessage?.historyLimit).toBe(5);
       expect(res.config.channels?.msteams?.historyLimit).toBe(4);
+      expect(res.config.channels?.discord?.historyLimit).toBe(3);
     }
   });
 });

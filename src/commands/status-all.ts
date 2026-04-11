@@ -16,8 +16,8 @@ import { buildGatewayConnectionDetails, callGateway } from "../gateway/call.js";
 import { normalizeControlUiBasePath } from "../gateway/control-ui-shared.js";
 import { resolveGatewayProbeAuthSafeWithSecretInputs } from "../gateway/probe-auth.js";
 import { probeGateway } from "../gateway/probe.js";
-import { resolveChainbreakerPackageRoot } from "../infra/chainbreaker-root.js";
 import { collectChannelStatusIssues } from "../infra/channels-status-issues.js";
+import { resolveChainbreakerPackageRoot } from "../infra/chainbreaker-root.js";
 import { resolveOsSummary } from "../infra/os-summary.js";
 import { inspectPortUsage } from "../infra/ports.js";
 import { readRestartSentinel } from "../infra/restart-sentinel.js";
@@ -34,6 +34,7 @@ import { getAgentLocalStatuses } from "./status-all/agents.js";
 import { buildChannelsTable } from "./status-all/channels.js";
 import { formatDurationPrecise, formatGatewayAuthUsed } from "./status-all/format.js";
 import { pickGatewaySelfPresence } from "./status-all/gateway.js";
+import { buildStatusAllReportLines } from "./status-all/report-lines.js";
 import { resolveNodeOnlyGatewayInfo } from "./status.node-mode.js";
 import { readServiceStatusSummary } from "./status.service-summary.js";
 import { formatUpdateOneLiner } from "./status.update.js";
@@ -357,6 +358,7 @@ export async function statusAllCommand(
       },
     ];
 
+    const lines = await buildStatusAllReportLines({
       progress,
       overviewRows,
       channels,
@@ -388,6 +390,7 @@ export async function statusAllCommand(
     });
 
     progress.setLabel("Rendering…");
+    runtime.log(lines.join("\n"));
     progress.tick();
   });
 }

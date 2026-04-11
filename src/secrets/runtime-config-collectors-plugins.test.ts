@@ -399,6 +399,7 @@ describe("collectPluginConfigAssignments", () => {
     expect(context.assignments).toHaveLength(0);
   });
 
+  it("collects inline env-template refs while leaving normal strings literal", () => {
     const config = asConfig({
       plugins: {
         entries: {

@@ -1,5 +1,6 @@
 import type { Api, Context, Model } from "@mariozechner/pi-ai";
 import { complete } from "@mariozechner/pi-ai";
+import { isMinimaxVlmModel, minimaxUnderstandImage } from "../agents/minimax-vlm.js";
 import {
   getApiKeyForModel,
   requireApiKey,
@@ -100,6 +101,7 @@ async function describeImagesWithMinimax(params: {
       params.images.length > 1
         ? `${params.prompt}\n\nDescribe image ${index + 1} of ${params.images.length} independently.`
         : params.prompt;
+    const text = await minimaxUnderstandImage({
       apiKey: params.apiKey,
       prompt,
       imageDataUrl: `data:${image.mime ?? "image/jpeg"};base64,${image.buffer.toString("base64")}`,
@@ -194,6 +196,7 @@ export async function describeImagesWithModel(
   const message = await complete(model, context, {
     apiKey,
     maxTokens: resolveImageToolMaxTokens(model.maxTokens, params.maxTokens ?? 512),
+    signal: controller.signal,
   }).finally(() => {
     clearTimeout(timeout);
   });

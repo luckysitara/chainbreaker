@@ -20,7 +20,10 @@ describe("gateway chat.inject transcript writes", () => {
       expect(appended.ok).toBe(true);
       expect(appended.messageId).toBeTruthy();
 
+      const lines = fs.readFileSync(transcriptPath, "utf-8").split(/\r?\n/).filter(Boolean);
+      expect(lines.length).toBeGreaterThanOrEqual(2);
 
+      const last = JSON.parse(lines.at(-1) as string) as Record<string, unknown>;
       expect(last.type).toBe("message");
 
       // The regression we saw: raw jsonl appends omitted this field entirely.

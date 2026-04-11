@@ -15,6 +15,8 @@ let githubCopilotProvider: Awaited<ReturnType<typeof requireProvider>>;
 let ollamaProvider: Awaited<ReturnType<typeof requireProvider>>;
 let vllmProvider: Awaited<ReturnType<typeof requireProvider>>;
 let sglangProvider: Awaited<ReturnType<typeof requireProvider>>;
+let minimaxProvider: Awaited<ReturnType<typeof requireProvider>>;
+let minimaxPortalProvider: Awaited<ReturnType<typeof requireProvider>>;
 let modelStudioProvider: Awaited<ReturnType<typeof requireProvider>>;
 let cloudflareAiGatewayProvider: Awaited<ReturnType<typeof requireProvider>>;
 
@@ -195,6 +197,7 @@ describe("provider discovery contract", () => {
       { default: ollamaPlugin },
       { default: vllmPlugin },
       { default: sglangPlugin },
+      { default: minimaxPlugin },
       { default: modelStudioPlugin },
       { default: cloudflareAiGatewayPlugin },
     ] = await Promise.all([
@@ -210,6 +213,7 @@ describe("provider discovery contract", () => {
       import(buildBundledPluginModuleId("sglang", "index.js")) as Promise<{
         default: Parameters<typeof registerProviders>[0];
       }>,
+      import(buildBundledPluginModuleId("minimax", "index.js")) as Promise<{
         default: Parameters<typeof registerProviders>[0];
       }>,
       import(buildBundledPluginModuleId("modelstudio", "index.js")) as Promise<{
@@ -226,6 +230,8 @@ describe("provider discovery contract", () => {
     ollamaProvider = requireProvider(registerProviders(ollamaPlugin), "ollama");
     vllmProvider = requireProvider(registerProviders(vllmPlugin), "vllm");
     sglangProvider = requireProvider(registerProviders(sglangPlugin), "sglang");
+    minimaxProvider = requireProvider(registerProviders(minimaxPlugin), "minimax");
+    minimaxPortalProvider = requireProvider(registerProviders(minimaxPlugin), "minimax-portal");
     modelStudioProvider = requireProvider(registerProviders(modelStudioPlugin), "modelstudio");
     cloudflareAiGatewayProvider = requireProvider(
       registerProviders(cloudflareAiGatewayPlugin),
@@ -423,10 +429,14 @@ describe("provider discovery contract", () => {
   it("keeps MiniMax API catalog provider-owned", async () => {
     await expect(
       runProviderCatalog({
+        provider: minimaxProvider,
         config: {},
         env: {
+          MINIMAX_API_KEY: "minimax-key",
         } as NodeJS.ProcessEnv,
+        resolveProviderApiKey: () => ({ apiKey: "minimax-key" }),
         resolveProviderAuth: () => ({
+          apiKey: "minimax-key",
           discoveryApiKey: undefined,
           mode: "api_key",
           source: "env",
@@ -434,8 +444,10 @@ describe("provider discovery contract", () => {
       }),
     ).resolves.toMatchObject({
       provider: {
+        baseUrl: "https://api.minimax.io/anthropic",
         api: "anthropic-messages",
         authHeader: true,
+        apiKey: "minimax-key",
         models: expect.arrayContaining([
           expect.objectContaining({ id: "MiniMax-M2.7" }),
           expect.objectContaining({ id: "MiniMax-M2.7-highspeed" }),
@@ -448,7 +460,9 @@ describe("provider discovery contract", () => {
     setRuntimeAuthStore({
       version: 1,
       profiles: {
+        "minimax-portal:default": {
           type: "oauth",
+          provider: "minimax-portal",
           access: "access-token",
           refresh: "refresh-token",
           expires: Date.now() + 60_000,
@@ -458,19 +472,24 @@ describe("provider discovery contract", () => {
 
     await expect(
       runProviderCatalog({
+        provider: minimaxPortalProvider,
         config: {},
         env: {} as NodeJS.ProcessEnv,
         resolveProviderApiKey: () => ({ apiKey: undefined }),
         resolveProviderAuth: () => ({
+          apiKey: "minimax-oauth",
           discoveryApiKey: "access-token",
           mode: "oauth",
           source: "profile",
+          profileId: "minimax-portal:default",
         }),
       }),
     ).resolves.toMatchObject({
       provider: {
+        baseUrl: "https://api.minimax.io/anthropic",
         api: "anthropic-messages",
         authHeader: true,
+        apiKey: "minimax-oauth",
         models: expect.arrayContaining([expect.objectContaining({ id: "MiniMax-M2.7" })]),
       },
     });
@@ -479,9 +498,11 @@ describe("provider discovery contract", () => {
   it("keeps MiniMax portal explicit base URL override provider-owned", async () => {
     await expect(
       runProviderCatalog({
+        provider: minimaxPortalProvider,
         config: {
           models: {
             providers: {
+              "minimax-portal": {
                 baseUrl: "https://portal-proxy.example.com/anthropic",
                 apiKey: "explicit-key",
                 models: [],

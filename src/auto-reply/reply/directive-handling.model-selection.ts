@@ -7,6 +7,7 @@ import {
 } from "../../agents/model-selection.js";
 import type { ChainbreakerConfig } from "../../config/config.js";
 import { resolveProfileOverride } from "./directive-handling.auth-profile.js";
+import type { InlineDirectives } from "./directive-handling.parse.js";
 import { type ModelDirectiveSelection, resolveModelDirectiveSelection } from "./model-selection.js";
 
 function resolveStoredNumericProfileModelDirective(params: { raw: string; agentDir: string }): {
@@ -43,6 +44,7 @@ function resolveStoredNumericProfileModelDirective(params: { raw: string; agentD
 }
 
 export function resolveModelSelectionFromDirective(params: {
+  directives: InlineDirectives;
   cfg: ChainbreakerConfig;
   agentDir: string;
   defaultProvider: string;

@@ -110,24 +110,34 @@ describe("commands registry", () => {
   it("applies provider-specific native names", () => {
     const native = listNativeCommandSpecsForConfig(
       { commands: { native: true } },
+      { provider: "discord" },
     );
     expect(native.find((spec) => spec.name === "voice")).toBeTruthy();
+    expect(findCommandByNativeName("voice", "discord")?.key).toBe("tts");
+    expect(findCommandByNativeName("tts", "discord")).toBeUndefined();
   });
 
+  it("renames status to agentstatus for slack", () => {
     const native = listNativeCommandSpecsForConfig(
       { commands: { native: true } },
+      { provider: "slack" },
     );
     expect(native.find((spec) => spec.name === "agentstatus")).toBeTruthy();
     expect(native.find((spec) => spec.name === "status")).toBeFalsy();
+    expect(findCommandByNativeName("agentstatus", "slack")?.key).toBe("status");
+    expect(findCommandByNativeName("status", "slack")).toBeUndefined();
   });
 
+  it("keeps discord native command specs within slash-command limits", () => {
     const cfg = { commands: { native: true } };
+    const native = listNativeCommandSpecsForConfig(cfg, { provider: "discord" });
     for (const spec of native) {
       expect(spec.name).toMatch(/^[a-z0-9_-]{1,32}$/);
       expect(spec.description.length).toBeGreaterThan(0);
       expect(spec.description.length).toBeLessThanOrEqual(100);
       expect(spec.args?.length ?? 0).toBeLessThanOrEqual(25);
 
+      const command = findCommandByNativeName(spec.name, "discord");
       expect(command).toBeTruthy();
 
       const args = command?.args ?? spec.args ?? [];
@@ -155,6 +165,7 @@ describe("commands registry", () => {
           command,
           arg,
           cfg,
+          provider: "discord",
         });
         if (choices.length === 0) {
           continue;
@@ -234,7 +245,9 @@ describe("commands registry", () => {
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "discord",
           plugin: createChannelTestPluginBase({
+            id: "discord",
             capabilities: { nativeCommands: true, chatTypes: ["direct"] },
           }),
           source: "test",
@@ -245,6 +258,7 @@ describe("commands registry", () => {
     expect(
       shouldHandleTextCommands({
         cfg,
+        surface: "discord",
         commandSource: "text",
       }),
     ).toBe(false);
@@ -258,15 +272,14 @@ describe("commands registry", () => {
     expect(
       shouldHandleTextCommands({
         cfg,
+        surface: "discord",
         commandSource: "native",
       }),
     ).toBe(true);
   });
 
   it("normalizes telegram-style command mentions for the current bot", () => {
-    expect(normalizeCommandBody("/help@chainbreaker", { botUsername: "chainbreaker" })).toBe(
-      "/help",
-    );
+    expect(normalizeCommandBody("/help@chainbreaker", { botUsername: "chainbreaker" })).toBe("/help");
     expect(
       normalizeCommandBody("/help@chainbreaker args", {
         botUsername: "chainbreaker",

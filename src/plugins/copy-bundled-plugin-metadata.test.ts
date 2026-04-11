@@ -283,14 +283,11 @@ describe("copyBundledPluginMetadata", () => {
       "export default {}\n",
       "utf8",
     );
-    writeJson(
-      path.join(repoRoot, "dist", "extensions", "removed-plugin", "chainbreaker.plugin.json"),
-      {
-        id: "removed-plugin",
-        configSchema: { type: "object" },
-        skills: ["./bundled-skills/@scope/skill"],
-      },
-    );
+    writeJson(path.join(repoRoot, "dist", "extensions", "removed-plugin", "chainbreaker.plugin.json"), {
+      id: "removed-plugin",
+      configSchema: { type: "object" },
+      skills: ["./bundled-skills/@scope/skill"],
+    });
     writeJson(path.join(repoRoot, "dist", "extensions", "removed-plugin", "package.json"), {
       name: "@chainbreaker/removed-plugin",
     });
@@ -386,13 +383,7 @@ describe("copyBundledPluginMetadata", () => {
     ).toBe(true);
     expect(
       fs.existsSync(
-        path.join(
-          repoRoot,
-          "dist",
-          "extensions",
-          "image-generation-core",
-          "chainbreaker.plugin.json",
-        ),
+        path.join(repoRoot, "dist", "extensions", "image-generation-core", "chainbreaker.plugin.json"),
       ),
     ).toBe(false);
     expect(

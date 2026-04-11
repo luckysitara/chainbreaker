@@ -42,9 +42,12 @@ vi.mock("../cli/progress.js", () => ({
 
 function createTokenOnlyPlugin() {
   return {
+    id: "discord",
     meta: {
+      id: "discord",
       label: "Discord",
       selectionLabel: "Discord",
+      docsPath: "/channels/discord",
       blurb: "test",
     },
     capabilities: { chatTypes: ["direct"] },
@@ -57,6 +60,7 @@ function createTokenOnlyPlugin() {
               name: "Primary",
               enabled: true,
               configured: true,
+              token: "resolved-discord-token",
               tokenSource: "config",
               tokenStatus: "available",
             }
@@ -74,6 +78,7 @@ function createTokenOnlyPlugin() {
               name: "Primary",
               enabled: true,
               configured: true,
+              token: "resolved-discord-token",
               tokenSource: "config",
               tokenStatus: "available",
             }
@@ -121,6 +126,7 @@ describe("channelsStatusCommand SecretRef fallback flow", () => {
     resolveCommandSecretRefsViaGateway.mockResolvedValue({
       resolvedConfig: { secretResolved: false, channels: {} },
       diagnostics: [
+        "channels status: channels.discord.token is unavailable in this command path; continuing with degraded read-only config.",
       ],
       targetStatesByPath: {},
       hadUnresolvedTargets: true,
@@ -129,6 +135,7 @@ describe("channelsStatusCommand SecretRef fallback flow", () => {
 
     await channelsStatusCommand({ probe: false }, runtime as never);
 
+    expect(errors.some((line) => line.includes("Gateway not reachable"))).toBe(true);
     expect(resolveCommandSecretRefsViaGateway).toHaveBeenCalledWith(
       expect.objectContaining({
         commandName: "channels status",
@@ -136,6 +143,8 @@ describe("channelsStatusCommand SecretRef fallback flow", () => {
       }),
     );
     expect(
+      logs.some((line) =>
+        line.includes("[secrets] channels status: channels.discord.token is unavailable"),
       ),
     ).toBe(true);
     const joined = logs.join("\n");

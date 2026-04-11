@@ -62,6 +62,7 @@ describe("shared/usage-aggregates", () => {
 
     const tail = buildUsageAggregateTail({
       byChannelMap: new Map([
+        ["discord", { totalCost: 4 }],
         ["telegram", { totalCost: 8 }],
       ]),
       latencyTotals: {
@@ -83,6 +84,7 @@ describe("shared/usage-aggregates", () => {
       ]),
     });
 
+    expect(tail.byChannel.map((entry) => entry.channel)).toEqual(["telegram", "discord"]);
     expect(tail.latency).toEqual({
       count: 3,
       avgMs: 200 / 3,

@@ -402,6 +402,7 @@ describe("gateway server cron", () => {
         patch: {
           delivery: {
             mode: "announce",
+            channel: "signal",
             to: "+15550001111",
             bestEffort: true,
           },
@@ -417,6 +418,7 @@ describe("gateway server cron", () => {
       expect(deliveryPatched?.payload?.kind).toBe("agentTurn");
       expect(deliveryPatched?.payload?.message).toBe("hello");
       expect(deliveryPatched?.delivery?.mode).toBe("announce");
+      expect(deliveryPatched?.delivery?.channel).toBe("signal");
       expect(deliveryPatched?.delivery?.to).toBe("+15550001111");
       expect(deliveryPatched?.delivery?.bestEffort).toBe(true);
 

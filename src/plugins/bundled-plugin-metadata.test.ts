@@ -60,11 +60,18 @@ describe("bundled plugin metadata", () => {
   );
 
   it("captures setup-entry metadata for bundled channel plugins", () => {
+    const discord = listBundledPluginMetadata().find((entry) => entry.dirName === "discord");
+    expect(discord?.source).toEqual({ source: "./index.ts", built: "index.js" });
+    expect(discord?.setupSource).toEqual({ source: "./setup-entry.ts", built: "setup-entry.js" });
+    expectArtifactPresence(discord?.publicSurfaceArtifacts, {
       contains: ["api.js", "runtime-api.js", "session-key-api.js"],
       excludes: ["test-api.js"],
     });
+    expectArtifactPresence(discord?.runtimeSidecarArtifacts, {
       contains: ["runtime-api.js"],
     });
+    expect(discord?.manifest.id).toBe("discord");
+    expect(discord?.manifest.channelConfigs?.discord).toEqual(
       expect.objectContaining({
         schema: expect.objectContaining({ type: "object" }),
       }),

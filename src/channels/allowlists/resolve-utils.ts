@@ -149,9 +149,14 @@ export function summarizeMapping(
   unresolved: string[],
   runtime: RuntimeEnv,
 ): void {
+  const lines: string[] = [];
   if (mapping.length > 0) {
+    lines.push(`${label} resolved: ${summarizeStringEntries({ entries: mapping, limit: 6 })}`);
   }
   if (unresolved.length > 0) {
+    lines.push(`${label} unresolved: ${summarizeStringEntries({ entries: unresolved, limit: 6 })}`);
   }
+  if (lines.length > 0) {
+    runtime.log?.(lines.join("\n"));
   }
 }

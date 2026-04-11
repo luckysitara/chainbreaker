@@ -161,8 +161,12 @@ export async function initiateCall(
   persistCallRecord(ctx.storePath, callRecord);
 
   try {
+    // For notify mode with a message, use inline TwiML with <Say>.
+    let inlineTwiml: string | undefined;
     if (mode === "notify" && initialMessage) {
       const pollyVoice = mapVoiceToPolly(resolveOpenAITtsVoice(ctx.config));
+      inlineTwiml = generateNotifyTwiml(initialMessage, pollyVoice);
+      console.log(`[voice-call] Using inline TwiML for notify mode (voice: ${pollyVoice})`);
     }
 
     const result = await ctx.provider.initiateCall({
@@ -170,6 +174,7 @@ export async function initiateCall(
       from,
       to,
       webhookUrl: ctx.webhookUrl,
+      inlineTwiml,
     });
 
     callRecord.providerCallId = result.providerCallId;

@@ -1,3 +1,4 @@
+import { createInterface } from "node:readline";
 import type {
   AcpRuntimeCapabilities,
   AcpRuntimeDoctorReport,
@@ -80,6 +81,7 @@ function formatPermissionModeGuidance(): string {
 function formatAcpxExitMessage(params: {
   stderr: string;
   exitCode: number | null | undefined;
+  signal?: NodeJS.Signals | null;
 }): string {
   const stderr = params.stderr.trim();
   if (params.exitCode === ACPX_EXIT_CODE_PERMISSION_DENIED) {
@@ -92,15 +94,19 @@ function formatAcpxExitMessage(params: {
   if (stderr) {
     return stderr;
   }
+  if (params.signal) {
+    return `acpx exited with signal ${params.signal}`;
   }
   return `acpx exited with code ${params.exitCode ?? "unknown"}`;
 }
 
 function didAcpxProcessExitWithFailure(params: {
   exitCode: number | null | undefined;
+  signal?: NodeJS.Signals | null;
 }): boolean {
   return params.exitCode !== null && params.exitCode !== undefined
     ? params.exitCode !== 0
+    : params.signal !== null && params.signal !== undefined;
 }
 
 function summarizeLogText(text: string, maxChars = 240): string {
@@ -286,6 +292,7 @@ export class AcpxRuntime implements AcpRuntime {
         result.error != null ||
         didAcpxProcessExitWithFailure({
           exitCode: result.code,
+          signal: result.signal,
         })
       ) {
         return {
@@ -600,6 +607,7 @@ export class AcpxRuntime implements AcpRuntime {
     const cancelOnAbort = async () => {
       await this.cancel({
         handle: input.handle,
+        reason: "abort-signal",
       }).catch((err) => {
         this.logger?.warn?.(`acpx runtime abort-cancel failed: ${String(err)}`);
       });
@@ -608,9 +616,12 @@ export class AcpxRuntime implements AcpRuntime {
       void cancelOnAbort();
     };
 
+    if (input.signal?.aborted) {
       await cancelOnAbort();
       return;
     }
+    if (input.signal) {
+      input.signal.addEventListener("abort", onAbort, { once: true });
     }
     const child = spawnWithResolvedCommand(
       {
@@ -647,7 +658,10 @@ export class AcpxRuntime implements AcpRuntime {
 
     let sawDone = false;
     let sawError = false;
+    const lines = createInterface({ input: child.stdout });
     try {
+      for await (const line of lines) {
+        const parsed = parsePromptEventLine(line);
         if (!parsed) {
           continue;
         }
@@ -686,6 +700,7 @@ export class AcpxRuntime implements AcpRuntime {
 
       const exitedWithFailure = didAcpxProcessExitWithFailure({
         exitCode: exit.code,
+        signal: exit.signal,
       });
       if (exitedWithFailure && !sawError) {
         yield {
@@ -693,6 +708,7 @@ export class AcpxRuntime implements AcpRuntime {
           message: formatAcpxExitMessage({
             stderr,
             exitCode: exit.code,
+            signal: exit.signal,
           }),
         };
         return;
@@ -702,6 +718,9 @@ export class AcpxRuntime implements AcpRuntime {
         yield { type: "done" };
       }
     } finally {
+      lines.close();
+      if (input.signal) {
+        input.signal.removeEventListener("abort", onAbort);
       }
     }
   }
@@ -712,6 +731,7 @@ export class AcpxRuntime implements AcpRuntime {
 
   async getStatus(input: {
     handle: AcpRuntimeHandle;
+    signal?: AbortSignal;
   }): Promise<AcpRuntimeStatus> {
     const state = this.resolveHandleState(input.handle);
     const args = await this.buildVerbArgs({
@@ -724,6 +744,7 @@ export class AcpxRuntime implements AcpRuntime {
       cwd: state.cwd,
       fallbackCode: "ACP_TURN_FAILED",
       ignoreNoSession: true,
+      signal: input.signal,
     });
     const detail = events.find((event) => !toAcpxErrorEvent(event)) ?? events[0];
     if (!detail) {
@@ -1000,6 +1021,7 @@ export class AcpxRuntime implements AcpRuntime {
     cwd: string;
     fallbackCode: AcpRuntimeErrorCode;
     ignoreNoSession?: boolean;
+    signal?: AbortSignal;
   }): Promise<AcpxJsonObject[]> {
     const result = await spawnAndCollect(
       {
@@ -1010,6 +1032,7 @@ export class AcpxRuntime implements AcpRuntime {
       },
       this.spawnCommandOptions,
       {
+        signal: params.signal,
       },
     );
 
@@ -1055,6 +1078,7 @@ export class AcpxRuntime implements AcpRuntime {
     if (
       didAcpxProcessExitWithFailure({
         exitCode: result.code,
+        signal: result.signal,
       })
     ) {
       throw new AcpRuntimeError(
@@ -1062,6 +1086,7 @@ export class AcpxRuntime implements AcpRuntime {
         formatAcpxExitMessage({
           stderr: result.stderr,
           exitCode: result.code,
+          signal: result.signal,
         }),
       );
     }

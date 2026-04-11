@@ -24,6 +24,7 @@ describe("resolveEffectiveToolInventory integration", () => {
     vi.resetModules();
   });
 
+  it("preserves plugin and channel classification through the real tool wrapper pipeline", async () => {
     vi.resetModules();
     vi.doUnmock("./tools-effective-inventory.js");
     vi.doUnmock("./pi-tools.js");

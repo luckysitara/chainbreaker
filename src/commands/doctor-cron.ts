@@ -17,32 +17,42 @@ function pluralize(count: number, noun: string) {
 }
 
 function formatLegacyIssuePreview(issues: Partial<Record<string, number>>): string[] {
+  const lines: string[] = [];
   if (issues.jobId) {
+    lines.push(`- ${pluralize(issues.jobId, "job")} still uses legacy \`jobId\``);
   }
   if (issues.legacyScheduleString) {
+    lines.push(
       `- ${pluralize(issues.legacyScheduleString, "job")} stores schedule as a bare string`,
     );
   }
   if (issues.legacyScheduleCron) {
+    lines.push(`- ${pluralize(issues.legacyScheduleCron, "job")} still uses \`schedule.cron\``);
   }
   if (issues.legacyPayloadKind) {
+    lines.push(`- ${pluralize(issues.legacyPayloadKind, "job")} needs payload kind normalization`);
   }
   if (issues.legacyPayloadProvider) {
+    lines.push(
       `- ${pluralize(issues.legacyPayloadProvider, "job")} still uses payload \`provider\` as a delivery alias`,
     );
   }
   if (issues.legacyTopLevelPayloadFields) {
+    lines.push(
       `- ${pluralize(issues.legacyTopLevelPayloadFields, "job")} still uses top-level payload fields`,
     );
   }
   if (issues.legacyTopLevelDeliveryFields) {
+    lines.push(
       `- ${pluralize(issues.legacyTopLevelDeliveryFields, "job")} still uses top-level delivery fields`,
     );
   }
   if (issues.legacyDeliveryMode) {
+    lines.push(
       `- ${pluralize(issues.legacyDeliveryMode, "job")} still uses delivery mode \`deliver\``,
     );
   }
+  return lines;
 }
 
 function trimString(value: unknown): string | undefined {

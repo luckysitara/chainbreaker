@@ -35,6 +35,7 @@ afterEach(async () => {
 });
 
 describe("repairSessionFileIfNeeded", () => {
+  it("rewrites session files that contain malformed lines", async () => {
     const { file } = await createTempSessionPath();
     const { header, message } = buildSessionHeaderAndMessage();
 
@@ -55,6 +56,7 @@ describe("repairSessionFileIfNeeded", () => {
     }
   });
 
+  it("does not drop CRLF-terminated JSONL lines", async () => {
     const { file } = await createTempSessionPath();
     const { header, message } = buildSessionHeaderAndMessage();
     const content = `${JSON.stringify(header)}\r\n${JSON.stringify(message)}\r\n`;

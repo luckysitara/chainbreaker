@@ -192,6 +192,7 @@ export type RestartDeferralHooks = {
 };
 
 /**
+ * Poll pending work until it drains (or times out), then emit one restart signal.
  * Shared by both the direct RPC restart path and the config watcher path.
  */
 export function deferGatewayRestartUntilIdle(opts: {
@@ -396,8 +397,10 @@ export function triggerChainbreakerRestart(): RestartAttempt {
 export type ScheduledRestart = {
   ok: boolean;
   pid: number;
+  signal: "SIGUSR1";
   delayMs: number;
   reason?: string;
+  mode: "emit" | "signal";
   coalesced: boolean;
   cooldownMsApplied: number;
 };
@@ -416,6 +419,7 @@ export function scheduleGatewaySigusr1Restart(opts?: {
     typeof opts?.reason === "string" && opts.reason.trim()
       ? opts.reason.trim().slice(0, 200)
       : undefined;
+  const mode = process.listenerCount("SIGUSR1") > 0 ? "emit" : "signal";
   const nowMs = Date.now();
   const cooldownMsApplied = Math.max(0, lastRestartEmittedAt + RESTART_COOLDOWN_MS - nowMs);
   const requestedDueAt = nowMs + delayMs + cooldownMsApplied;
@@ -427,6 +431,7 @@ export function scheduleGatewaySigusr1Restart(opts?: {
     return {
       ok: true,
       pid: process.pid,
+      signal: "SIGUSR1",
       delayMs: 0,
       reason,
       mode,
@@ -450,6 +455,7 @@ export function scheduleGatewaySigusr1Restart(opts?: {
       return {
         ok: true,
         pid: process.pid,
+        signal: "SIGUSR1",
         delayMs: remainingMs,
         reason,
         mode,
@@ -482,6 +488,7 @@ export function scheduleGatewaySigusr1Restart(opts?: {
   return {
     ok: true,
     pid: process.pid,
+    signal: "SIGUSR1",
     delayMs: Math.max(0, requestedDueAt - nowMs),
     reason,
     mode,

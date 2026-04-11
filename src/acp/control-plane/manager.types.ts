@@ -60,6 +60,7 @@ export type AcpRunTurnInput = {
   attachments?: AcpTurnAttachment[];
   mode: AcpRuntimePromptMode;
   requestId: string;
+  signal?: AbortSignal;
   onEvent?: (event: AcpRuntimeEvent) => Promise<void> | void;
 };
 

@@ -8,9 +8,9 @@ import { parseCliContainerArgs, resolveCliContainerTarget } from "./cli/containe
 import { applyCliProfileEnv, parseCliProfileArgs } from "./cli/profile.js";
 import { normalizeWindowsArgv } from "./cli/windows-argv.js";
 import { buildCliRespawnPlan } from "./entry.respawn.js";
-import { ensureChainbreakerExecMarkerOnProcess } from "./infra/chainbreaker-exec-env.js";
 import { isTruthyEnvValue, normalizeEnv } from "./infra/env.js";
 import { isMainModule } from "./infra/is-main.js";
+import { ensureChainbreakerExecMarkerOnProcess } from "./infra/chainbreaker-exec-env.js";
 import { installProcessWarningFilter } from "./infra/warning-filter.js";
 import { attachChildProcessBridge } from "./process/child-process-bridge.js";
 
@@ -79,6 +79,8 @@ if (
 
     attachChildProcessBridge(child);
 
+    child.once("exit", (code, signal) => {
+      if (signal) {
         process.exitCode = 1;
         return;
       }

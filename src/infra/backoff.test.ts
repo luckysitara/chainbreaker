@@ -38,6 +38,7 @@ describe("backoff helpers", () => {
     const controller = new AbortController();
     controller.abort();
 
+    await expect(sleepWithAbort(5, controller.signal)).rejects.toMatchObject({
       message: "aborted",
       cause: expect.anything(),
     });

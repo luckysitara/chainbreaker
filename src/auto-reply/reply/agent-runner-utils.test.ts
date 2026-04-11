@@ -196,9 +196,12 @@ describe("agent-runner-utils", () => {
     expect(context.currentThreadTs).toBeUndefined();
   });
 
+  it("uses OriginatingTo for threading tool context on discord native commands", () => {
     const context = buildThreadingToolContext({
       sessionCtx: {
+        Provider: "discord",
         To: "slash:1177378744822943744",
+        OriginatingChannel: "discord",
         OriginatingTo: "channel:123456789012345678",
         MessageSid: "msg-9",
       },

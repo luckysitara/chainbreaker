@@ -186,6 +186,8 @@ export function createProfileTabOps({
     if (createdViaCdp) {
       const profileState = getProfileState();
       profileState.lastTargetId = createdViaCdp;
+      const deadline = Date.now() + OPEN_TAB_DISCOVERY_WINDOW_MS;
+      while (Date.now() < deadline) {
         const tabs = await listTabs().catch(() => [] as BrowserTab[]);
         const found = tabs.find((t) => t.targetId === createdViaCdp);
         if (found) {

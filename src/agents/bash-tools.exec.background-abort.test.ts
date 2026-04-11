@@ -61,6 +61,7 @@ async function expectBackgroundSessionSurvivesAbort(params: {
   const result = await params.tool.execute(
     "toolcall",
     params.executeParams,
+    abortController.signal,
   );
   expect(result.details.status).toBe("running");
   const sessionId = (result.details as { sessionId: string }).sessionId;
@@ -91,9 +92,12 @@ async function expectBackgroundSessionSurvivesAbort(params: {
 async function expectBackgroundSessionTimesOut(params: {
   tool: ReturnType<typeof createExecTool>;
   executeParams: Record<string, unknown>;
+  signal?: AbortSignal;
   abortAfterStart?: boolean;
 }) {
   const abortController = new AbortController();
+  const signal = params.signal ?? abortController.signal;
+  const result = await params.tool.execute("toolcall", params.executeParams, signal);
   expect(result.details.status).toBe("running");
   const sessionId = (result.details as { sessionId: string }).sessionId;
 
@@ -110,6 +114,7 @@ async function expectBackgroundSessionTimesOut(params: {
   }
 }
 
+test("background exec is not killed when tool signal aborts", async () => {
   const tool = createTestExecTool({ allowBackground: true, backgroundMs: 0 });
   await expectBackgroundSessionSurvivesAbort({
     tool,
@@ -117,6 +122,7 @@ async function expectBackgroundSessionTimesOut(params: {
   });
 });
 
+test("pty background exec is not killed when tool signal aborts", async () => {
   const tool = createTestExecTool({ allowBackground: true, backgroundMs: 0 });
   await expectBackgroundSessionSurvivesAbort({
     tool,
@@ -124,6 +130,7 @@ async function expectBackgroundSessionTimesOut(params: {
   });
 });
 
+test("background exec still times out after tool signal abort", async () => {
   const tool = createTestExecTool({ allowBackground: true, backgroundMs: 0 });
   await expectBackgroundSessionTimesOut({
     tool,

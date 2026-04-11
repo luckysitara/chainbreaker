@@ -5,6 +5,7 @@ describe("markdownToTelegramHtml", () => {
   it("handles core markdown-to-telegram conversions", () => {
     const cases = [
       [
+        "renders basic inline formatting",
         "hi _there_ **boss** `code`",
         "hi <i>there</i> <b>boss</b> <code>code</code>",
       ],
@@ -15,6 +16,7 @@ describe("markdownToTelegramHtml", () => {
       ],
       ["escapes raw HTML", "<b>nope</b>", "&lt;b&gt;nope&lt;/b&gt;"],
       ["escapes unsafe characters", "a & b < c", "a &amp; b &lt; c"],
+      ["renders paragraphs with blank lines", "first\n\nsecond", "first\n\nsecond"],
       ["renders lists without block HTML", "- one\n- two", "• one\n• two"],
       ["renders ordered lists with numbering", "2. two\n3. three", "2. two\n3. three"],
       ["flattens headings", "# Title", "Title"],
@@ -31,12 +33,14 @@ describe("markdownToTelegramHtml", () => {
     expect(res).toContain("</blockquote>");
   });
 
+  it("renders blockquotes with inline formatting", () => {
     const res = markdownToTelegramHtml("> **bold** quote");
     expect(res).toContain("<blockquote>");
     expect(res).toContain("<b>bold</b>");
     expect(res).toContain("</blockquote>");
   });
 
+  it("renders multiline blockquotes as a single Telegram blockquote", () => {
     const res = markdownToTelegramHtml("> first\n> second");
     expect(res).toBe("<blockquote>first\nsecond</blockquote>");
   });
@@ -109,6 +113,7 @@ describe("markdownToTelegramHtml", () => {
     expect(res).toContain("trailing ||");
   });
 
+  it("splits long multiline html text without breaking balanced tags", () => {
     const chunks = splitTelegramHtmlChunks(`<b>${"A\n".repeat(2500)}</b>`, 4000);
     expect(chunks.length).toBeGreaterThan(1);
     expect(chunks.every((chunk) => chunk.length <= 4000)).toBe(true);

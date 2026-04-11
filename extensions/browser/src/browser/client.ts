@@ -82,6 +82,7 @@ export type SnapshotResult =
       truncated?: boolean;
       refs?: Record<string, { role: string; name?: string; nth?: number }>;
       stats?: {
+        lines: number;
         chars: number;
         refs: number;
         interactive: number;

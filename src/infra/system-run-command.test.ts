@@ -52,6 +52,7 @@ describe("system run command helpers", () => {
   test.each([
     { argv: ["/usr/bin/nice", "/bin/bash", "-lc", "echo hi"], expected: "echo hi" },
     {
+      argv: ["/usr/bin/timeout", "--signal=TERM", "5", "zsh", "-lc", "echo hi"],
       expected: "echo hi",
     },
     {

@@ -4,15 +4,7 @@ import { withPathResolutionEnv } from "../test-utils/env.js";
 import { formatPluginSourceForTable, resolvePluginSourceRoots } from "./source-display.js";
 
 const PLUGIN_SOURCE_ROOTS = {
-  stock: path.resolve(
-    path.sep,
-    "opt",
-    "homebrew",
-    "lib",
-    "node_modules",
-    "chainbreaker",
-    "extensions",
-  ),
+  stock: path.resolve(path.sep, "opt", "homebrew", "lib", "node_modules", "chainbreaker", "extensions"),
   global: path.resolve(path.sep, "Users", "x", ".chainbreaker", "extensions"),
   workspace: path.resolve(path.sep, "Users", "x", "ws", ".chainbreaker", "extensions"),
 };

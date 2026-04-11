@@ -8,6 +8,7 @@ describe("doctor repair sequencing", () => {
       state: {
         cfg: {
           channels: {
+            discord: {
               allowFrom: [123],
             },
             tools: {
@@ -17,6 +18,7 @@ describe("doctor repair sequencing", () => {
                 },
               },
             },
+            signal: {
               accounts: {
                 "ops\u001B[31m-team\u001B[0m\r\nnext": {
                   dmPolicy: "allowlist",
@@ -27,6 +29,7 @@ describe("doctor repair sequencing", () => {
         } as unknown as ChainbreakerConfig,
         candidate: {
           channels: {
+            discord: {
               allowFrom: [123],
             },
             tools: {
@@ -36,6 +39,7 @@ describe("doctor repair sequencing", () => {
                 },
               },
             },
+            signal: {
               accounts: {
                 "ops\u001B[31m-team\u001B[0m\r\nnext": {
                   dmPolicy: "allowlist",
@@ -51,7 +55,9 @@ describe("doctor repair sequencing", () => {
     });
 
     expect(result.state.pendingChanges).toBe(true);
+    expect(result.state.candidate.channels?.discord?.allowFrom).toEqual(["123"]);
     expect(result.changeNotes).toEqual([
+      expect.stringContaining("channels.discord.allowFrom: converted 1 numeric entry to strings"),
       expect.stringContaining(
         "tools.exec.toolsBySender: migrated 1 legacy key to typed id: entries",
       ),
@@ -60,6 +66,7 @@ describe("doctor repair sequencing", () => {
     expect(result.changeNotes[1]).not.toContain("\u001B");
     expect(result.changeNotes[1]).not.toContain("\r");
     expect(result.warningNotes).toEqual([
+      expect.stringContaining("channels.signal.accounts.ops-teamnext.dmPolicy"),
     ]);
     expect(result.warningNotes[0]).not.toContain("\u001B");
     expect(result.warningNotes[0]).not.toContain("\r");

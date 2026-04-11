@@ -9,10 +9,14 @@ installDiscordRegistryHooks();
 describe("senderIsOwner only reflects explicit owner authorization", () => {
   it("does not treat direct-message senders as owners when no ownerAllowFrom is configured", () => {
     const cfg = {
+      channels: { discord: {} },
     } as ChainbreakerConfig;
 
     const ctx = {
+      Provider: "discord",
+      Surface: "discord",
       ChatType: "direct",
+      From: "discord:123",
       SenderId: "123",
     } as MsgContext;
 
@@ -28,10 +32,14 @@ describe("senderIsOwner only reflects explicit owner authorization", () => {
 
   it("does not treat group-chat senders as owners when no ownerAllowFrom is configured", () => {
     const cfg = {
+      channels: { discord: {} },
     } as ChainbreakerConfig;
 
     const ctx = {
+      Provider: "discord",
+      Surface: "discord",
       ChatType: "group",
+      From: "discord:123",
       SenderId: "123",
     } as MsgContext;
 
@@ -47,10 +55,14 @@ describe("senderIsOwner only reflects explicit owner authorization", () => {
 
   it("senderIsOwner is false when ownerAllowFrom is configured and sender does not match", () => {
     const cfg = {
+      channels: { discord: {} },
       commands: { ownerAllowFrom: ["456"] },
     } as ChainbreakerConfig;
 
     const ctx = {
+      Provider: "discord",
+      Surface: "discord",
+      From: "discord:789",
       SenderId: "789",
     } as MsgContext;
 
@@ -65,10 +77,14 @@ describe("senderIsOwner only reflects explicit owner authorization", () => {
 
   it("senderIsOwner is true when ownerAllowFrom matches sender", () => {
     const cfg = {
+      channels: { discord: {} },
       commands: { ownerAllowFrom: ["456"] },
     } as ChainbreakerConfig;
 
     const ctx = {
+      Provider: "discord",
+      Surface: "discord",
+      From: "discord:456",
       SenderId: "456",
     } as MsgContext;
 
@@ -83,10 +99,14 @@ describe("senderIsOwner only reflects explicit owner authorization", () => {
 
   it("senderIsOwner is true when ownerAllowFrom is wildcard (*)", () => {
     const cfg = {
+      channels: { discord: {} },
       commands: { ownerAllowFrom: ["*"] },
     } as ChainbreakerConfig;
 
     const ctx = {
+      Provider: "discord",
+      Surface: "discord",
+      From: "discord:anyone",
       SenderId: "anyone",
     } as MsgContext;
 

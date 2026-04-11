@@ -1,5 +1,6 @@
 import { resolveEffectiveMessagesConfig, resolveHumanDelayConfig } from "../../agents/identity.js";
 import {
+  chunkByNewline,
   chunkMarkdownText,
   chunkMarkdownTextWithMode,
   chunkText,
@@ -66,6 +67,7 @@ import type { PluginRuntime } from "./types.js";
 export function createRuntimeChannel(): PluginRuntime["channel"] {
   const channelRuntime = {
     text: {
+      chunkByNewline,
       chunkMarkdownText,
       chunkMarkdownTextWithMode,
       chunkText,

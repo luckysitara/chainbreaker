@@ -1,3 +1,4 @@
+import type { Bot } from "grammy";
 import { resolveAgentDir } from "chainbreaker/plugin-sdk/agent-runtime";
 import {
   findModelInCatalog,
@@ -10,6 +11,7 @@ import {
   logTypingFailure,
   removeAckReactionAfterReply,
 } from "chainbreaker/plugin-sdk/channel-feedback";
+import { createChannelReplyPipeline } from "chainbreaker/plugin-sdk/channel-reply-pipeline";
 import { resolveMarkdownTableMode } from "chainbreaker/plugin-sdk/config-runtime";
 import {
   loadSessionStore,
@@ -27,18 +29,15 @@ import { clearHistoryEntriesIfEnabled } from "chainbreaker/plugin-sdk/reply-hist
 import { resolveSendableOutboundReplyParts } from "chainbreaker/plugin-sdk/reply-payload";
 import { resolveChunkMode } from "chainbreaker/plugin-sdk/reply-runtime";
 import type { ReplyPayload } from "chainbreaker/plugin-sdk/reply-runtime";
-import {
-  resolveAutoTopicLabelConfig,
-  generateTopicLabel,
-} from "chainbreaker/plugin-sdk/reply-runtime";
+import { resolveAutoTopicLabelConfig, generateTopicLabel } from "chainbreaker/plugin-sdk/reply-runtime";
 import { danger, logVerbose } from "chainbreaker/plugin-sdk/runtime-env";
 import type { RuntimeEnv } from "chainbreaker/plugin-sdk/runtime-env";
-import type { Bot } from "grammy";
 import { defaultTelegramBotDeps, type TelegramBotDeps } from "./bot-deps.js";
 import type { TelegramMessageContext } from "./bot-message-context.js";
 import type { TelegramBotOptions } from "./bot.js";
 import { deliverReplies, emitInternalMessageSentHook } from "./bot/delivery.js";
 import type { TelegramStreamMode } from "./bot/types.js";
+import type { TelegramInlineButtons } from "./button-types.js";
 import { createTelegramDraftStream } from "./draft-stream.js";
 import { shouldSuppressLocalTelegramExecApprovalPrompt } from "./exec-approvals.js";
 import { renderTelegramHtmlText } from "./format.js";
@@ -571,6 +570,8 @@ export const dispatchTelegramMessage = async ({
     void statusReactionController.setThinking();
   }
 
+  const { onModelSelected, ...replyPipeline } = (
+    telegramDeps.createChannelReplyPipeline ?? createChannelReplyPipeline
   )({
     cfg,
     agentId: route.agentId,
@@ -595,6 +596,7 @@ export const dispatchTelegramMessage = async ({
       ctx: ctxPayload,
       cfg,
       dispatcherOptions: {
+        ...replyPipeline,
         deliver: async (payload, info) => {
           if (payload.isError === true) {
             hadErrorReplyFailureOrSkip = true;
@@ -615,6 +617,7 @@ export const dispatchTelegramMessage = async ({
             return;
           }
           const previewButtons = (
+            payload.channelData?.telegram as { buttons?: TelegramInlineButtons } | undefined
           )?.buttons;
           const split = splitTextIntoLaneSegments(payload.text);
           const segments = split.segments;
@@ -628,6 +631,7 @@ export const dispatchTelegramMessage = async ({
             }
             const bufferedButtons = (
               buffered.payload.channelData?.telegram as
+                | { buttons?: TelegramInlineButtons }
                 | undefined
             )?.buttons;
             await deliverLaneText({

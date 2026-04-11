@@ -1,6 +1,7 @@
 import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  signalOutbound,
   telegramOutbound,
   whatsappOutbound,
 } from "../../../test/channel-outbounds.js";
@@ -12,6 +13,7 @@ import { setActivePluginRegistry } from "../../plugins/runtime.js";
 import type { PluginHookRegistration } from "../../plugins/types.js";
 import { createOutboundTestPlugin, createTestRegistry } from "../../test-utils/channel-plugins.js";
 import { withEnvAsync } from "../../test-utils/env.js";
+import { createIMessageTestPlugin } from "../../test-utils/imessage-test-plugin.js";
 import { createInternalHookEventPayload } from "../../test-utils/internal-hook-event-payload.js";
 import { resolvePreferredChainbreakerTmpDir } from "../tmp-chainbreaker-dir.js";
 
@@ -494,9 +496,12 @@ describe("deliverOutboundPayloads", () => {
     );
   });
 
+  it("includes Chainbreaker tmp root in signal mediaLocalRoots", async () => {
     const sendSignal = vi.fn().mockResolvedValue({ messageId: "s1", timestamp: 123 });
 
     await deliverOutboundPayloads({
+      cfg: { channels: { signal: {} } },
+      channel: "signal",
       to: "+1555",
       payloads: [{ text: "hi", mediaUrl: "https://example.com/x.png" }],
       deps: { sendSignal },
@@ -513,17 +518,21 @@ describe("deliverOutboundPayloads", () => {
 
   it("forwards audioAsVoice through generic plugin media delivery", async () => {
     const sendMedia = vi.fn(async () => ({
+      channel: "matrix" as const,
       messageId: "mx-1",
       roomId: "!room:example",
     }));
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "matrix",
           source: "test",
           plugin: createOutboundTestPlugin({
+            id: "matrix",
             outbound: {
               deliveryMode: "direct",
               sendText: async ({ to, text }) => ({
+                channel: "matrix",
                 messageId: `${to}:${text}`,
               }),
               sendMedia,
@@ -534,6 +543,8 @@ describe("deliverOutboundPayloads", () => {
     );
 
     await deliverOutboundPayloads({
+      cfg: { channels: { matrix: {} } } as ChainbreakerConfig,
+      channel: "matrix",
       to: "room:!room:example",
       payloads: [{ text: "voice caption", mediaUrl: "file:///tmp/clip.mp3", audioAsVoice: true }],
     });
@@ -568,15 +579,19 @@ describe("deliverOutboundPayloads", () => {
     );
   });
 
+  it("includes Chainbreaker tmp root in imessage mediaLocalRoots", async () => {
     const sendIMessage = vi.fn().mockResolvedValue({ messageId: "i1", chatId: "chat-1" });
 
     await deliverOutboundPayloads({
       cfg: {},
+      channel: "imessage",
+      to: "imessage:+15551234567",
       payloads: [{ text: "hi", mediaUrl: "https://example.com/x.png" }],
       deps: { sendIMessage },
     });
 
     expect(sendIMessage).toHaveBeenCalledWith(
+      "imessage:+15551234567",
       "hi",
       expect.objectContaining({
         mediaLocalRoots: expect.arrayContaining([expectedPreferredTmpRoot]),
@@ -584,10 +599,13 @@ describe("deliverOutboundPayloads", () => {
     );
   });
 
+  it("uses signal media maxBytes from config", async () => {
     const sendSignal = vi.fn().mockResolvedValue({ messageId: "s1", timestamp: 123 });
+    const cfg: ChainbreakerConfig = { channels: { signal: { mediaMaxMb: 2 } } };
 
     const results = await deliverOutboundPayloads({
       cfg,
+      channel: "signal",
       to: "+1555",
       payloads: [{ text: "hi", mediaUrl: "https://x.test/a.jpg" }],
       deps: { sendSignal },
@@ -603,16 +621,19 @@ describe("deliverOutboundPayloads", () => {
         textStyles: [],
       }),
     );
+    expect(results[0]).toMatchObject({ channel: "signal", messageId: "s1" });
   });
 
   it("chunks Signal markdown using the format-first chunker", async () => {
     const sendSignal = vi.fn().mockResolvedValue({ messageId: "s1", timestamp: 123 });
     const cfg: ChainbreakerConfig = {
+      channels: { signal: { textChunkLimit: 20 } },
     };
     const text = `Intro\\n\\n\`\`\`\`md\\n${"y".repeat(60)}\\n\`\`\`\\n\\nOutro`;
 
     await deliverOutboundPayloads({
       cfg,
+      channel: "signal",
       to: "+1555",
       payloads: [{ text }],
       deps: { sendSignal },
@@ -639,8 +660,10 @@ describe("deliverOutboundPayloads", () => {
     expect(results.map((r) => r.messageId)).toEqual(["w1", "w2"]);
   });
 
+  it("respects newline chunk mode for WhatsApp", async () => {
     const sendWhatsApp = vi.fn().mockResolvedValue({ messageId: "w1", toJid: "jid" });
     const cfg: ChainbreakerConfig = {
+      channels: { whatsapp: { textChunkLimit: 4000, chunkMode: "newline" } },
     };
 
     await deliverOutboundPayloads({
@@ -666,6 +689,7 @@ describe("deliverOutboundPayloads", () => {
     );
   });
 
+  it("strips leading blank lines for WhatsApp text payloads", async () => {
     const sendWhatsApp = vi.fn().mockResolvedValue({ messageId: "w1", toJid: "jid" });
     await deliverWhatsAppPayload({
       sendWhatsApp,
@@ -726,6 +750,7 @@ describe("deliverOutboundPayloads", () => {
     const sendSignal = vi.fn().mockResolvedValue({ messageId: "s1", toJid: "jid" });
     const results = await deliverOutboundPayloads({
       cfg: {},
+      channel: "signal",
       to: "+1555",
       payloads: [{ text: "<br>" }],
       deps: { sendSignal },
@@ -735,20 +760,25 @@ describe("deliverOutboundPayloads", () => {
     expect(results).toEqual([]);
   });
 
+  it("preserves fenced blocks for markdown chunkers in newline mode", async () => {
     const chunker = vi.fn((text: string) => (text ? [text] : []));
     const sendText = vi.fn().mockImplementation(async ({ text }: { text: string }) => ({
+      channel: "matrix" as const,
       messageId: text,
       roomId: "r1",
     }));
     const sendMedia = vi.fn().mockImplementation(async ({ text }: { text: string }) => ({
+      channel: "matrix" as const,
       messageId: text,
       roomId: "r1",
     }));
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "matrix",
           source: "test",
           plugin: createOutboundTestPlugin({
+            id: "matrix",
             outbound: {
               deliveryMode: "direct",
               chunker,
@@ -763,11 +793,13 @@ describe("deliverOutboundPayloads", () => {
     );
 
     const cfg: ChainbreakerConfig = {
+      channels: { matrix: { textChunkLimit: 4000, chunkMode: "newline" } },
     };
     const text = "```js\nconst a = 1;\nconst b = 2;\n```\nAfter";
 
     await deliverOutboundPayloads({
       cfg,
+      channel: "matrix",
       to: "!room",
       payloads: [{ text }],
     });
@@ -781,6 +813,7 @@ describe("deliverOutboundPayloads", () => {
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "imessage",
           source: "test",
           plugin: createIMessageTestPlugin(),
         },
@@ -792,6 +825,7 @@ describe("deliverOutboundPayloads", () => {
 
     await deliverOutboundPayloads({
       cfg,
+      channel: "imessage",
       to: "chat_id:42",
       payloads: [{ text: "hello" }],
       deps: { sendIMessage },
@@ -930,6 +964,7 @@ describe("deliverOutboundPayloads", () => {
         to: "+1555",
         payloads: [{ text: "a" }],
         deps: { sendWhatsApp },
+        abortSignal: abortController.signal,
       }),
     ).rejects.toThrow("Operation aborted");
 
@@ -1048,13 +1083,16 @@ describe("deliverOutboundPayloads", () => {
 
   it("emits message_sent success for sendPayload deliveries", async () => {
     hookMocks.runner.hasHooks.mockReturnValue(true);
+    const sendPayload = vi.fn().mockResolvedValue({ channel: "matrix", messageId: "mx-1" });
     const sendText = vi.fn();
     const sendMedia = vi.fn();
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "matrix",
           source: "test",
           plugin: createOutboundTestPlugin({
+            id: "matrix",
             outbound: { deliveryMode: "direct", sendPayload, sendText, sendMedia },
           }),
         },
@@ -1063,23 +1101,28 @@ describe("deliverOutboundPayloads", () => {
 
     await deliverOutboundPayloads({
       cfg: {},
+      channel: "matrix",
       to: "!room:1",
       payloads: [{ text: "payload text", channelData: { mode: "custom" } }],
     });
 
     expect(hookMocks.runner.runMessageSent).toHaveBeenCalledWith(
       expect.objectContaining({ to: "!room:1", content: "payload text", success: true }),
+      expect.objectContaining({ channelId: "matrix" }),
     );
   });
 
   it("preserves channelData-only payloads with empty text for non-WhatsApp sendPayload channels", async () => {
+    const sendPayload = vi.fn().mockResolvedValue({ channel: "line", messageId: "ln-1" });
     const sendText = vi.fn();
     const sendMedia = vi.fn();
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "line",
           source: "test",
           plugin: createOutboundTestPlugin({
+            id: "line",
             outbound: { deliveryMode: "direct", sendPayload, sendText, sendMedia },
           }),
         },
@@ -1088,6 +1131,7 @@ describe("deliverOutboundPayloads", () => {
 
     const results = await deliverOutboundPayloads({
       cfg: {},
+      channel: "line",
       to: "U123",
       payloads: [{ text: " \n\t ", channelData: { mode: "flex" } }],
     });
@@ -1098,14 +1142,18 @@ describe("deliverOutboundPayloads", () => {
         payload: expect.objectContaining({ text: "", channelData: { mode: "flex" } }),
       }),
     );
+    expect(results).toEqual([{ channel: "line", messageId: "ln-1" }]);
   });
 
   it("falls back to sendText when plugin outbound omits sendMedia", async () => {
+    const sendText = vi.fn().mockResolvedValue({ channel: "matrix", messageId: "mx-1" });
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "matrix",
           source: "test",
           plugin: createOutboundTestPlugin({
+            id: "matrix",
             outbound: { deliveryMode: "direct", sendText },
           }),
         },
@@ -1114,6 +1162,7 @@ describe("deliverOutboundPayloads", () => {
 
     const results = await deliverOutboundPayloads({
       cfg: {},
+      channel: "matrix",
       to: "!room:1",
       payloads: [{ text: "caption", mediaUrl: "https://example.com/file.png" }],
     });
@@ -1127,17 +1176,22 @@ describe("deliverOutboundPayloads", () => {
     expect(logMocks.warn).toHaveBeenCalledWith(
       "Plugin outbound adapter does not implement sendMedia; media URLs will be dropped and text fallback will be used",
       expect.objectContaining({
+        channel: "matrix",
         mediaCount: 1,
       }),
     );
+    expect(results).toEqual([{ channel: "matrix", messageId: "mx-1" }]);
   });
 
   it("falls back to one sendText call for multi-media payloads when sendMedia is omitted", async () => {
+    const sendText = vi.fn().mockResolvedValue({ channel: "matrix", messageId: "mx-2" });
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "matrix",
           source: "test",
           plugin: createOutboundTestPlugin({
+            id: "matrix",
             outbound: { deliveryMode: "direct", sendText },
           }),
         },
@@ -1146,6 +1200,7 @@ describe("deliverOutboundPayloads", () => {
 
     const results = await deliverOutboundPayloads({
       cfg: {},
+      channel: "matrix",
       to: "!room:1",
       payloads: [
         {
@@ -1164,18 +1219,23 @@ describe("deliverOutboundPayloads", () => {
     expect(logMocks.warn).toHaveBeenCalledWith(
       "Plugin outbound adapter does not implement sendMedia; media URLs will be dropped and text fallback will be used",
       expect.objectContaining({
+        channel: "matrix",
         mediaCount: 2,
       }),
     );
+    expect(results).toEqual([{ channel: "matrix", messageId: "mx-2" }]);
   });
 
   it("fails media-only payloads when plugin outbound omits sendMedia", async () => {
     hookMocks.runner.hasHooks.mockReturnValue(true);
+    const sendText = vi.fn().mockResolvedValue({ channel: "matrix", messageId: "mx-3" });
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "matrix",
           source: "test",
           plugin: createOutboundTestPlugin({
+            id: "matrix",
             outbound: { deliveryMode: "direct", sendText },
           }),
         },
@@ -1185,6 +1245,7 @@ describe("deliverOutboundPayloads", () => {
     await expect(
       deliverOutboundPayloads({
         cfg: {},
+        channel: "matrix",
         to: "!room:1",
         payloads: [{ text: "   ", mediaUrl: "https://example.com/file.png" }],
       }),
@@ -1196,6 +1257,7 @@ describe("deliverOutboundPayloads", () => {
     expect(logMocks.warn).toHaveBeenCalledWith(
       "Plugin outbound adapter does not implement sendMedia; media URLs will be dropped and text fallback will be used",
       expect.objectContaining({
+        channel: "matrix",
         mediaCount: 1,
       }),
     );
@@ -1207,6 +1269,7 @@ describe("deliverOutboundPayloads", () => {
         error:
           "Plugin outbound adapter does not implement sendMedia and no text fallback is available for media payload",
       }),
+      expect.objectContaining({ channelId: "matrix" }),
     );
   });
 
@@ -1244,6 +1307,8 @@ const defaultRegistry = createTestRegistry([
     source: "test",
   },
   {
+    pluginId: "signal",
+    plugin: createOutboundTestPlugin({ id: "signal", outbound: signalOutbound }),
     source: "test",
   },
   {
@@ -1252,6 +1317,7 @@ const defaultRegistry = createTestRegistry([
     source: "test",
   },
   {
+    pluginId: "imessage",
     plugin: createIMessageTestPlugin(),
     source: "test",
   },

@@ -20,6 +20,7 @@ let runExec: typeof import("./exec.js").runExec;
 
 type MockChild = EventEmitter & {
   exitCode?: number | null;
+  signalCode?: NodeJS.Signals | null;
   stdout: EventEmitter;
   stderr: EventEmitter;
   stdin: { write: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> };
@@ -34,11 +35,13 @@ function createMockChild(params?: {
   exitCode?: number | null;
   exitCodeAfterClose?: number | null;
   exitCodeAfterCloseDelayMs?: number;
+  signal?: NodeJS.Signals | null;
 }): MockChild {
   const child = new EventEmitter() as MockChild;
   child.stdout = new EventEmitter();
   child.stderr = new EventEmitter();
   child.exitCode = params?.exitCode ?? params?.closeCode ?? 0;
+  child.signalCode = params?.signal ?? null;
   child.stdin = {
     write: vi.fn(),
     end: vi.fn(),
@@ -47,6 +50,7 @@ function createMockChild(params?: {
   child.pid = 1234;
   child.killed = false;
   queueMicrotask(() => {
+    child.emit("close", params?.closeCode ?? 0, params?.closeSignal ?? params?.signal ?? null);
     if (params?.exitCodeAfterClose !== undefined) {
       setTimeout(() => {
         child.exitCode = params.exitCodeAfterClose ?? null;
@@ -207,6 +211,7 @@ describe("windows command wrapper behavior", () => {
     try {
       const result = await runCommandWithTimeout(["npm", "--version"], { timeoutMs: 1000 });
       expect(result.code).toBe(0);
+      expect(result.signal).toBeNull();
       expect(result.termination).toBe("exit");
     } finally {
       platformSpy.mockRestore();
@@ -226,6 +231,7 @@ describe("windows command wrapper behavior", () => {
     try {
       const result = await runCommandWithTimeout(["npm", "--version"], { timeoutMs: 1000 });
       expect(result.code).toBe(0);
+      expect(result.signal).toBeNull();
       expect(result.termination).toBe("exit");
     } finally {
       platformSpy.mockRestore();

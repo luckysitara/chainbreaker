@@ -14,6 +14,7 @@ export function resolveTelegramChatLookupFetch(params?: {
 export async function lookupTelegramChatId(params: {
   token: string;
   chatId: string;
+  signal?: AbortSignal;
   apiRoot?: string;
   proxyUrl?: string;
   network?: TelegramNetworkConfig;
@@ -21,6 +22,7 @@ export async function lookupTelegramChatId(params: {
   return fetchTelegramChatId({
     token: params.token,
     chatId: params.chatId,
+    signal: params.signal,
     apiRoot: params.apiRoot,
     fetchImpl: resolveTelegramChatLookupFetch({
       proxyUrl: params.proxyUrl,
@@ -32,6 +34,7 @@ export async function lookupTelegramChatId(params: {
 export async function fetchTelegramChatId(params: {
   token: string;
   chatId: string;
+  signal?: AbortSignal;
   apiRoot?: string;
   fetchImpl?: typeof fetch;
 }): Promise<string | null> {
@@ -39,6 +42,7 @@ export async function fetchTelegramChatId(params: {
   const url = `${apiBase}/bot${params.token}/getChat?chat_id=${encodeURIComponent(params.chatId)}`;
   const fetchImpl = params.fetchImpl ?? fetch;
   try {
+    const res = await fetchImpl(url, params.signal ? { signal: params.signal } : undefined);
     if (!res.ok) {
       return null;
     }

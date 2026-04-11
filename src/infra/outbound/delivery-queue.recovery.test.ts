@@ -118,12 +118,14 @@ describe("delivery-queue recovery", () => {
 
   it("treats Matrix 'User not in room' as a permanent error", async () => {
     const id = await enqueueDelivery(
+      { channel: "matrix", to: "!lowercased:matrix.example.com", payloads: [{ text: "hi" }] },
       tmpDir(),
     );
     const deliver = vi
       .fn()
       .mockRejectedValue(
         new Error(
+          "MatrixError: [403] User @bot:matrix.example.com not in room !lowercased:matrix.example.com",
         ),
       );
     const log = createRecoveryLog();

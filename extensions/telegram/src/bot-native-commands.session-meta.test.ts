@@ -65,8 +65,7 @@ const conversationStoreMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("chainbreaker/plugin-sdk/conversation-runtime", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("chainbreaker/plugin-sdk/conversation-runtime")>();
+  const actual = await importOriginal<typeof import("chainbreaker/plugin-sdk/conversation-runtime")>();
   return {
     ...actual,
     resolveConfiguredBindingRoute: persistentBindingMocks.resolveConfiguredBindingRoute,

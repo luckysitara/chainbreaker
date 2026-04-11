@@ -5,6 +5,7 @@ import {
   createChannelTestPluginBase,
   createTestRegistry,
 } from "../../test-utils/channel-plugins.js";
+import { createIMessageTestPlugin } from "../../test-utils/imessage-test-plugin.js";
 import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../../utils/message-channel.js";
 
 const setRegistry = (registry: ReturnType<typeof createTestRegistry>) => {
@@ -53,9 +54,13 @@ describe("sendMessage channel normalization", () => {
       sendCfg?: unknown;
       to?: string;
     } = {};
+    const imessageAliasPlugin: ChannelPlugin = {
+      id: "imessage",
       meta: {
+        id: "imessage",
         label: "iMessage",
         selectionLabel: "iMessage",
+        docsPath: "/channels/imessage",
         blurb: "iMessage test stub.",
         aliases: ["imsg"],
       },
@@ -70,15 +75,18 @@ describe("sendMessage channel normalization", () => {
           seen.resolveCfg = cfg;
           const normalized = String(to ?? "")
             .trim()
+            .replace(/^imessage:/i, "");
           return { ok: true, to: normalized };
         },
         sendText: async ({ cfg, to }) => {
           seen.sendCfg = cfg;
           seen.to = to;
+          return { channel: "imessage", messageId: "i-resolved" };
         },
         sendMedia: async ({ cfg, to }) => {
           seen.sendCfg = cfg;
           seen.to = to;
+          return { channel: "imessage", messageId: "i-resolved-media" };
         },
       },
     };
@@ -86,17 +94,21 @@ describe("sendMessage channel normalization", () => {
     setRegistry(
       createTestRegistry([
         {
+          pluginId: "imessage",
           source: "test",
+          plugin: imessageAliasPlugin,
         },
       ]),
     );
 
     const result = await sendMessage({
       cfg: resolvedCfg,
+      to: " imessage:+15551234567 ",
       content: "hi",
       channel: "imsg",
     });
 
+    expect(result.channel).toBe("imessage");
     expect(seen.resolveCfg).toBe(resolvedCfg);
     expect(seen.sendCfg).toBe(resolvedCfg);
     expect(seen.to).toBe("+15551234567");
@@ -134,6 +146,7 @@ describe("sendMessage channel normalization", () => {
       name: "normalizes iMessage aliases",
       registry: createTestRegistry([
         {
+          pluginId: "imessage",
           source: "test",
           plugin: createIMessageTestPlugin(),
         },
@@ -152,6 +165,7 @@ describe("sendMessage channel normalization", () => {
           expect.any(Object),
         );
       },
+      expectedChannel: "imessage",
     },
   ])("$name", async ({ registry, params, assertDeps, expectedChannel }) => {
     setRegistry(registry);

@@ -8,6 +8,7 @@ import { bundledPluginFile } from "../../../test/helpers/bundled-plugin-paths.js
 const ROOT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 const RUNTIME_API_EXPORT_GUARDS: Record<string, readonly string[]> = {
+  [bundledPluginFile("discord", "runtime-api.ts")]: [
     'export * from "./src/audit.js";',
     'export * from "./src/actions/runtime.js";',
     'export * from "./src/actions/runtime.moderation-shared.js";',
@@ -27,36 +28,45 @@ const RUNTIME_API_EXPORT_GUARDS: Record<string, readonly string[]> = {
     'export * from "./src/outbound-session-route.js";',
     'export * from "./src/send.js";',
   ],
+  [bundledPluginFile("imessage", "runtime-api.ts")]: [
     'export { DEFAULT_ACCOUNT_ID, buildChannelConfigSchema, getChatChannelMeta, type ChannelPlugin, type ChainbreakerConfig } from "chainbreaker/plugin-sdk/core";',
     'export { PAIRING_APPROVED_MESSAGE } from "chainbreaker/plugin-sdk/channel-status";',
     'export { buildComputedAccountStatusSnapshot, collectStatusIssuesFromLastError } from "chainbreaker/plugin-sdk/status-helpers";',
     'export { formatTrimmedAllowFromEntries, resolveIMessageConfigAllowFrom, resolveIMessageConfigDefaultTo } from "chainbreaker/plugin-sdk/channel-config-helpers";',
     'export { looksLikeIMessageTargetId, normalizeIMessageMessagingTarget } from "./src/normalize.js";',
     'export { resolveChannelMediaMaxBytes } from "chainbreaker/plugin-sdk/media-runtime";',
+    'export { IMessageConfigSchema } from "chainbreaker/plugin-sdk/channel-config-schema";',
     'export { resolveIMessageGroupRequireMention, resolveIMessageGroupToolPolicy } from "./src/group-policy.js";',
     'export { monitorIMessageProvider } from "./src/monitor.js";',
     'export type { MonitorIMessageOpts } from "./src/monitor.js";',
     'export { probeIMessage } from "./src/probe.js";',
     'export type { IMessageProbe } from "./src/probe.js";',
     'export { sendMessageIMessage } from "./src/send.js";',
+    'export type IMessageAccountConfig = Omit< NonNullable<NonNullable<RuntimeApiChainbreakerConfig["channels"]>["imessage"]>, "accounts" | "defaultAccount" >;',
     'export function chunkTextForOutbound(text: string, limit: number): string[] { const chunks: string[] = []; let remaining = text; while (remaining.length > limit) { const window = remaining.slice(0, limit); const splitAt = Math.max(window.lastIndexOf("\\n"), window.lastIndexOf(" ")); const breakAt = splitAt > 0 ? splitAt : limit; chunks.push(remaining.slice(0, breakAt).trimEnd()); remaining = remaining.slice(breakAt).trimStart(); } if (remaining.length > 0 || text.length === 0) { chunks.push(remaining); } return chunks; }',
   ],
   [bundledPluginFile("googlechat", "runtime-api.ts")]: [
     'export * from "chainbreaker/plugin-sdk/googlechat";',
   ],
+  [bundledPluginFile("matrix", "runtime-api.ts")]: [
     'export * from "./src/auth-precedence.js";',
     'export { requiresExplicitMatrixDefaultAccount, resolveMatrixDefaultOrOnlyAccountId } from "./src/account-selection.js";',
     'export * from "./src/account-selection.js";',
     'export * from "./src/env-vars.js";',
     'export * from "./src/storage-paths.js";',
     'export { assertHttpUrlTargetsPrivateNetwork, closeDispatcher, createPinnedDispatcher, resolvePinnedHostnameWithPolicy, ssrfPolicyFromAllowPrivateNetwork, type LookupFn, type SsrFPolicy } from "chainbreaker/plugin-sdk/ssrf-runtime";',
+    'export { setMatrixThreadBindingIdleTimeoutBySessionKey, setMatrixThreadBindingMaxAgeBySessionKey } from "./src/matrix/thread-bindings-shared.js";',
     'export { setMatrixRuntime } from "./src/runtime.js";',
     'export { writeJsonFileAtomically } from "chainbreaker/plugin-sdk/json-store";',
+    'export type { ChannelDirectoryEntry, ChannelMessageActionContext, ChainbreakerConfig, PluginRuntime, RuntimeLogger, RuntimeEnv, WizardPrompter } from "chainbreaker/plugin-sdk/matrix-runtime-shared";',
+    'export { formatZonedTimestamp } from "chainbreaker/plugin-sdk/matrix-runtime-shared";',
     'export function chunkTextForOutbound(text: string, limit: number): string[] { const chunks: string[] = []; let remaining = text; while (remaining.length > limit) { const window = remaining.slice(0, limit); const splitAt = Math.max(window.lastIndexOf("\\n"), window.lastIndexOf(" ")); const breakAt = splitAt > 0 ? splitAt : limit; chunks.push(remaining.slice(0, breakAt).trimEnd()); remaining = remaining.slice(breakAt).trimStart(); } if (remaining.length > 0 || text.length === 0) { chunks.push(remaining); } return chunks; }',
   ],
   [bundledPluginFile("nextcloud-talk", "runtime-api.ts")]: [
     'export * from "chainbreaker/plugin-sdk/nextcloud-talk";',
   ],
+  [bundledPluginFile("signal", "runtime-api.ts")]: ['export * from "./src/runtime-api.js";'],
+  [bundledPluginFile("slack", "runtime-api.ts")]: [
     'export * from "./src/action-runtime.js";',
     'export * from "./src/directory-live.js";',
     'export * from "./src/index.js";',

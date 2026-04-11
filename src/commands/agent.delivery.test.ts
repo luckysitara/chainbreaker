@@ -184,6 +184,7 @@ describe("deliverAgentCommandResult", () => {
         deliver: true,
         to: "+15551234567",
         replyTo: "#reports",
+        replyChannel: "slack",
         replyAccountId: "ops",
       },
       sessionEntry: {
@@ -194,6 +195,7 @@ describe("deliverAgentCommandResult", () => {
     });
 
     expect(mocks.resolveOutboundTarget).toHaveBeenCalledWith(
+      expect.objectContaining({ channel: "slack", to: "#reports", accountId: "ops" }),
     );
   });
 
@@ -209,6 +211,7 @@ describe("deliverAgentCommandResult", () => {
         },
       },
       sessionEntry: {
+        lastChannel: "slack",
         lastTo: "U_WRONG",
         lastAccountId: "wrong",
       } as SessionEntry,
@@ -229,6 +232,7 @@ describe("deliverAgentCommandResult", () => {
         },
       },
       sessionEntry: {
+        lastChannel: "slack",
         lastTo: "U_WRONG",
       } as SessionEntry,
     });
@@ -279,6 +283,12 @@ describe("deliverAgentCommandResult", () => {
     });
 
     expect(runtime.log).toHaveBeenCalledTimes(1);
+    const line = String((runtime.log as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]);
+    expect(line).toContain("[agent:nested]");
+    expect(line).toContain("session=agent:main:main");
+    expect(line).toContain("run=run-announce");
+    expect(line).toContain("channel=webchat");
+    expect(line).toContain("ANNOUNCE_SKIP");
   });
 
   it("preserves audioAsVoice in JSON output envelopes", async () => {

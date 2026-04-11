@@ -4,10 +4,7 @@ import {
   getContentType,
   normalizeMessageContent,
 } from "@whiskeysockets/baileys";
-import {
-  formatLocationText,
-  type NormalizedLocation,
-} from "chainbreaker/plugin-sdk/channel-inbound";
+import { formatLocationText, type NormalizedLocation } from "chainbreaker/plugin-sdk/channel-inbound";
 import { logVerbose } from "chainbreaker/plugin-sdk/runtime-env";
 import { jidToE164 } from "chainbreaker/plugin-sdk/text-runtime";
 import { resolveComparableIdentity, type WhatsAppReplyContext } from "../identity.js";

@@ -26,6 +26,7 @@ function manifest(id: string): PluginManifestRecord {
 describe("doctor stale plugin config helpers", () => {
   beforeEach(() => {
     vi.spyOn(manifestRegistry, "loadPluginManifestRegistry").mockReturnValue({
+      plugins: [manifest("discord"), manifest("voice-call"), manifest("openai")],
       diagnostics: [],
     });
   });
@@ -37,6 +38,7 @@ describe("doctor stale plugin config helpers", () => {
   it("finds stale plugins.allow and plugins.entries refs", () => {
     const hits = scanStalePluginConfig({
       plugins: {
+        allow: ["discord", "acpx"],
         entries: {
           "voice-call": { enabled: true },
           acpx: { enabled: true },
@@ -61,6 +63,7 @@ describe("doctor stale plugin config helpers", () => {
   it("removes stale plugin ids from allow and entries without changing valid refs", () => {
     const result = maybeRepairStalePluginConfig({
       plugins: {
+        allow: ["discord", "acpx", "voice-call"],
         entries: {
           "voice-call": { enabled: true },
           acpx: { enabled: true },
@@ -72,6 +75,7 @@ describe("doctor stale plugin config helpers", () => {
       "- plugins.allow: removed 1 stale plugin id (acpx)",
       "- plugins.entries: removed 1 stale plugin entry (acpx)",
     ]);
+    expect(result.config.plugins?.allow).toEqual(["discord", "voice-call"]);
     expect(result.config.plugins?.entries).toEqual({
       "voice-call": { enabled: true },
     });

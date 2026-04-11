@@ -13,6 +13,8 @@ import {
   sendPayloadMediaSequenceOrFallback,
 } from "chainbreaker/plugin-sdk/reply-payload";
 import type { ReplyPayload } from "chainbreaker/plugin-sdk/reply-runtime";
+import type { TelegramInlineButtons } from "./button-types.js";
+import { resolveTelegramInlineButtons } from "./button-types.js";
 import { markdownToTelegramHtmlChunks } from "./format.js";
 import { parseTelegramReplyToMessageId, parseTelegramThreadId } from "./outbound-params.js";
 import { sendMessageTelegram } from "./send.js";
@@ -64,6 +66,7 @@ export async function sendTelegramPayloadMessages(params: {
   baseOpts: Omit<NonNullable<TelegramSendOpts>, "buttons" | "mediaUrl" | "quoteText">;
 }): Promise<Awaited<ReturnType<TelegramSendFn>>> {
   const telegramData = params.payload.channelData?.telegram as
+    | { buttons?: TelegramInlineButtons; quoteText?: string }
     | undefined;
   const quoteText =
     typeof telegramData?.quoteText === "string" ? telegramData.quoteText : undefined;
@@ -73,6 +76,7 @@ export async function sendTelegramPayloadMessages(params: {
       interactive: params.payload.interactive,
     }) ?? "";
   const mediaUrls = resolvePayloadMediaUrls(params.payload);
+  const buttons = resolveTelegramInlineButtons({
     buttons: telegramData?.buttons,
     interactive: params.payload.interactive,
   });

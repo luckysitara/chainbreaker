@@ -243,6 +243,8 @@ export async function applyNonInteractiveAuthChoice(params: {
   if (
     authChoice === "oauth" ||
     authChoice === "chutes" ||
+    authChoice === "minimax-global-oauth" ||
+    authChoice === "minimax-cn-oauth"
   ) {
     runtime.error("OAuth requires interactive mode.");
     runtime.exit(1);

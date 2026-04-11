@@ -36,6 +36,8 @@ type DependabotConfig = {
 function resolveFirstFromReference(dockerfile: string): string | undefined {
   const argDefaults = new Map<string, string>();
 
+  for (const line of dockerfile.split(/\r?\n/)) {
+    const trimmed = line.trim();
     if (!trimmed) {
       continue;
     }
@@ -51,6 +53,7 @@ function resolveFirstFromReference(dockerfile: string): string | undefined {
     argDefaults.set(name, value);
   }
 
+  const fromLine = dockerfile.split(/\r?\n/).find((line) => line.trimStart().startsWith("FROM "));
   if (!fromLine) {
     return undefined;
   }
@@ -70,9 +73,11 @@ function resolveFirstFromReference(dockerfile: string): string | undefined {
 }
 
 describe("docker base image pinning", () => {
+  it("pins selected Dockerfile FROM lines to immutable sha256 digests", async () => {
     for (const dockerfilePath of DIGEST_PINNED_DOCKERFILES) {
       const dockerfile = await readFile(resolve(repoRoot, dockerfilePath), "utf8");
       const imageRef = resolveFirstFromReference(dockerfile);
+      expect(imageRef, `${dockerfilePath} should define a FROM line`).toBeDefined();
       expect(imageRef, `${dockerfilePath} FROM must be digest-pinned`).toMatch(
         /^\S+@sha256:[a-f0-9]{64}$/,
       );

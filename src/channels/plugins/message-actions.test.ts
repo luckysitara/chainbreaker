@@ -135,9 +135,9 @@ describe("message action capability checks", () => {
         "cards",
       ),
     ).toBe(true);
-    expect(
-      channelSupportsMessageCapabilityForChannel({ cfg: {} as ChainbreakerConfig }, "cards"),
-    ).toBe(false);
+    expect(channelSupportsMessageCapabilityForChannel({ cfg: {} as ChainbreakerConfig }, "cards")).toBe(
+      false,
+    );
   });
 
   it("normalizes channel aliases for per-channel capability checks", () => {
@@ -189,11 +189,7 @@ describe("message action capability checks", () => {
       createTestRegistry([{ pluginId: "demo-unified", source: "test", plugin: unifiedPlugin }]),
     );
 
-    expect(listChannelMessageActions({} as ChainbreakerConfig)).toEqual([
-      "send",
-      "broadcast",
-      "react",
-    ]);
+    expect(listChannelMessageActions({} as ChainbreakerConfig)).toEqual(["send", "broadcast", "react"]);
     expect(listChannelMessageCapabilities({} as ChainbreakerConfig)).toEqual(["interactive"]);
     expect(
       resolveChannelMessageToolSchemaProperties({

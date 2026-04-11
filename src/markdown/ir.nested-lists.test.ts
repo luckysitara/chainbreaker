@@ -12,6 +12,8 @@
  * 1. **Indentation**: Each nesting level adds 2 spaces of indentation
  * 2. **Bullet markers**: Bullet lists use "•" (Unicode bullet)
  * 3. **Ordered markers**: Ordered lists use "N. " format
+ * 4. **Line endings**: Each list item ends with a single newline
+ * 5. **List termination**: A trailing newline after the entire list (for top-level only)
  *
  * ## markdown-it Token Sequence
  *
@@ -19,10 +21,12 @@
  * - bullet_list_open (outer)
  *   - list_item_open
  *     - paragraph_open (hidden=true for tight lists)
+ *       - inline (with text children)
  *     - paragraph_close
  *     - bullet_list_open (nested)
  *       - list_item_open
  *         - paragraph_open
+ *           - inline
  *         - paragraph_close
  *       - list_item_close
  *     - bullet_list_close
@@ -50,6 +54,7 @@ describe("Nested Lists - 2 Level Nesting", () => {
     //   • Nested 1.1
     //   • Nested 1.2
     // • Item 2
+    // Note: markdownToIR trims trailing whitespace, so no final newline
     const expected = `• Item 1
   • Nested 1.1
   • Nested 1.2
@@ -216,6 +221,8 @@ describe("Nested Lists - Mixed Nesting", () => {
   });
 });
 
+describe("Nested Lists - Newline Handling", () => {
+  it("does not produce triple newlines in nested lists", () => {
     const input = `- Item 1
   - Nested
 - Item 2`;
@@ -224,6 +231,7 @@ describe("Nested Lists - Mixed Nesting", () => {
     expect(result.text).not.toContain("\n\n\n");
   });
 
+  it("does not produce double newlines between nested items", () => {
     const input = `- A
   - B
   - C
@@ -231,6 +239,7 @@ describe("Nested Lists - Mixed Nesting", () => {
 
     const result = markdownToIR(input);
 
+    // Between B and C there should be exactly one newline
     expect(result.text).toContain("  • B\n  • C");
     expect(result.text).not.toContain("  • B\n\n  • C");
   });
@@ -243,7 +252,9 @@ describe("Nested Lists - Mixed Nesting", () => {
     const result = markdownToIR(input);
 
     // markdownToIR trims trailing whitespace, so output should end with Item 2
+    // (no trailing newline after trimming)
     expect(result.text).toMatch(/Item 2$/);
+    // Should not have excessive newlines before Item 2
     expect(result.text).not.toContain("\n\n• Item 2");
   });
 });
@@ -290,14 +301,17 @@ describe("Nested Lists - Edge Cases", () => {
 });
 
 describe("list paragraph spacing", () => {
+  it("adds blank line between bullet list and following paragraph", () => {
     const input = `- item 1
 - item 2
 
 Paragraph after`;
     const result = markdownToIR(input);
+    // Should have two newlines between "item 2" and "Paragraph"
     expect(result.text).toContain("item 2\n\nParagraph");
   });
 
+  it("adds blank line between ordered list and following paragraph", () => {
     const input = `1. item 1
 2. item 2
 
@@ -306,11 +320,13 @@ Paragraph after`;
     expect(result.text).toContain("item 2\n\nParagraph");
   });
 
+  it("does not produce triple newlines", () => {
     const input = `- item 1
 - item 2
 
 Paragraph after`;
     const result = markdownToIR(input);
+    // Should NOT have three consecutive newlines
     expect(result.text).not.toContain("\n\n\n");
   });
 });

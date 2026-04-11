@@ -174,6 +174,7 @@ afterEach(() => {
 
 describe("models list/status", () => {
   const ZAI_MODEL = {
+    provider: "zai",
     id: "glm-4.7",
     name: "GLM-4.7",
     input: ["text"],
@@ -275,6 +276,7 @@ describe("models list/status", () => {
 
     const payload = parseJsonLog(runtime);
     expect(payload.count).toBe(1);
+    expect(payload.models[0]?.key).toBe("zai/glm-4.7");
   }
 
   function setDefaultZaiRegistry(params: { available?: boolean } = {}) {
@@ -297,14 +299,17 @@ describe("models list/status", () => {
     expect(runtime.error).not.toHaveBeenCalled();
   });
 
+  it("models list outputs canonical zai key for configured z.ai model", async () => {
     setDefaultZaiRegistry();
     const runtime = makeRuntime();
 
     await modelsListCommand({ json: true }, runtime);
 
     const payload = parseJsonLog(runtime);
+    expect(payload.models[0]?.key).toBe("zai/glm-4.7");
   });
 
+  it("models list plain outputs canonical zai key", async () => {
     loadConfig.mockReturnValue({
       agents: { defaults: { model: "z.ai/glm-4.7" } },
     });
@@ -315,6 +320,7 @@ describe("models list/status", () => {
     await modelsListCommand({ plain: true }, runtime);
 
     expect(runtime.log).toHaveBeenCalledTimes(1);
+    expect(runtime.log.mock.calls[0]?.[0]).toBe("zai/glm-4.7");
   });
 
   it("models list plain keeps canonical OpenRouter native ids", async () => {

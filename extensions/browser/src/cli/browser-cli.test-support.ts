@@ -1,5 +1,5 @@
-import type { GatewayRpcOpts } from "chainbreaker/plugin-sdk/browser-support";
 import { Command } from "commander";
+import type { GatewayRpcOpts } from "chainbreaker/plugin-sdk/browser-support";
 import { createCliRuntimeCapture } from "../../test-support.js";
 import type { CliRuntimeCapture } from "../../test-support.js";
 

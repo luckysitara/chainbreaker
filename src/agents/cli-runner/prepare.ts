@@ -175,6 +175,7 @@ export async function prepareCliRunContext(
     normalizedModel,
     systemPrompt,
     systemPromptReport,
+    bootstrapPromptWarningLines: bootstrapPromptWarning.lines,
     heartbeatPrompt,
     extraSystemPromptHash,
   };

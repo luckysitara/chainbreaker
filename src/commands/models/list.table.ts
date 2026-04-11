@@ -72,6 +72,7 @@ export function printModelTable(
       authLabel,
     );
 
+    const line = [
       rich ? theme.accent(keyLabel) : keyLabel,
       coloredInput,
       ctxLabel,
@@ -79,5 +80,6 @@ export function printModelTable(
       coloredAuth,
       tagsLabel,
     ].join(" ");
+    runtime.log(line);
   }
 }

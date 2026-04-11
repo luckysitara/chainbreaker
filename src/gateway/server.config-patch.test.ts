@@ -340,6 +340,7 @@ describe("gateway server sessions", () => {
           sessionId: "sess-home-main",
           updatedAt: Date.now(),
         },
+        "discord:group:dev": {
           sessionId: "sess-home-group",
           updatedAt: Date.now() - 1000,
         },
@@ -365,6 +366,7 @@ describe("gateway server sessions", () => {
     });
     expect(homeSessions.ok).toBe(true);
     expect(homeSessions.payload?.sessions.map((s) => s.key).toSorted()).toEqual([
+      "agent:home:discord:group:dev",
       "agent:home:main",
     ]);
 

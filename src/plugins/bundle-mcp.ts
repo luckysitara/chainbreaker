@@ -198,6 +198,7 @@ function loadBundleFileBackedMcpConfig(params: {
   }
 }
 
+function loadBundleInlineMcpConfig(params: {
   raw: Record<string, unknown>;
   baseDir: string;
 }): BundleMcpConfig {
@@ -254,6 +255,7 @@ function loadBundleMcpConfig(params: {
 
   merged = applyMergePatch(
     merged,
+    loadBundleInlineMcpConfig({
       raw: manifestLoaded.raw,
       baseDir: params.rootDir,
     }),

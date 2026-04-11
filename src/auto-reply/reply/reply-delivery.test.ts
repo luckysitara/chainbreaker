@@ -1,11 +1,14 @@
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { createBlockReplyContentKey } from "./block-reply-pipeline.js";
 import {
   createBlockReplyDeliveryHandler,
   normalizeReplyPayloadDirectives,
 } from "./reply-delivery.js";
 import type { TypingSignaler } from "./typing-mode.js";
 
+type BlockReplyPipelineLike = NonNullable<
+  Parameters<typeof createBlockReplyDeliveryHandler>[0]["blockReplyPipeline"]
 >;
 
 describe("createBlockReplyDeliveryHandler", () => {
@@ -17,6 +20,7 @@ describe("createBlockReplyDeliveryHandler", () => {
     }));
     const directlySentBlockKeys = new Set<string>();
     const typingSignals = {
+      signalTextDelta: vi.fn(async () => {}),
     } as unknown as TypingSignaler;
 
     const handler = createBlockReplyDeliveryHandler({
@@ -25,6 +29,7 @@ describe("createBlockReplyDeliveryHandler", () => {
       applyReplyToMode: (payload) => payload,
       typingSignals,
       blockStreamingEnabled: false,
+      blockReplyPipeline: null,
       directlySentBlockKeys,
     });
 
@@ -52,6 +57,7 @@ describe("createBlockReplyDeliveryHandler", () => {
         }),
       ]),
     );
+    expect(typingSignals.signalTextDelta).toHaveBeenCalledWith("here's the vibe");
   });
 
   it("keeps text-only block replies buffered when block streaming is disabled", async () => {
@@ -62,8 +68,10 @@ describe("createBlockReplyDeliveryHandler", () => {
       normalizeStreamingText: (payload) => ({ text: payload.text, skip: false }),
       applyReplyToMode: (payload) => payload,
       typingSignals: {
+        signalTextDelta: vi.fn(async () => {}),
       } as unknown as TypingSignaler,
       blockStreamingEnabled: false,
+      blockReplyPipeline: null,
       directlySentBlockKeys: new Set(),
     });
 
@@ -73,20 +81,25 @@ describe("createBlockReplyDeliveryHandler", () => {
   });
 
   it("trims leading whitespace in block-streamed replies", async () => {
+    const blockReplyPipeline = {
       enqueue: vi.fn(),
+    } as unknown as BlockReplyPipelineLike;
 
     const handler = createBlockReplyDeliveryHandler({
       onBlockReply: vi.fn(async () => {}),
       normalizeStreamingText: (payload) => ({ text: payload.text, skip: false }),
       applyReplyToMode: (payload) => payload,
       typingSignals: {
+        signalTextDelta: vi.fn(async () => {}),
       } as unknown as TypingSignaler,
       blockStreamingEnabled: true,
+      blockReplyPipeline,
       directlySentBlockKeys: new Set(),
     });
 
     await handler({ text: "\n\n  Hello from stream" });
 
+    expect(blockReplyPipeline.enqueue).toHaveBeenCalledWith({
       text: "Hello from stream",
       mediaUrl: undefined,
       replyToId: undefined,
@@ -112,7 +125,9 @@ describe("createBlockReplyDeliveryHandler", () => {
   });
 
   it("passes normalized media block replies through media path normalization", async () => {
+    const blockReplyPipeline = {
       enqueue: vi.fn(),
+    } as unknown as BlockReplyPipelineLike;
     const absPath = path.join("/tmp/home", "chainbreaker", "image.png");
 
     const handler = createBlockReplyDeliveryHandler({
@@ -125,13 +140,16 @@ describe("createBlockReplyDeliveryHandler", () => {
         mediaUrls: [absPath],
       }),
       typingSignals: {
+        signalTextDelta: vi.fn(async () => {}),
       } as unknown as TypingSignaler,
       blockStreamingEnabled: true,
+      blockReplyPipeline,
       directlySentBlockKeys: new Set(),
     });
 
     await handler({ text: "Result\nMEDIA: ./image.png" });
 
+    expect(blockReplyPipeline.enqueue).toHaveBeenCalledWith({
       text: "Result",
       mediaUrl: absPath,
       mediaUrls: [absPath],

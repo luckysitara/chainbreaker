@@ -5,8 +5,7 @@ import {
 
 type DescribeImageWithModel =
   typeof import("chainbreaker/plugin-sdk/media-runtime").describeImageWithModel;
-type TranscribeFirstAudio =
-  typeof import("chainbreaker/plugin-sdk/media-runtime").transcribeFirstAudio;
+type TranscribeFirstAudio = typeof import("chainbreaker/plugin-sdk/media-runtime").transcribeFirstAudio;
 
 export async function describeImageWithModel(
   ...args: Parameters<DescribeImageWithModel>

@@ -335,6 +335,7 @@ function mockSuccessfulCommandRun(run: ReturnType<typeof vi.mocked<typeof runCom
     code: 0,
     stdout: "",
     stderr: "",
+    signal: null,
     killed: false,
     termination: "exit",
   });
@@ -633,11 +634,7 @@ describe("installPluginFromArchive", () => {
       archivePath: archiveV1,
       extensionsDir,
     });
-    expectSuccessfulArchiveInstall({
-      result: first,
-      stateDir,
-      pluginId: "@chainbreaker/voice-call",
-    });
+    expectSuccessfulArchiveInstall({ result: first, stateDir, pluginId: "@chainbreaker/voice-call" });
 
     const duplicate = await installPluginFromArchive({
       archivePath: archiveV1,
@@ -1011,6 +1008,8 @@ describe("installPluginFromDir", () => {
 
   it("does not warn when a scoped npm package name matches the manifest id", async () => {
     const { pluginDir, extensionsDir } = setupManifestInstallFixture({
+      manifestId: "matrix",
+      packageName: "@chainbreaker/matrix",
     });
 
     const infoMessages: string[] = [];
@@ -1020,6 +1019,7 @@ describe("installPluginFromDir", () => {
       logger: { info: (msg: string) => infoMessages.push(msg), warn: () => {} },
     });
 
+    expectInstalledWithPluginId(res, extensionsDir, "matrix");
     expect(infoMessages.some((msg) => msg.includes("differs from npm package name"))).toBe(false);
   });
 
@@ -1314,6 +1314,7 @@ describe("installPluginFromNpmSpec", () => {
             },
           ]),
           stderr: "",
+          signal: null,
           killed: false,
           termination: "exit",
         };
@@ -1382,6 +1383,7 @@ describe("installPluginFromNpmSpec", () => {
       code: 1,
       stdout: "",
       stderr: "npm ERR! code E404\nnpm ERR! 404 Not Found - GET https://registry.npmjs.org/nope",
+      signal: null,
       killed: false,
       termination: "exit",
     });
@@ -1436,6 +1438,7 @@ describe("installPluginFromNpmSpec", () => {
             code: 0,
             stdout: JSON.stringify([prereleaseMetadata]),
             stderr: "",
+            signal: null,
             killed: false,
             termination: "exit",
           };

@@ -130,6 +130,7 @@ export async function monitorWebChannel(
 
   const sleep =
     tuning.sleep ??
+    ((ms: number, signal?: AbortSignal) => sleepWithAbort(ms, signal ?? abortSignal));
   const stopRequested = () => abortSignal?.aborted === true;
   const abortPromise =
     abortSignal &&
@@ -235,6 +236,7 @@ export async function monitorWebChannel(
         { connectionId: active.connectionId, error: errorStr },
         "web reconnect: unhandled rejection from WhatsApp socket; forcing reconnect",
       );
+      listener.signalClose?.({
         status: 499,
         isLoggedOut: false,
         error: reason,
@@ -316,6 +318,7 @@ export async function monitorWebChannel(
         void closeListener().catch((err) => {
           logVerbose(`Close listener failed: ${formatError(err)}`);
         });
+        listener.signalClose?.({
           status: 499,
           isLoggedOut: false,
           error: "watchdog-timeout",

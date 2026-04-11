@@ -57,6 +57,7 @@ export function createAnthropicVertexStreamFn(
       client: client as unknown as AnthropicOptions["client"],
       temperature: options?.temperature,
       ...(maxTokens !== undefined ? { maxTokens } : {}),
+      signal: options?.signal,
       cacheRetention: options?.cacheRetention,
       sessionId: options?.sessionId,
       headers: options?.headers,

@@ -271,6 +271,7 @@ describe("sandboxRecreateCommand", () => {
       expect(mocks.removeSandboxContainer).toHaveBeenCalled();
     });
 
+    it("should cancel when user declines", async () => {
       await runCancelledConfirmation(false);
 
       expect(runtime.log).toHaveBeenCalledWith("Cancelled.");

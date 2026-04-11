@@ -1,6 +1,10 @@
 import "./isolated-agent.mocks.js";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  discordOutbound,
+  imessageOutbound,
+  signalOutbound,
+  slackOutbound,
   telegramOutbound,
   whatsappOutbound,
 } from "../../test/channel-outbounds.js";
@@ -20,6 +24,7 @@ import { setupIsolatedAgentTurnMocks } from "./isolated-agent.test-setup.js";
 
 type ChannelCase = {
   name: string;
+  channel: "slack" | "discord" | "whatsapp" | "imessage";
   to: string;
   sendKey: keyof Pick<
     CliDeps,
@@ -31,12 +36,14 @@ type ChannelCase = {
 const CASES: ChannelCase[] = [
   {
     name: "Slack",
+    channel: "slack",
     to: "channel:C12345",
     sendKey: "sendMessageSlack",
     expectedTo: "channel:C12345",
   },
   {
     name: "Discord",
+    channel: "discord",
     to: "channel:789",
     sendKey: "sendMessageDiscord",
     expectedTo: "channel:789",
@@ -50,6 +57,7 @@ const CASES: ChannelCase[] = [
   },
   {
     name: "iMessage",
+    channel: "imessage",
     to: "friend@example.com",
     sendKey: "sendMessageIMessage",
     expectedTo: "friend@example.com",
@@ -91,12 +99,18 @@ describe("runCronIsolatedAgentTurn core-channel direct delivery", () => {
           source: "test",
         },
         {
+          pluginId: "signal",
+          plugin: createOutboundTestPlugin({ id: "signal", outbound: signalOutbound }),
           source: "test",
         },
         {
+          pluginId: "slack",
+          plugin: createOutboundTestPlugin({ id: "slack", outbound: slackOutbound }),
           source: "test",
         },
         {
+          pluginId: "discord",
+          plugin: createOutboundTestPlugin({ id: "discord", outbound: discordOutbound }),
           source: "test",
         },
         {
@@ -105,6 +119,8 @@ describe("runCronIsolatedAgentTurn core-channel direct delivery", () => {
           source: "test",
         },
         {
+          pluginId: "imessage",
+          plugin: createOutboundTestPlugin({ id: "imessage", outbound: imessageOutbound }),
           source: "test",
         },
       ]),

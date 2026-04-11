@@ -31,9 +31,12 @@ function parseContextArgs(commandBodyNormalized: string): string {
 function formatListTop(
   entries: Array<{ name: string; value: number }>,
   cap: number,
+): { lines: string[]; omitted: number } {
   const sorted = [...entries].toSorted((a, b) => b.value - a.value);
   const top = sorted.slice(0, cap);
   const omitted = Math.max(0, sorted.length - top.length);
+  const lines = top.map((e) => `- ${e.name}: ${formatCharsAndTokens(e.value)}`);
+  return { lines, omitted };
 }
 
 async function resolveContextReport(
@@ -84,6 +87,7 @@ export async function buildContextReply(params: HandleCommandsParams): Promise<R
         "- /context detail (per-file + per-tool + per-skill + system prompt size)",
         "- /context json   (same, machine-readable)",
         "",
+        "Inline shortcut = a command token inside a normal message (e.g. “hey /status”). It runs immediately (allowlisted senders only) and is stripped before the model sees the remaining text.",
       ].join("\n"),
     };
   }
@@ -225,20 +229,24 @@ export async function buildContextReply(params: HandleCommandsParams): Promise<R
       text: [
         "🧠 Context breakdown (detailed)",
         ...sharedContextLines,
+        ...(perSkill.lines.length ? ["Top skills (prompt entry size):", ...perSkill.lines] : []),
         ...(perSkill.omitted ? [`… (+${perSkill.omitted} more skills)`] : []),
         "",
         toolListLine,
         toolSchemaLine,
         toolsNamesLine,
         "Top tools (schema size):",
+        ...perToolSchema.lines,
         ...(perToolSchema.omitted ? [`… (+${perToolSchema.omitted} more tools)`] : []),
         "",
         "Top tools (summary text size):",
+        ...perToolSummary.lines,
         ...(perToolSummary.omitted ? [`… (+${perToolSummary.omitted} more tools)`] : []),
         ...(toolPropsLines.length ? ["", "Tools (param count):", ...toolPropsLines] : []),
         "",
         totalsLine,
         "",
+        "Inline shortcut: a command token inside normal text (e.g. “hey /status”) that runs immediately (allowlisted senders only) and is stripped before the model sees the remaining message.",
       ]
         .filter(Boolean)
         .join("\n"),
@@ -255,6 +263,7 @@ export async function buildContextReply(params: HandleCommandsParams): Promise<R
       "",
       totalsLine,
       "",
+      "Inline shortcut: a command token inside normal text (e.g. “hey /status”) that runs immediately (allowlisted senders only) and is stripped before the model sees the remaining message.",
     ].join("\n"),
   };
 }

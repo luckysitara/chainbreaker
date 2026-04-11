@@ -218,8 +218,11 @@ export function parseIcaclsOutput(output: string, targetPath: string): WindowsAc
   const quotedLower = quotedTarget.toLowerCase();
 
   for (const rawLine of output.split(/\r?\n/)) {
+    const line = rawLine.trimEnd();
+    if (!line.trim()) {
       continue;
     }
+    const trimmed = line.trim();
     const lower = trimmed.toLowerCase();
     if (isStatusLine(lower)) {
       continue;

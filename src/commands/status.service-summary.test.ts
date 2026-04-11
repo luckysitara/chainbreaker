@@ -58,8 +58,7 @@ describe("readServiceStatusSummary", () => {
       return env?.CHAINBREAKER_GATEWAY_PORT === "18789";
     });
     const readRuntime = vi.fn(async (env?: NodeJS.ProcessEnv) => ({
-      status:
-        env?.CHAINBREAKER_GATEWAY_PORT === "18789" ? ("running" as const) : ("unknown" as const),
+      status: env?.CHAINBREAKER_GATEWAY_PORT === "18789" ? ("running" as const) : ("unknown" as const),
     }));
 
     const summary = await readServiceStatusSummary(

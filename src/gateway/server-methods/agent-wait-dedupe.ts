@@ -149,12 +149,14 @@ export async function waitForTerminalGatewayDedupe(params: {
   dedupe: Map<string, DedupeEntry>;
   runId: string;
   timeoutMs: number;
+  signal?: AbortSignal;
   ignoreAgentTerminalSnapshot?: boolean;
 }): Promise<AgentWaitTerminalSnapshot | null> {
   const initial = readTerminalSnapshotFromGatewayDedupe(params);
   if (initial) {
     return initial;
   }
+  if (params.timeoutMs <= 0 || params.signal?.aborted) {
     return null;
   }
 
@@ -173,6 +175,7 @@ export async function waitForTerminalGatewayDedupe(params: {
         clearTimeout(timeoutHandle);
       }
       if (onAbort) {
+        params.signal?.removeEventListener("abort", onAbort);
       }
       removeWaiter?.();
       resolve(snapshot);
@@ -196,6 +199,7 @@ export async function waitForTerminalGatewayDedupe(params: {
     timeoutHandle.unref?.();
 
     onAbort = () => finish(null);
+    params.signal?.addEventListener("abort", onAbort, { once: true });
   });
 }
 

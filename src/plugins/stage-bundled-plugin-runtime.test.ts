@@ -173,6 +173,7 @@ describe("stageBundledPluginRuntime", () => {
         "  registry.clear();",
         "}",
         "export function getPluginCommandSpecs(provider) {",
+        "  if (provider && provider !== 'telegram' && provider !== 'discord') return [];",
         "  return Array.from(registry.values()).map((command) => ({",
         "    name: command.nativeNames?.[provider] ?? command.nativeNames?.default ?? command.name,",
         "    description: command.description,",
@@ -202,6 +203,7 @@ describe("stageBundledPluginRuntime", () => {
         "    name: 'pair',",
         "    description: 'Pair a device',",
         "    acceptsArgs: true,",
+        "    nativeNames: { telegram: 'pair', discord: 'pair' },",
         "    handler: async ({ args }) => ({ text: `paired:${args ?? ''}` }),",
         "  });",
         "}",
@@ -245,6 +247,7 @@ describe("stageBundledPluginRuntime", () => {
     expect(commandsModule.getPluginCommandSpecs("telegram")).toEqual([
       { name: "pair", description: "Pair a device", acceptsArgs: true },
     ]);
+    expect(commandsModule.getPluginCommandSpecs("discord")).toEqual([
       { name: "pair", description: "Pair a device", acceptsArgs: true },
     ]);
 

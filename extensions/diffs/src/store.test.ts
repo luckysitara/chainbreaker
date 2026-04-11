@@ -34,6 +34,7 @@ describe("DiffArtifactStore", () => {
       context: {
         agentId: "main",
         sessionId: "session-123",
+        messageChannel: "discord",
         agentAccountId: "default",
       },
     });
@@ -43,6 +44,7 @@ describe("DiffArtifactStore", () => {
     expect(loaded?.context).toEqual({
       agentId: "main",
       sessionId: "session-123",
+      messageChannel: "discord",
       agentAccountId: "default",
     });
     expect(await store.readHtml(artifact.id)).toBe("<html>demo</html>");

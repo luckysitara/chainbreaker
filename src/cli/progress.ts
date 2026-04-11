@@ -4,6 +4,7 @@ import {
   clearActiveProgressLine,
   registerActiveProgressLine,
   unregisterActiveProgressLine,
+} from "../terminal/progress-line.js";
 import { theme } from "../terminal/theme.js";
 
 const DEFAULT_DELAY_MS = 0;
@@ -16,6 +17,7 @@ type ProgressOptions = {
   enabled?: boolean;
   delayMs?: number;
   stream?: NodeJS.WriteStream;
+  fallback?: "spinner" | "line" | "log" | "none";
 };
 
 export type ProgressReporter = {
@@ -56,6 +58,7 @@ export function createCliProgress(options: ProgressOptions): ProgressReporter {
   const delayMs = typeof options.delayMs === "number" ? options.delayMs : DEFAULT_DELAY_MS;
   const canOsc = isTty && supportsOscProgress(process.env, isTty);
   const allowSpinner = isTty && (options.fallback === undefined || options.fallback === "spinner");
+  const allowLine = isTty && options.fallback === "line";
 
   let started = false;
   let label = options.label;

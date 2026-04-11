@@ -332,6 +332,10 @@ function findDesktopFilePath(desktopId: string): string | null {
 function readDesktopExecLine(desktopPath: string): string | null {
   try {
     const raw = fs.readFileSync(desktopPath, "utf8");
+    const lines = raw.split(/\r?\n/);
+    for (const line of lines) {
+      if (line.startsWith("Exec=")) {
+        return line.slice("Exec=".length).trim();
       }
     }
   } catch {
@@ -357,10 +361,13 @@ function extractExecutableFromExecLine(execLine: string): string | null {
   return null;
 }
 
+function splitExecLine(line: string): string[] {
   const tokens: string[] = [];
   let current = "";
   let inQuotes = false;
   let quoteChar = "";
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
     if ((ch === '"' || ch === "'") && (!inQuotes || ch === quoteChar)) {
       if (inQuotes) {
         inQuotes = false;

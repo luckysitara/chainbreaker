@@ -18,6 +18,7 @@ describe("cron tool flat-params", () => {
 
   it("preserves explicit top-level sessionKey during flat-params recovery", async () => {
     const tool = createCronTool(
+      { agentSessionKey: "agent:main:discord:channel:ops" },
       { callGatewayTool: callGatewayToolMock },
     );
     await tool.execute("call-flat-session-key", {

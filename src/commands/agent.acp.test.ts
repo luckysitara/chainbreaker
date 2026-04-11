@@ -317,6 +317,8 @@ describe("agentCommand ACP runtime routing", () => {
       ]);
 
       expect(assistantEvents).toEqual([{ text: "Actual answer", delta: "Actual answer" }]);
+      expect(logLines.some((line) => line.includes("NO_REPLY"))).toBe(false);
+      expect(logLines.some((line) => line.includes("Actual answer"))).toBe(true);
     });
   });
 
@@ -329,6 +331,8 @@ describe("agentCommand ACP runtime routing", () => {
         "NO_REPLY",
       ]);
       expect(assistantEvents.map((event) => event.text).filter(Boolean)).toEqual([]);
+      expect(logLines.some((line) => line.includes("NO_REPLY"))).toBe(false);
+      expect(logLines.some((line) => line.includes("No reply from agent."))).toBe(true);
     });
   });
 
@@ -347,6 +351,7 @@ describe("agentCommand ACP runtime routing", () => {
         { text: "boo", delta: "o" },
         { text: "book", delta: "k" },
       ]);
+      expect(logLines.some((line) => line.includes("book"))).toBe(true);
     });
   });
 
@@ -355,6 +360,7 @@ describe("agentCommand ACP runtime routing", () => {
       const { assistantEvents, logLines } = await runAcpTurnWithAssistantEvents(["NO", "W"]);
 
       expect(assistantEvents).toEqual([{ text: "NOW", delta: "NOW" }]);
+      expect(logLines.some((line) => line.includes("NOW"))).toBe(true);
     });
   });
 

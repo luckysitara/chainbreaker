@@ -4,6 +4,7 @@ import { createApproverRestrictedNativeApprovalAdapter } from "./approval-delive
 describe("createApproverRestrictedNativeApprovalAdapter", () => {
   it("uses approver-restricted authorization for exec and plugin commands", () => {
     const adapter = createApproverRestrictedNativeApprovalAdapter({
+      channel: "discord",
       channelLabel: "Discord",
       listAccountIds: () => ["work"],
       hasApprovers: ({ accountId }) => accountId === "work",
@@ -139,6 +140,7 @@ describe("createApproverRestrictedNativeApprovalAdapter", () => {
         cfg: {} as never,
         target: { channel: "telegram" },
         request: {
+          request: { turnSourceChannel: "slack", turnSourceAccountId: "topic-1" },
         } as never,
       }),
     ).toBe(false);
@@ -146,6 +148,7 @@ describe("createApproverRestrictedNativeApprovalAdapter", () => {
     expect(
       shouldSuppressForwardingFallback({
         cfg: {} as never,
+        target: { channel: "slack" },
         request: {
           request: { turnSourceChannel: "telegram", turnSourceAccountId: "topic-1" },
         } as never,

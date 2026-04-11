@@ -20,6 +20,7 @@ describe("origin-routing helpers", () => {
       provider: "  Slack  ",
     });
 
+    expect(provider).toBe("slack");
   });
 
   it("prefers originating destination over fallback destination", () => {

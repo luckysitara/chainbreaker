@@ -608,9 +608,11 @@ async function deliverOutboundPayloadsCore(
       results.push(await handler.sendText(text, overrides));
       return;
     }
+    if (chunkMode === "newline") {
       const mode = handler.chunkerMode ?? "text";
       const blockChunks =
         mode === "markdown"
+          ? chunkMarkdownTextWithMode(text, textLimit, "newline")
           : chunkByParagraph(text, textLimit);
 
       if (!blockChunks.length && text) {

@@ -44,6 +44,7 @@ function expectMissingScenarios(scenarios: MissingEnvScenario[]) {
 
 describe("resolveConfigEnvVars", () => {
   describe("basic substitution", () => {
+    it("substitutes direct, inline, repeated, and multi-var patterns", () => {
       const scenarios: SubstitutionScenario[] = [
         {
           name: "single env var",
@@ -58,6 +59,7 @@ describe("resolveConfigEnvVars", () => {
           expected: { key: "x/y" },
         },
         {
+          name: "inline prefix/suffix",
           config: { key: "prefix-${FOO}-suffix" },
           env: { FOO: "bar" },
           expected: { key: "prefix-bar-suffix" },

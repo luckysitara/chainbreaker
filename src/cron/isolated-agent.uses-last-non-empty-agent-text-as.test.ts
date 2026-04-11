@@ -197,6 +197,7 @@ describe("runCronIsolatedAgentTurn", () => {
     });
   });
 
+  it("appends current time after the cron header line", async () => {
     await withTempHome(async (home) => {
       await runCronTurn(home, {
         jobPayload: DEFAULT_AGENT_TURN_PAYLOAD,
@@ -205,6 +206,10 @@ describe("runCronIsolatedAgentTurn", () => {
       const call = vi.mocked(runEmbeddedPiAgent).mock.calls.at(-1)?.[0] as {
         prompt?: string;
       };
+      const lines = call?.prompt?.split("\n") ?? [];
+      expect(lines[0]).toContain("[cron:job-1");
+      expect(lines[0]).toContain("do it");
+      expect(lines[1]).toMatch(/^Current time: .+ \(.+\) \/ \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC$/);
     });
   });
 

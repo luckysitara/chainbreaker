@@ -279,12 +279,14 @@ function renderStoreDryRunPlan(params: {
   params.runtime.log(rich ? theme.heading(header) : header);
   for (const actionRow of params.actionRows) {
     const model = resolveSessionDisplayModel(params.cfg, actionRow, params.displayDefaults);
+    const line = [
       formatCleanupActionCell(actionRow.action, rich),
       formatSessionKeyCell(actionRow.key, rich),
       formatSessionAgeCell(actionRow.updatedAt, rich),
       formatSessionModelCell(model, rich),
       formatSessionFlagsCell(actionRow, rich),
     ].join(" ");
+    params.runtime.log(line.trimEnd());
   }
 }
 

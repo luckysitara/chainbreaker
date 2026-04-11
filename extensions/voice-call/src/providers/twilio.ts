@@ -513,6 +513,7 @@ export class TwilioProvider implements VoiceCallProvider {
 
   /**
    * Initiate an outbound call via Twilio API.
+   * If inlineTwiml is provided, uses that directly (for notify mode).
    * Otherwise, uses webhook URL for dynamic TwiML.
    */
   async initiateCall(input: InitiateCallInput): Promise<InitiateCallResult> {
@@ -525,10 +526,14 @@ export class TwilioProvider implements VoiceCallProvider {
     statusUrl.searchParams.set("type", "status"); // Differentiate from TwiML requests
 
     // Store TwiML content if provided (for notify mode)
+    // We now serve it from the webhook endpoint instead of sending inline
+    if (input.inlineTwiml) {
+      this.twimlStorage.set(input.callId, input.inlineTwiml);
       this.notifyCalls.add(input.callId);
     }
 
     // Build request params - always use URL-based TwiML.
+    // Twilio silently ignores `StatusCallback` when using the inline `Twiml` parameter.
     const params: Record<string, string | string[]> = {
       To: input.to,
       From: input.from,
@@ -664,11 +669,13 @@ export class TwilioProvider implements VoiceCallProvider {
       return normalizeSendResult(raw);
     };
 
+    await handler.queueTts(streamSid, async (signal) => {
       const sendKeepAlive = () => {
         sendAudioChunk(SILENCE_CHUNK);
       };
       sendKeepAlive();
       const keepAlive = setInterval(() => {
+        if (!signal.aborted) {
           sendKeepAlive();
         }
       }, CHUNK_DELAY_MS);
@@ -699,6 +706,7 @@ export class TwilioProvider implements VoiceCallProvider {
       let chunkDelivered = 0;
       let nextChunkDueAt = Date.now() + CHUNK_DELAY_MS;
       for (const chunk of chunkAudio(muLawAudio, CHUNK_SIZE)) {
+        if (signal.aborted) {
           break;
         }
         chunkAttempts += 1;
@@ -713,15 +721,18 @@ export class TwilioProvider implements VoiceCallProvider {
           await new Promise((resolve) => setTimeout(resolve, Math.ceil(waitMs)));
         }
         nextChunkDueAt += CHUNK_DELAY_MS;
+        if (signal.aborted) {
           break;
         }
       }
 
       let markSent = true;
+      if (!signal.aborted) {
         // Send a mark to track when audio finishes
         markSent = sendPlaybackMark(`tts-${Date.now()}`).sent;
       }
 
+      if (!signal.aborted && chunkAttempts > 0 && (chunkDelivered === 0 || !markSent)) {
         const failures: string[] = [];
         if (chunkDelivered === 0) {
           failures.push("no audio chunks delivered");

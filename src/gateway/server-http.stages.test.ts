@@ -28,6 +28,7 @@ describe("runGatewayHttpRequestStages", () => {
       {
         name: "broken-facade",
         run: () => {
+          throw new Error("Cannot find module '@slack/bolt'");
         },
       },
       { name: "c", run: stageC },

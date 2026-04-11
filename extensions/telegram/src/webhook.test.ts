@@ -131,6 +131,7 @@ beforeEach(() => {
 
 async function fetchWithTimeout(
   input: string,
+  init: Omit<RequestInit, "signal">,
   timeoutMs: number,
 ): Promise<Response> {
   const abort = new AbortController();
@@ -138,6 +139,7 @@ async function fetchWithTimeout(
     abort.abort();
   }, timeoutMs);
   try {
+    return await fetch(input, { ...init, signal: abort.signal });
   } finally {
     clearTimeout(timer);
   }
@@ -354,6 +356,7 @@ async function withStartedWebhook<T>(
   const started = await startTelegramWebhook({
     token: TELEGRAM_TOKEN,
     port: 0,
+    abortSignal: abort.signal,
     ...options,
   });
   try {
@@ -658,12 +661,14 @@ describe("startTelegramWebhook", () => {
     const first = await startTelegramWebhook({
       token: TELEGRAM_TOKEN,
       port: 0,
+      abortSignal: firstAbort.signal,
       secret: TELEGRAM_SECRET,
       path: TELEGRAM_WEBHOOK_PATH,
     });
     const second = await startTelegramWebhook({
       token: TELEGRAM_TOKEN,
       port: 0,
+      abortSignal: secondAbort.signal,
       secret: TELEGRAM_SECRET,
       path: TELEGRAM_WEBHOOK_PATH,
     });
@@ -905,6 +910,7 @@ describe("startTelegramWebhook", () => {
       token: TELEGRAM_TOKEN,
       secret: TELEGRAM_SECRET,
       port: 0,
+      abortSignal: abort.signal,
       path: TELEGRAM_WEBHOOK_PATH,
     });
 

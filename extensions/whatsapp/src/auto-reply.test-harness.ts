@@ -16,10 +16,12 @@ import {
 export { resetBaileysMocks, resetLoadConfigMock, setLoadConfigMock } from "./test-helpers.js";
 
 // Avoid exporting inferred vitest mock types (TS2742 under pnpm + d.ts emit).
+// oxlint-disable-next-line typescript/no-explicit-any
 type AnyExport = any;
 type MockWebListener = {
   close: () => Promise<void>;
   onClose: Promise<WebListenerCloseReason>;
+  signalClose: () => void;
   sendMessage: () => Promise<{ messageId: string }>;
   sendPoll: () => Promise<{ messageId: string }>;
   sendReaction: () => Promise<void>;
@@ -178,6 +180,7 @@ export function createMockWebListener(): MockWebListener {
   return {
     close: vi.fn(async () => undefined),
     onClose: new Promise<WebListenerCloseReason>(() => {}),
+    signalClose: vi.fn(),
     sendMessage: vi.fn(async () => ({ messageId: "msg-1" })),
     sendPoll: vi.fn(async () => ({ messageId: "poll-1" })),
     sendReaction: vi.fn(async () => undefined),
@@ -201,6 +204,7 @@ export function createScriptedWebListenerFactory(): AnyExport {
       const listener: MockWebListener = {
         ...createMockWebListener(),
         onClose,
+        signalClose: vi.fn((reason?: unknown) => resolveClose(reason)),
       };
       listeners.push(listener);
       return listener;
@@ -236,6 +240,7 @@ export function startWebAutoReplyMonitor(params: {
   monitorWebChannelFn: (...args: unknown[]) => Promise<unknown>;
   listenerFactory: unknown;
   sleep: ReturnType<typeof vi.fn>;
+  signal?: AbortSignal;
   heartbeatSeconds?: number;
   messageTimeoutMs?: number;
   watchdogCheckMs?: number;
@@ -249,6 +254,7 @@ export function startWebAutoReplyMonitor(params: {
     true,
     async () => ({ text: "ok" }),
     runtime as never,
+    params.signal ?? controller.signal,
     {
       heartbeatSeconds: params.heartbeatSeconds ?? 1,
       messageTimeoutMs: params.messageTimeoutMs,

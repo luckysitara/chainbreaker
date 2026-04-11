@@ -305,12 +305,14 @@ describe("gateway run option collisions", () => {
     );
   });
 
+  it("warns when gateway password is passed inline", async () => {
     await runGatewayCli([
       "gateway",
       "run",
       "--auth",
       "password",
       "--password",
+      "pw_inline",
       "--allow-unconfigured",
     ]);
 
@@ -329,6 +331,7 @@ describe("gateway run option collisions", () => {
             "gateway",
             "run",
             "--password",
+            "pw_inline",
             "--password-file",
             passwordFile ?? "",
             "--allow-unconfigured",

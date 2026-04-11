@@ -164,6 +164,7 @@ type AcpSpawnStreamPlan = {
 };
 
 type AcpSpawnBootstrapDeliveryPlan = {
+  useInlineDelivery: boolean;
   channel?: string;
   accountId?: string;
   to?: string;
@@ -408,6 +409,8 @@ function resolveConversationIdForThreadBinding(params: {
     return genericConversationId;
   }
   const target = params.to?.trim() || "";
+  if (channel === "line") {
+    const prefixed = target.match(/^line:(?:(?:user|group|room):)?([UCR][a-f0-9]{32})$/i)?.[1];
     if (prefixed) {
       return prefixed;
     }
@@ -749,12 +752,19 @@ function resolveAcpSpawnBootstrapDeliveryPlan(params: {
     : (boundDeliveryTarget.threadId ?? deliveryThreadId);
   const hasDeliveryTarget = Boolean(params.requester.origin?.channel && inferredDeliveryTo);
 
+  // Thread-bound session spawns always deliver inline to their bound thread.
   // Background run-mode spawns should stay internal and report back through
   // the parent task lifecycle notifier instead of letting the child ACP
   // session write raw output directly into the originating channel.
+  const useInlineDelivery =
     hasDeliveryTarget && !params.effectiveStreamToParent && params.spawnMode === "session";
 
   return {
+    useInlineDelivery,
+    channel: useInlineDelivery ? params.requester.origin?.channel : undefined,
+    accountId: useInlineDelivery ? (params.requester.origin?.accountId ?? undefined) : undefined,
+    to: useInlineDelivery ? inferredDeliveryTo : undefined,
+    threadId: useInlineDelivery ? resolvedDeliveryThreadId : undefined,
   };
 }
 
@@ -946,6 +956,7 @@ export async function spawnAcpDirect(
         accountId: deliveryPlan.accountId,
         threadId: deliveryPlan.threadId,
         idempotencyKey: childIdem,
+        deliver: deliveryPlan.useInlineDelivery,
         label: params.label || undefined,
       },
       timeoutMs: 10_000,

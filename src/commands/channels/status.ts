@@ -95,6 +95,8 @@ function buildChannelAccountLine(
 }
 
 export function formatGatewayChannelsStatusLines(payload: Record<string, unknown>): string[] {
+  const lines: string[] = [];
+  lines.push(theme.success("Gateway reachable."));
   const accountLines = (provider: ChatChannel, accounts: Array<Record<string, unknown>>) =>
     accounts.map((account) => {
       const bits: string[] = [];
@@ -185,18 +187,26 @@ export function formatGatewayChannelsStatusLines(payload: Record<string, unknown
   for (const plugin of plugins) {
     const accounts = accountPayloads[plugin.id];
     if (accounts && accounts.length > 0) {
+      lines.push(...accountLines(plugin.id, accounts));
     }
   }
 
+  lines.push("");
   const issues = collectChannelStatusIssues(payload);
   if (issues.length > 0) {
+    lines.push(theme.warn("Warnings:"));
     for (const issue of issues) {
+      lines.push(
         `- ${issue.channel} ${issue.accountId}: ${issue.message}${issue.fix ? ` (${issue.fix})` : ""}`,
       );
     }
+    lines.push(`- Run: ${formatCliCommand("chainbreaker doctor")}`);
+    lines.push("");
   }
+  lines.push(
     `Tip: ${formatDocsLink("/cli#status", "status --deep")} adds gateway health probes to status output (requires a reachable gateway).`,
   );
+  return lines;
 }
 
 export async function formatConfigChannelsStatusLines(
@@ -204,11 +214,16 @@ export async function formatConfigChannelsStatusLines(
   meta: { path?: string; mode?: "local" | "remote" },
   opts?: { sourceConfig?: ChainbreakerConfig },
 ): Promise<string[]> {
+  const lines: string[] = [];
+  lines.push(theme.warn("Gateway not reachable; showing config-only status."));
   if (meta.path) {
+    lines.push(`Config: ${meta.path}`);
   }
   if (meta.mode) {
+    lines.push(`Mode: ${meta.mode}`);
   }
   if (meta.path || meta.mode) {
+    lines.push("");
   }
 
   const accountLines = (provider: ChatChannel, accounts: Array<Record<string, unknown>>) =>
@@ -250,11 +265,15 @@ export async function formatConfigChannelsStatusLines(
       );
     }
     if (snapshots.length > 0) {
+      lines.push(...accountLines(plugin.id, snapshots));
     }
   }
 
+  lines.push("");
+  lines.push(
     `Tip: ${formatDocsLink("/cli#status", "status --deep")} adds gateway health probes to status output (requires a reachable gateway).`,
   );
+  return lines;
 }
 
 export async function channelsStatusCommand(

@@ -58,11 +58,16 @@ function parsePidsFromLsofOutput(stdout: string): number[] {
   const pids: number[] = [];
   let currentPid: number | undefined;
   let currentCmd: string | undefined;
+  for (const line of stdout.split(/\r?\n/).filter(Boolean)) {
+    if (line.startsWith("p")) {
       if (currentPid != null && currentCmd && currentCmd.toLowerCase().includes("chainbreaker")) {
         pids.push(currentPid);
       }
+      const parsed = Number.parseInt(line.slice(1), 10);
       currentPid = Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
       currentCmd = undefined;
+    } else if (line.startsWith("c")) {
+      currentCmd = line.slice(1);
     }
   }
   if (currentPid != null && currentCmd && currentCmd.toLowerCase().includes("chainbreaker")) {
@@ -219,8 +224,11 @@ function terminateStaleProcessesSync(pids: number[]): number[] {
  *   - `pollPortOnce` returns `{ free: null, permanent: true }`   → lsof unavailable, bail
  *   - `pollPortOnce` returns `{ free: false }`                   → port busy, sleep + retry
  *   - `pollPortOnce` returns `{ free: null, permanent: false }`  → transient error, sleep + retry
+ *   - Wall-clock deadline exceeded                               → log warning, proceed anyway
  */
 function waitForPortFreeSync(port: number): void {
+  const deadline = getTimeMs() + PORT_FREE_TIMEOUT_MS;
+  while (getTimeMs() < deadline) {
     const result = pollPortOnce(port);
     if (result.free === true) {
       return;
@@ -261,6 +269,7 @@ export function cleanStaleGatewayProcessesSync(portOverride?: number): number[] 
     const killed = terminateStaleProcessesSync(stalePids);
     // Wait for the port to be released before returning — called unconditionally
     // even when `killed` is empty (all pids were already dead before SIGTERM).
+    // A process can exit before our signal arrives yet still leave its socket
     // in TIME_WAIT / FIN_WAIT; polling is the only reliable way to confirm the
     // kernel has fully released the port before systemd fires the new process.
     waitForPortFreeSync(port);

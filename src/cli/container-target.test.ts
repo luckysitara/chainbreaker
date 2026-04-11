@@ -571,13 +571,10 @@ describe("maybeRunCliInContainer", () => {
     });
 
     expect(() =>
-      maybeRunCliInContainer(
-        ["node", "chainbreaker", "--container", "demo", "--no-color", "update"],
-        {
-          env: {},
-          spawnSync,
-        },
-      ),
+      maybeRunCliInContainer(["node", "chainbreaker", "--container", "demo", "--no-color", "update"], {
+        env: {},
+        spawnSync,
+      }),
     ).toThrow(
       "chainbreaker update is not supported with --container; rebuild or restart the container image instead.",
     );

@@ -30,7 +30,9 @@ function registerTempSessionStore(
   });
 }
 
+function writeTranscript(tmpDir: string, sessionId: string, lines: unknown[]): string {
   const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+  fs.writeFileSync(transcriptPath, lines.map((line) => JSON.stringify(line)).join("\n"), "utf-8");
   return transcriptPath;
 }
 
@@ -58,6 +60,7 @@ describe("readFirstUserMessageFromTranscript", () => {
   test.each([
     {
       sessionId: "test-session-1",
+      lines: [
         JSON.stringify({ type: "session", version: 1, id: "test-session-1" }),
         JSON.stringify({ message: { role: "user", content: "Hello world" } }),
         JSON.stringify({ message: { role: "assistant", content: "Hi there" } }),
@@ -66,6 +69,7 @@ describe("readFirstUserMessageFromTranscript", () => {
     },
     {
       sessionId: "test-session-2",
+      lines: [
         JSON.stringify({ type: "session", version: 1, id: "test-session-2" }),
         JSON.stringify({
           message: {
@@ -78,6 +82,7 @@ describe("readFirstUserMessageFromTranscript", () => {
     },
     {
       sessionId: "test-session-2b",
+      lines: [
         JSON.stringify({ type: "session", version: 1, id: "test-session-2b" }),
         JSON.stringify({
           message: {
@@ -88,18 +93,22 @@ describe("readFirstUserMessageFromTranscript", () => {
       ],
       expected: "Input text content",
     },
+  ] as const)("extracts first user text for $sessionId", ({ sessionId, lines, expected }) => {
     const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+    fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
     const result = readFirstUserMessageFromTranscript(sessionId, storePath);
     expect(result, sessionId).toBe(expected);
   });
   test("skips non-user messages to find first user message", () => {
     const sessionId = "test-session-3";
     const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+    const lines = [
       JSON.stringify({ type: "session", version: 1, id: sessionId }),
       JSON.stringify({ message: { role: "system", content: "System prompt" } }),
       JSON.stringify({ message: { role: "assistant", content: "Greeting" } }),
       JSON.stringify({ message: { role: "user", content: "First user question" } }),
     ];
+    fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
 
     const result = readFirstUserMessageFromTranscript(sessionId, storePath);
     expect(result).toBe("First user question");
@@ -108,6 +117,7 @@ describe("readFirstUserMessageFromTranscript", () => {
   test("skips inter-session user messages by default", () => {
     const sessionId = "test-session-inter-session";
     const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+    const lines = [
       JSON.stringify({
         message: {
           role: "user",
@@ -119,6 +129,7 @@ describe("readFirstUserMessageFromTranscript", () => {
         message: { role: "user", content: "Real user message" },
       }),
     ];
+    fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
 
     const result = readFirstUserMessageFromTranscript(sessionId, storePath);
     expect(result).toBe("Real user message");
@@ -127,20 +138,25 @@ describe("readFirstUserMessageFromTranscript", () => {
   test("returns null when no user messages exist", () => {
     const sessionId = "test-session-4";
     const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+    const lines = [
       JSON.stringify({ type: "session", version: 1, id: sessionId }),
       JSON.stringify({ message: { role: "system", content: "System prompt" } }),
       JSON.stringify({ message: { role: "assistant", content: "Greeting" } }),
     ];
+    fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
 
     const result = readFirstUserMessageFromTranscript(sessionId, storePath);
     expect(result).toBeNull();
   });
 
+  test("handles malformed JSON lines gracefully", () => {
     const sessionId = "test-session-5";
     const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+    const lines = [
       "not valid json",
       JSON.stringify({ message: { role: "user", content: "Valid message" } }),
     ];
+    fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
 
     const result = readFirstUserMessageFromTranscript(sessionId, storePath);
     expect(result).toBe("Valid message");
@@ -149,9 +165,11 @@ describe("readFirstUserMessageFromTranscript", () => {
   test("returns null for empty content", () => {
     const sessionId = "test-session-8";
     const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+    const lines = [
       JSON.stringify({ message: { role: "user", content: "" } }),
       JSON.stringify({ message: { role: "user", content: "Second message" } }),
     ];
+    fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
 
     const result = readFirstUserMessageFromTranscript(sessionId, storePath);
     expect(result).toBe("Second message");
@@ -179,6 +197,7 @@ describe("readLastMessagePreviewFromTranscript", () => {
   test.each([
     {
       sessionId: "test-last-user",
+      lines: [
         JSON.stringify({ message: { role: "user", content: "First user" } }),
         JSON.stringify({ message: { role: "assistant", content: "First assistant" } }),
         JSON.stringify({ message: { role: "user", content: "Last user message" } }),
@@ -187,6 +206,7 @@ describe("readLastMessagePreviewFromTranscript", () => {
     },
     {
       sessionId: "test-last-assistant",
+      lines: [
         JSON.stringify({ message: { role: "user", content: "User question" } }),
         JSON.stringify({ message: { role: "assistant", content: "Final assistant reply" } }),
       ],
@@ -194,7 +214,9 @@ describe("readLastMessagePreviewFromTranscript", () => {
     },
   ] as const)(
     "returns the last user or assistant message from transcript for $sessionId",
+    ({ sessionId, lines, expected }) => {
       const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+      fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
       const result = readLastMessagePreviewFromTranscript(sessionId, storePath);
       expect(result).toBe(expected);
     },
@@ -203,9 +225,11 @@ describe("readLastMessagePreviewFromTranscript", () => {
   test("skips system messages to find last user/assistant", () => {
     const sessionId = "test-last-skip-system";
     const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+    const lines = [
       JSON.stringify({ message: { role: "user", content: "Real last" } }),
       JSON.stringify({ message: { role: "system", content: "System at end" } }),
     ];
+    fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
 
     const result = readLastMessagePreviewFromTranscript(sessionId, storePath);
     expect(result).toBe("Real last");
@@ -214,19 +238,24 @@ describe("readLastMessagePreviewFromTranscript", () => {
   test("returns null when no user/assistant messages exist", () => {
     const sessionId = "test-last-no-match";
     const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+    const lines = [
       JSON.stringify({ type: "session", version: 1, id: sessionId }),
       JSON.stringify({ message: { role: "system", content: "Only system" } }),
     ];
+    fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
 
     const result = readLastMessagePreviewFromTranscript(sessionId, storePath);
     expect(result).toBeNull();
   });
 
+  test("handles malformed JSON lines gracefully (last preview)", () => {
     const sessionId = "test-last-malformed";
     const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+    const lines = [
       JSON.stringify({ message: { role: "user", content: "Valid first" } }),
       "not valid json at end",
     ];
+    fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
 
     const result = readLastMessagePreviewFromTranscript(sessionId, storePath);
     expect(result).toBe("Valid first");
@@ -262,9 +291,11 @@ describe("readLastMessagePreviewFromTranscript", () => {
   test("skips empty content to find previous message", () => {
     const sessionId = "test-last-skip-empty";
     const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+    const lines = [
       JSON.stringify({ message: { role: "assistant", content: "Has content" } }),
       JSON.stringify({ message: { role: "user", content: "" } }),
     ];
+    fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
 
     const result = readLastMessagePreviewFromTranscript(sessionId, storePath);
     expect(result).toBe("Has content");
@@ -274,8 +305,12 @@ describe("readLastMessagePreviewFromTranscript", () => {
     const sessionId = "test-last-large";
     const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
     const padding = JSON.stringify({ message: { role: "user", content: "x".repeat(500) } });
+    const lines: string[] = [];
     for (let i = 0; i < 30; i++) {
+      lines.push(padding);
     }
+    lines.push(JSON.stringify({ message: { role: "assistant", content: "Last in large file" } }));
+    fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
 
     const result = readLastMessagePreviewFromTranscript(sessionId, storePath);
     expect(result).toBe("Last in large file");
@@ -293,7 +328,10 @@ describe("readLastMessagePreviewFromTranscript", () => {
     expect(result).toBe("Valid UTF-8: 你好世界 🌍");
   });
 
+  test("strips inline directives from last preview text", () => {
+    const sessionId = "test-last-strip-inline-directives";
     const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+    const lines = [
       JSON.stringify({
         message: {
           role: "assistant",
@@ -301,6 +339,7 @@ describe("readLastMessagePreviewFromTranscript", () => {
         },
       }),
     ];
+    fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
 
     const result = readLastMessagePreviewFromTranscript(sessionId, storePath);
     expect(result).toBe("Hello  world");
@@ -432,6 +471,7 @@ describe("readSessionMessages", () => {
   test("includes synthetic compaction markers for compaction entries", () => {
     const sessionId = "test-session-compaction";
     const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+    const lines = [
       JSON.stringify({ type: "session", version: 1, id: sessionId }),
       JSON.stringify({ message: { role: "user", content: "Hello" } }),
       JSON.stringify({
@@ -444,6 +484,7 @@ describe("readSessionMessages", () => {
       }),
       JSON.stringify({ message: { role: "assistant", content: "World" } }),
     ];
+    fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
 
     const out = readSessionMessages(sessionId, storePath);
     expect(out).toHaveLength(3);
@@ -505,7 +546,9 @@ describe("readSessionPreviewItemsFromTranscript", () => {
     storePath = nextStorePath;
   });
 
+  function writeTranscriptLines(sessionId: string, lines: string[]) {
     const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+    fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
   }
 
   function readPreview(sessionId: string, maxItems = 3, maxChars = 120) {
@@ -521,6 +564,8 @@ describe("readSessionPreviewItemsFromTranscript", () => {
 
   test("returns recent preview items with tool summary", () => {
     const sessionId = "preview-session";
+    const lines = createToolSummaryPreviewTranscriptLines(sessionId);
+    writeTranscriptLines(sessionId, lines);
     const result = readPreview(sessionId);
 
     expect(result.map((item) => item.role)).toEqual(["assistant", "tool", "assistant"]);
@@ -529,6 +574,7 @@ describe("readSessionPreviewItemsFromTranscript", () => {
 
   test("detects tool calls from tool_use/tool_call blocks and toolName field", () => {
     const sessionId = "preview-session-tools";
+    const lines = [
       JSON.stringify({ type: "session", version: 1, id: sessionId }),
       JSON.stringify({ message: { role: "assistant", content: "Hi" } }),
       JSON.stringify({
@@ -543,6 +589,7 @@ describe("readSessionPreviewItemsFromTranscript", () => {
       }),
       JSON.stringify({ message: { role: "assistant", content: "Done" } }),
     ];
+    writeTranscriptLines(sessionId, lines);
     const result = readPreview(sessionId);
 
     expect(result.map((item) => item.role)).toEqual(["assistant", "tool", "assistant"]);
@@ -556,6 +603,8 @@ describe("readSessionPreviewItemsFromTranscript", () => {
   test("truncates preview text to max chars", () => {
     const sessionId = "preview-truncate";
     const longText = "a".repeat(60);
+    const lines = [JSON.stringify({ message: { role: "assistant", content: longText } })];
+    writeTranscriptLines(sessionId, lines);
     const result = readPreview(sessionId, 1, 24);
 
     expect(result).toHaveLength(1);
@@ -563,6 +612,9 @@ describe("readSessionPreviewItemsFromTranscript", () => {
     expect(result[0]?.text.endsWith("...")).toBe(true);
   });
 
+  test("strips inline directives from preview items", () => {
+    const sessionId = "preview-strip-inline-directives";
+    const lines = [
       JSON.stringify({
         message: {
           role: "assistant",
@@ -570,6 +622,7 @@ describe("readSessionPreviewItemsFromTranscript", () => {
         },
       }),
     ];
+    writeTranscriptLines(sessionId, lines);
     const result = readPreview(sessionId, 1, 120);
 
     expect(result).toHaveLength(1);
@@ -739,12 +792,7 @@ describe("resolveSessionTranscriptCandidates", () => {
     const candidates = resolveSessionTranscriptCandidates("sess-1", undefined);
     const fallback = candidates[candidates.length - 1];
     expect(fallback).toBe(
-      path.join(
-        path.resolve("/srv/chainbreaker-home"),
-        ".chainbreaker",
-        "sessions",
-        "sess-1.jsonl",
-      ),
+      path.join(path.resolve("/srv/chainbreaker-home"), ".chainbreaker", "sessions", "sess-1.jsonl"),
     );
   });
 });
@@ -799,14 +847,10 @@ describe("resolveSessionTranscriptCandidates safety", () => {
     );
 
     expect(candidates[0]).toBe(
-      path.resolve(
-        "/tmp/chainbreaker/agents/main/sessions/11111111-1111-4111-8111-111111111111.jsonl",
-      ),
+      path.resolve("/tmp/chainbreaker/agents/main/sessions/11111111-1111-4111-8111-111111111111.jsonl"),
     );
     expect(candidates).toContain(
-      path.resolve(
-        "/tmp/chainbreaker/agents/main/sessions/22222222-2222-4222-8222-222222222222.jsonl",
-      ),
+      path.resolve("/tmp/chainbreaker/agents/main/sessions/22222222-2222-4222-8222-222222222222.jsonl"),
     );
   });
 
@@ -847,8 +891,7 @@ describe("resolveSessionTranscriptCandidates safety", () => {
   test("keeps timestamped custom transcript paths ahead of synthesized fallback", () => {
     const storePath = "/tmp/chainbreaker/agents/main/sessions/sessions.json";
     const sessionId = "11111111-1111-4111-8111-111111111111";
-    const sessionFile =
-      "/tmp/chainbreaker/agents/main/sessions/2026-03-23T16-30-00-000Z_notes.jsonl";
+    const sessionFile = "/tmp/chainbreaker/agents/main/sessions/2026-03-23T16-30-00-000Z_notes.jsonl";
     const candidates = resolveSessionTranscriptCandidates(sessionId, storePath, sessionFile);
 
     expect(candidates[0]).toBe(path.resolve(sessionFile));
@@ -862,9 +905,7 @@ describe("resolveSessionTranscriptCandidates safety", () => {
     const candidates = resolveSessionTranscriptCandidates(sessionId, storePath, staleSessionFile);
 
     expect(candidates[0]).toBe(
-      path.resolve(
-        "/tmp/chainbreaker/agents/main/sessions/11111111-1111-4111-8111-111111111111.jsonl",
-      ),
+      path.resolve("/tmp/chainbreaker/agents/main/sessions/11111111-1111-4111-8111-111111111111.jsonl"),
     );
     expect(candidates).toContain(path.resolve(staleSessionFile));
   });

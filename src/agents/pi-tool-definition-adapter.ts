@@ -149,18 +149,23 @@ function splitToolExecuteArgs(args: ToolExecuteArgsAny): {
   toolCallId: string;
   params: unknown;
   onUpdate: AgentToolUpdateCallback<unknown> | undefined;
+  signal: AbortSignal | undefined;
 } {
   if (isLegacyToolExecuteArgs(args)) {
+    const [toolCallId, params, onUpdate, _ctx, signal] = args;
     return {
       toolCallId,
       params,
       onUpdate,
+      signal,
     };
   }
+  const [toolCallId, params, signal, onUpdate] = args;
   return {
     toolCallId,
     params,
     onUpdate,
+    signal,
   };
 }
 
@@ -175,6 +180,7 @@ export function toToolDefinitions(tools: AnyAgentTool[]): ToolDefinition[] {
       description: tool.description ?? "",
       parameters: tool.parameters,
       execute: async (...args: ToolExecuteArgs): Promise<AgentToolResult<unknown>> => {
+        const { toolCallId, params, onUpdate, signal } = splitToolExecuteArgs(args);
         let executeParams = params;
         try {
           if (!beforeHookWrapped) {
@@ -188,12 +194,14 @@ export function toToolDefinitions(tools: AnyAgentTool[]): ToolDefinition[] {
             }
             executeParams = hookOutcome.params;
           }
+          const rawResult = await tool.execute(toolCallId, executeParams, signal, onUpdate);
           const result = normalizeToolExecutionResult({
             toolName: normalizedName,
             result: rawResult,
           });
           return result;
         } catch (err) {
+          if (signal?.aborted) {
             throw err;
           }
           const name =

@@ -5,13 +5,18 @@ import { createPluginRuntime, type PluginRuntime } from "../../plugins/runtime/i
 import { loadBundledPluginTestApiSync } from "../../test-utils/bundled-plugin-public-surface.js";
 import { createTestRegistry } from "../../test-utils/channel-plugins.js";
 
+const { slackPlugin, setSlackRuntime } = loadBundledPluginTestApiSync<{
+  slackPlugin: ChannelPlugin;
   setSlackRuntime: (runtime: PluginRuntime) => void;
+}>("slack");
 const { telegramPlugin, setTelegramRuntime } = loadBundledPluginTestApiSync<{
   telegramPlugin: ChannelPlugin;
   setTelegramRuntime: (runtime: PluginRuntime) => void;
 }>("telegram");
 
+export const slackConfig = {
   channels: {
+    slack: {
       botToken: "xoxb-test",
       appToken: "xapp-test",
     },
@@ -33,7 +38,9 @@ export function installMessageActionRunnerTestRegistry() {
   setActivePluginRegistry(
     createTestRegistry([
       {
+        pluginId: "slack",
         source: "test",
+        plugin: slackPlugin,
       },
       {
         pluginId: "telegram",

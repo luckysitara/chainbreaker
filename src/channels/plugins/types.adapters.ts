@@ -52,6 +52,7 @@ export type ChannelCapabilitiesDisplayLine = {
 };
 
 export type ChannelCapabilitiesDiagnostics = {
+  lines?: ChannelCapabilitiesDisplayLine[];
   details?: Record<string, unknown>;
 };
 
@@ -330,6 +331,7 @@ export type ChannelGatewayContext<ResolvedAccount = unknown> = {
    * ## Backward Compatibility
    *
    * - This field is **optional** - channels that don't need it can ignore it
+   * - Built-in channels (slack, discord, etc.) typically don't use this field
    *   because they can directly import internal modules
    * - External plugins should check for undefined before using
    *
@@ -421,10 +423,7 @@ export type ChannelHeartbeatAdapter = {
     accountId?: string | null;
     deps?: ChannelHeartbeatDeps;
   }) => Promise<{ ok: boolean; reason: string }>;
-  resolveRecipients?: (params: {
-    cfg: ChainbreakerConfig;
-    opts?: { to?: string; all?: boolean };
-  }) => {
+  resolveRecipients?: (params: { cfg: ChainbreakerConfig; opts?: { to?: string; all?: boolean } }) => {
     recipients: string[];
     source: string;
   };

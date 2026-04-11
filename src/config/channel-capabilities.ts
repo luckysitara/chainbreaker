@@ -2,14 +2,17 @@ import { normalizeChannelId } from "../channels/plugins/index.js";
 import { resolveAccountEntry } from "../routing/account-lookup.js";
 import { normalizeAccountId } from "../routing/session-key.js";
 import type { ChainbreakerConfig } from "./config.js";
+import type { SlackCapabilitiesConfig } from "./types.slack.js";
 import type { TelegramCapabilitiesConfig } from "./types.telegram.js";
 
-type CapabilitiesConfig = TelegramCapabilitiesConfig;
+type CapabilitiesConfig = TelegramCapabilitiesConfig | SlackCapabilitiesConfig;
 
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((entry) => typeof entry === "string");
 
 function normalizeCapabilities(capabilities: CapabilitiesConfig | undefined): string[] | undefined {
+  // Handle object-format capabilities (e.g., { inlineButtons: "dm" }) gracefully.
+  // Channel-specific handlers (like resolveTelegramInlineButtonsScope) process these separately.
   if (!isStringArray(capabilities)) {
     return undefined;
   }

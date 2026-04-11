@@ -38,6 +38,8 @@ vi.mock("./commands-core.js", () => ({
 vi.mock("./get-reply-directives.js", () => ({
   resolveReplyDirectives: mocks.resolveReplyDirectives,
 }));
+vi.mock("./get-reply-inline-actions.js", () => ({
+  handleInlineActions: vi.fn(async () => ({ kind: "reply", reply: { text: "ok" } })),
 }));
 vi.mock("./session.js", () => ({
   initSessionState: mocks.initSessionState,

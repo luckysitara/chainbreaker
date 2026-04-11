@@ -187,12 +187,9 @@ describe("hooks workspace", () => {
     fs.mkdirSync(extraHookDir, { recursive: true });
     fs.writeFileSync(
       path.join(extraHookDir, "HOOK.md"),
-      [
-        "---",
-        "name: shared-hook",
-        'metadata: {"chainbreaker":{"events":["command:new"]}}',
-        "---",
-      ].join("\n"),
+      ["---", "name: shared-hook", 'metadata: {"chainbreaker":{"events":["command:new"]}}', "---"].join(
+        "\n",
+      ),
     );
     fs.writeFileSync(path.join(extraHookDir, "handler.js"), "export default async () => {};\n");
 

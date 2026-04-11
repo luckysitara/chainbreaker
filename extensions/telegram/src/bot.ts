@@ -16,10 +16,7 @@ import {
   resolveThreadBindingSpawnPolicy,
 } from "chainbreaker/plugin-sdk/conversation-runtime";
 import { formatUncaughtError } from "chainbreaker/plugin-sdk/error-runtime";
-import {
-  DEFAULT_GROUP_HISTORY_LIMIT,
-  type HistoryEntry,
-} from "chainbreaker/plugin-sdk/reply-history";
+import { DEFAULT_GROUP_HISTORY_LIMIT, type HistoryEntry } from "chainbreaker/plugin-sdk/reply-history";
 import { resolveTextChunkLimit } from "chainbreaker/plugin-sdk/reply-runtime";
 import { danger, logVerbose, shouldLogVerbose } from "chainbreaker/plugin-sdk/runtime-env";
 import { getChildLogger } from "chainbreaker/plugin-sdk/runtime-env";
@@ -191,8 +188,11 @@ export function createTelegramBot(opts: TelegramBotOptions) {
     // they are runtime-compatible (the codebase already casts at every fetch boundary).
     const callFetch = baseFetch;
     // Use manual event forwarding instead of AbortSignal.any() to avoid the cross-realm
+    // AbortSignal issue in Node.js (grammY's signal may come from a different module context,
+    // causing "signals[0] must be an instance of AbortSignal" errors).
     finalFetch = (input: TelegramFetchInput, init?: TelegramFetchInit) => {
       const controller = new AbortController();
+      const abortWith = (signal: AbortSignal) => controller.abort(signal.reason);
       const shutdownSignal = opts.fetchAbortSignal;
       const onShutdown = () => {
         if (shutdownSignal) {
@@ -204,6 +204,7 @@ export function createTelegramBot(opts: TelegramBotOptions) {
         method === "getupdates" ? TELEGRAM_GET_UPDATES_REQUEST_TIMEOUT_MS : undefined;
       let requestTimeout: ReturnType<typeof setTimeout> | undefined;
       let onRequestAbort: (() => void) | undefined;
+      const requestSignal = init?.signal;
       if (shutdownSignal?.aborted) {
         abortWith(shutdownSignal);
       } else if (shutdownSignal) {
@@ -225,6 +226,7 @@ export function createTelegramBot(opts: TelegramBotOptions) {
       }
       return callFetch(input, {
         ...init,
+        signal: controller.signal,
       }).finally(() => {
         if (requestTimeout) {
           clearTimeout(requestTimeout);
@@ -279,6 +281,7 @@ export function createTelegramBot(opts: TelegramBotOptions) {
   const initialUpdateId =
     typeof opts.updateOffset?.lastUpdateId === "number" ? opts.updateOffset.lastUpdateId : null;
 
+  // Track update_ids that have entered the middleware pipeline but have not completed yet.
   // This includes updates that are "queued" behind sequentialize(...) for a chat/topic key.
   // We only persist a watermark that is strictly less than the smallest pending update_id,
   // so we never write an offset that would skip an update still waiting to run.

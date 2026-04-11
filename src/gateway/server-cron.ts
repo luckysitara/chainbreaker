@@ -112,6 +112,7 @@ async function postCronWebhook(params: {
         method: "POST",
         headers: buildCronWebhookHeaders(params.webhookToken),
         body: JSON.stringify(params.payload),
+        signal: abortController.signal,
       },
     });
     await result.release();
@@ -147,8 +148,7 @@ export function buildGatewayCronService(params: {
 }): GatewayCronState {
   const cronLogger = getChildLogger({ module: "cron" });
   const storePath = resolveCronStorePath(params.cfg.cron?.store);
-  const cronEnabled =
-    process.env.CHAINBREAKER_SKIP_CRON !== "1" && params.cfg.cron?.enabled !== false;
+  const cronEnabled = process.env.CHAINBREAKER_SKIP_CRON !== "1" && params.cfg.cron?.enabled !== false;
 
   const resolveCronAgent = (requested?: string | null) => {
     const runtimeConfig = loadConfig();

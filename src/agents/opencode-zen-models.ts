@@ -96,6 +96,7 @@ export function resolveOpencodeZenModelApi(modelId: string): ModelApi {
   if (lower.startsWith("gpt-")) {
     return "openai-responses";
   }
+  if (lower.startsWith("claude-") || lower.startsWith("minimax-")) {
     return "anthropic-messages";
   }
   if (lower.startsWith("gemini-")) {
@@ -109,6 +110,7 @@ export function resolveOpencodeZenModelApi(modelId: string): ModelApi {
  */
 function supportsImageInput(modelId: string): boolean {
   const lower = modelId.toLowerCase();
+  if (lower.includes("glm") || lower.includes("minimax")) {
     return false;
   }
   return true;
@@ -283,6 +285,7 @@ export async function fetchOpencodeZenModels(apiKey?: string): Promise<ModelDefi
     const response = await fetch(`${OPENCODE_ZEN_API_BASE_URL}/models`, {
       method: "GET",
       headers,
+      signal: AbortSignal.timeout(10000), // 10 second timeout
     });
 
     if (!response.ok) {

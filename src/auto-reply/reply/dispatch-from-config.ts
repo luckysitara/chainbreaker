@@ -29,6 +29,7 @@ import {
   logSessionStateChange,
 } from "../../logging/diagnostic.js";
 import {
+  buildPluginBindingDeclinedText,
   buildPluginBindingErrorText,
   buildPluginBindingUnavailableText,
   hasShownPluginBindingFallbackNotice,
@@ -390,9 +391,13 @@ export async function dispatchReplyFromConfig(params: {
         }
         break;
       }
+      case "declined": {
         await sendBindingNotice(
+          { text: buildPluginBindingDeclinedText(pluginOwnedBinding) },
           "terminal",
         );
+        markIdle("plugin_binding_declined");
+        recordProcessed("completed", { reason: "plugin-bound-declined" });
         return { queuedFinal: false, counts: dispatcher.getQueuedCounts() };
       }
       case "error": {
@@ -690,6 +695,7 @@ export async function dispatchReplyFromConfig(params: {
             }
             // Accumulate block text for TTS generation after streaming.
             // Exclude compaction status notices — they are informational UI
+            // signals and must not be synthesised into the spoken reply.
             if (payload.text && !payload.isCompactionNotice) {
               if (accumulatedBlockText.length > 0) {
                 accumulatedBlockText += "\n";

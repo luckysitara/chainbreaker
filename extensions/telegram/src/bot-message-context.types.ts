@@ -1,3 +1,4 @@
+import type { Bot } from "grammy";
 import type { ChainbreakerConfig } from "chainbreaker/plugin-sdk/config-runtime";
 import type {
   DmPolicy,
@@ -6,7 +7,6 @@ import type {
   TelegramTopicConfig,
 } from "chainbreaker/plugin-sdk/config-runtime";
 import type { HistoryEntry } from "chainbreaker/plugin-sdk/reply-history";
-import type { Bot } from "grammy";
 import type { StickerMetadata, TelegramContext } from "./bot/types.js";
 
 export type TelegramMediaRef = {

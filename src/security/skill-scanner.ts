@@ -13,6 +13,7 @@ export type SkillScanFinding = {
   ruleId: string;
   severity: SkillScanSeverity;
   file: string;
+  line: number;
   message: string;
   evidence: string;
 };
@@ -216,6 +217,7 @@ function truncateEvidence(evidence: string, maxLen = 120): string {
 
 export function scanSource(source: string, filePath: string): SkillScanFinding[] {
   const findings: SkillScanFinding[] = [];
+  const lines = source.split("\n");
   const matchedLineRules = new Set<string>();
 
   // --- Line rules ---
@@ -229,6 +231,9 @@ export function scanSource(source: string, filePath: string): SkillScanFinding[]
       continue;
     }
 
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const match = rule.pattern.exec(line);
       if (!match) {
         continue;
       }
@@ -245,9 +250,12 @@ export function scanSource(source: string, filePath: string): SkillScanFinding[]
         ruleId: rule.ruleId,
         severity: rule.severity,
         file: filePath,
+        line: i + 1,
         message: rule.message,
+        evidence: truncateEvidence(line.trim()),
       });
       matchedLineRules.add(rule.ruleId);
+      break; // one finding per line-rule per file
     }
   }
 
@@ -268,13 +276,19 @@ export function scanSource(source: string, filePath: string): SkillScanFinding[]
       continue;
     }
 
+    // Find the first matching line for evidence + line number
     let matchLine = 0;
     let matchEvidence = "";
+    for (let i = 0; i < lines.length; i++) {
+      if (rule.pattern.test(lines[i])) {
         matchLine = i + 1;
+        matchEvidence = lines[i].trim();
         break;
       }
     }
 
+    // For source rules, if we can't find a line match the pattern might span
+    // lines. Report line 0 with truncated source as evidence.
     if (matchLine === 0) {
       matchLine = 1;
       matchEvidence = source.slice(0, 120);
@@ -284,6 +298,7 @@ export function scanSource(source: string, filePath: string): SkillScanFinding[]
       ruleId: rule.ruleId,
       severity: rule.severity,
       file: filePath,
+      line: matchLine,
       message: rule.message,
       evidence: truncateEvidence(matchEvidence),
     });

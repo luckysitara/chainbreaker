@@ -73,6 +73,7 @@ export type BlockStreamingCoalescing = {
 export type BlockStreamingChunking = {
   minChars: number;
   maxChars: number;
+  breakPreference: "paragraph" | "newline" | "sentence";
   flushOnParagraph?: boolean;
 };
 
@@ -143,6 +144,7 @@ export function resolveEffectiveBlockStreamingConfig(params: {
       coalescingDefaults?.joiner ??
       (chunking.breakPreference === "sentence"
         ? " "
+        : chunking.breakPreference === "newline"
           ? "\n"
           : "\n\n"),
     ...(coalescingDefaults?.flushOnEnqueue === true ? { flushOnEnqueue: true } : {}),
@@ -159,6 +161,7 @@ export function resolveBlockStreamingChunking(
   const { providerKey, textLimit } = resolveProviderChunkContext(cfg, provider, accountId);
   const chunkCfg = cfg?.agents?.defaults?.blockStreamingChunk;
 
+  // When chunkMode="newline", outbound delivery prefers paragraph boundaries.
   // Keep the chunker paragraph-aware during streaming, but still let minChars
   // control when a buffered paragraph is ready to flush.
   const chunkMode = resolveChunkMode(cfg, providerKey, accountId);
@@ -169,12 +172,14 @@ export function resolveBlockStreamingChunking(
   const minRequested = Math.max(1, Math.floor(chunkCfg?.minChars ?? minFallback));
   const minChars = Math.min(minRequested, maxChars);
   const breakPreference =
+    chunkCfg?.breakPreference === "newline" || chunkCfg?.breakPreference === "sentence"
       ? chunkCfg.breakPreference
       : "paragraph";
   return {
     minChars,
     maxChars,
     breakPreference,
+    flushOnParagraph: chunkMode === "newline",
   };
 }
 
@@ -185,6 +190,7 @@ export function resolveBlockStreamingCoalescing(
   chunking?: {
     minChars: number;
     maxChars: number;
+    breakPreference: "paragraph" | "newline" | "sentence";
   },
 ): BlockStreamingCoalescing | undefined {
   const { providerKey, providerId, textLimit } = resolveProviderChunkContext(
@@ -221,6 +227,7 @@ export function resolveBlockStreamingCoalescing(
     ),
   );
   const preference = chunking?.breakPreference ?? "paragraph";
+  const joiner = preference === "sentence" ? " " : preference === "newline" ? "\n" : "\n\n";
   return {
     minChars,
     maxChars,

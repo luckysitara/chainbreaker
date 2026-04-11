@@ -426,6 +426,7 @@ describe("exec-command-resolution", () => {
     expect(long.kind).toBe("option");
     if (long.kind === "option" && long.style === "long") {
       expect(long.flag).toBe("--output");
+      expect(long.inlineValue).toBe("blocked.txt");
     }
   });
 });

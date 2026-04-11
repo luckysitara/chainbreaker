@@ -4,8 +4,13 @@ import type { MsgContext } from "../templating.js";
 import { resetInboundDedupe } from "./inbound-dedupe.js";
 
 const sharedInboundContext: MsgContext = {
+  Provider: "discord",
+  Surface: "discord",
+  From: "discord:user-1",
   To: "channel:c1",
+  OriginatingChannel: "discord",
   OriginatingTo: "channel:c1",
+  SessionKey: "agent:main:discord:channel:c1",
   MessageSid: "msg-1",
 };
 

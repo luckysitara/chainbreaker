@@ -141,9 +141,7 @@ export async function ensureChainbreakerModelsJson(
 ): Promise<{ agentDir: string; wrote: boolean }> {
   const resolved = resolveModelsConfigInput(config);
   const cfg = resolved.config;
-  const agentDir = agentDirOverride?.trim()
-    ? agentDirOverride.trim()
-    : resolveChainbreakerAgentDir();
+  const agentDir = agentDirOverride?.trim() ? agentDirOverride.trim() : resolveChainbreakerAgentDir();
   const targetPath = path.join(agentDir, "models.json");
   const fingerprint = await buildModelsJsonFingerprint({
     config: cfg,

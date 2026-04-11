@@ -42,6 +42,7 @@ export type BootstrapBudgetAnalysis = {
 export type BootstrapPromptWarning = {
   signature?: string;
   warningShown: boolean;
+  lines: string[];
   warningSignaturesSeen: string[];
 };
 
@@ -263,6 +264,7 @@ export function formatBootstrapTruncationWarningLines(params: {
     typeof params.maxFiles === "number" && Number.isFinite(params.maxFiles) && params.maxFiles > 0
       ? Math.floor(params.maxFiles)
       : DEFAULT_BOOTSTRAP_PROMPT_WARNING_MAX_FILES;
+  const lines: string[] = [];
   const duplicateNameCounts = params.analysis.truncatedFiles.reduce((acc, file) => {
     acc.set(file.name, (acc.get(file.name) ?? 0) + 1);
     return acc;
@@ -281,15 +283,19 @@ export function formatBootstrapTruncationWarningLines(params: {
       (duplicateNameCounts.get(file.name) ?? 0) > 1 && file.path.trim().length > 0
         ? `${file.name} (${file.path})`
         : file.name;
+    lines.push(
       `${nameLabel}: ${file.rawChars} raw -> ${file.injectedChars} injected (~${Math.max(0, pct)}% removed${causeText ? `; ${causeText}` : ""}).`,
     );
   }
   if (params.analysis.truncatedFiles.length > topFiles.length) {
+    lines.push(
       `+${params.analysis.truncatedFiles.length - topFiles.length} more truncated file(s).`,
     );
   }
+  lines.push(
     "If unintentional, raise agents.defaults.bootstrapMaxChars and/or agents.defaults.bootstrapTotalMaxChars.",
   );
+  return lines;
 }
 
 export function buildBootstrapPromptWarning(params: {
@@ -314,6 +320,7 @@ export function buildBootstrapPromptWarning(params: {
   return {
     signature,
     warningShown,
+    lines: warningShown
       ? formatBootstrapTruncationWarningLines({
           analysis: params.analysis,
           maxFiles: params.maxFiles,
@@ -330,6 +337,7 @@ export function appendBootstrapPromptWarning(
     preserveExactPrompt?: string;
   },
 ): string {
+  const normalizedLines = (warningLines ?? []).map((line) => line.trim()).filter(Boolean);
   if (normalizedLines.length === 0) {
     return prompt;
   }
@@ -340,6 +348,7 @@ export function appendBootstrapPromptWarning(
     "[Bootstrap truncation warning]",
     "Some workspace bootstrap files were truncated before injection.",
     "Treat Project Context as partial and read the relevant files directly if details seem missing.",
+    ...normalizedLines.map((line) => `- ${line}`),
   ].join("\n");
   return prompt ? `${prompt}\n\n${warningBlock}` : warningBlock;
 }

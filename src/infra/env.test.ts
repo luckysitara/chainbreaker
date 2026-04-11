@@ -27,12 +27,16 @@ beforeEach(async () => {
 
 describe("normalizeZaiEnv", () => {
   it("copies Z_AI_API_KEY to ZAI_API_KEY when missing", () => {
+    withEnv({ ZAI_API_KEY: "", Z_AI_API_KEY: "zai-legacy" }, () => {
       normalizeZaiEnv();
+      expect(process.env.ZAI_API_KEY).toBe("zai-legacy");
     });
   });
 
   it("does not override existing ZAI_API_KEY", () => {
+    withEnv({ ZAI_API_KEY: "zai-current", Z_AI_API_KEY: "zai-legacy" }, () => {
       normalizeZaiEnv();
+      expect(process.env.ZAI_API_KEY).toBe("zai-current");
     });
   });
 
@@ -75,6 +79,7 @@ describe("logAcceptedEnvOption", () => {
       {
         VITEST: "",
         NODE_ENV: "development",
+        CHAINBREAKER_TEST_ENV: "  line one\nline two  ",
       },
       () => {
         logAcceptedEnvOption({
@@ -133,7 +138,9 @@ describe("logAcceptedEnvOption", () => {
 
 describe("normalizeEnv", () => {
   it("normalizes the legacy ZAI env alias", () => {
+    withEnv({ ZAI_API_KEY: "", Z_AI_API_KEY: "zai-legacy" }, () => {
       normalizeEnv();
+      expect(process.env.ZAI_API_KEY).toBe("zai-legacy");
     });
   });
 });

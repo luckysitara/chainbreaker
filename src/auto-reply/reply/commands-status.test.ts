@@ -211,6 +211,7 @@ describe("buildStatusReply subagent summary", () => {
     expect(reply?.text).toMatch(/📌 Tasks: 2 active · 2 total · (subagent|cron) · /);
   });
 
+  it("hides stale completed task rows from the session task line", async () => {
     createRunningTaskRun({
       runtime: "subagent",
       requesterSessionKey: "agent:main:main",
@@ -261,11 +262,13 @@ describe("buildStatusReply subagent summary", () => {
     expect(reply?.text).toContain("approval denied");
   });
 
+  it("truncates long task titles and details in the session task line", async () => {
     createRunningTaskRun({
       runtime: "subagent",
       requesterSessionKey: "agent:main:main",
       childSessionKey: "agent:main:subagent:status-task-truncated",
       runId: "run-status-task-truncated",
+      task: "This is a deliberately long task prompt that should never be emitted in full by /status because it can include internal instructions and file paths that are not appropriate for the headline line shown to users.",
       progressSummary:
         "This progress detail is also intentionally long so the status surface proves it truncates verbose task context instead of dumping a multi-sentence internal update into the reply output.",
     });

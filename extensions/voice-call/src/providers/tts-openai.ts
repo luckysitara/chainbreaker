@@ -155,6 +155,7 @@ export class OpenAITTSProvider {
 }
 
 /**
+ * Convert 8-bit mu-law to 16-bit linear PCM.
  * Useful for decoding incoming audio.
  */
 export function mulawToLinear(mulaw: number): number {

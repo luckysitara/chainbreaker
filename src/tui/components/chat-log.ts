@@ -2,6 +2,7 @@ import type { Component } from "@mariozechner/pi-tui";
 import { Container, Spacer, Text } from "@mariozechner/pi-tui";
 import { theme } from "../theme/theme.js";
 import { AssistantMessageComponent } from "./assistant-message.js";
+import { BtwInlineMessage } from "./btw-inline-message.js";
 import { ToolExecutionComponent } from "./tool-execution.js";
 import { UserMessageComponent } from "./user-message.js";
 
@@ -9,6 +10,7 @@ export class ChatLog extends Container {
   private readonly maxComponents: number;
   private toolById = new Map<string, ToolExecutionComponent>();
   private streamingRuns = new Map<string, AssistantMessageComponent>();
+  private btwMessage: BtwInlineMessage | null = null;
   private toolsExpanded = false;
 
   constructor(maxComponents = 180) {
@@ -127,6 +129,7 @@ export class ChatLog extends Container {
       }
       return this.btwMessage;
     }
+    const component = new BtwInlineMessage(params);
     this.btwMessage = component;
     this.append(component);
     return component;

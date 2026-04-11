@@ -14,6 +14,7 @@ export type GatewayServiceCommand = {
   programArguments: string[];
   workingDirectory?: string;
   environment?: Record<string, string>;
+  environmentValueSources?: Record<string, "inline" | "file">;
   sourcePath?: string;
 } | null;
 
@@ -43,7 +44,9 @@ export const SERVICE_AUDIT_CODES = {
   gatewayTokenDrift: "gateway-token-drift",
   launchdKeepAlive: "launchd-keep-alive",
   launchdRunAtLoad: "launchd-run-at-load",
+  systemdAfterNetworkOnline: "systemd-after-network-online",
   systemdRestartSec: "systemd-restart-sec",
+  systemdWantsNetworkOnline: "systemd-wants-network-online",
 } as const;
 
 export function needsNodeRuntimeMigration(issues: ServiceConfigIssue[]): boolean {
@@ -68,15 +71,22 @@ function parseSystemdUnit(content: string): {
   let restartSec: string | undefined;
 
   for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) {
       continue;
     }
+    if (line.startsWith("#") || line.startsWith(";")) {
       continue;
     }
+    if (line.startsWith("[")) {
       continue;
     }
+    const idx = line.indexOf("=");
     if (idx <= 0) {
       continue;
     }
+    const key = line.slice(0, idx).trim();
+    const value = line.slice(idx + 1).trim();
     if (!value) {
       continue;
     }
@@ -124,12 +134,18 @@ async function auditSystemdUnit(
   }
 
   const parsed = parseSystemdUnit(content);
+  if (!parsed.after.has("network-online.target")) {
     issues.push({
+      code: SERVICE_AUDIT_CODES.systemdAfterNetworkOnline,
+      message: "Missing systemd After=network-online.target",
       detail: unitPath,
       level: "recommended",
     });
   }
+  if (!parsed.wants.has("network-online.target")) {
     issues.push({
+      code: SERVICE_AUDIT_CODES.systemdWantsNetworkOnline,
+      message: "Missing systemd Wants=network-online.target",
       detail: unitPath,
       level: "recommended",
     });

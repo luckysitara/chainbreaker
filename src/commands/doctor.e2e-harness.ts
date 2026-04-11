@@ -44,6 +44,7 @@ function createCommandWithTimeoutResult() {
     stdout: "",
     stderr: "",
     code: 0,
+    signal: null,
     killed: false,
   } as const;
 }
@@ -338,6 +339,7 @@ vi.mock("./doctor-state-migrations.js", () => ({
   runLegacyStateMigrations,
 }));
 
+vi.mock("../gateway/server-startup-matrix-migration.js", () => ({
   runStartupMatrixMigration,
 }));
 

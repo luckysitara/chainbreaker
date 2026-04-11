@@ -7,10 +7,7 @@ export {
   revokeDeviceBootstrapToken,
   type DeviceBootstrapProfile,
 } from "chainbreaker/plugin-sdk/device-bootstrap";
-export {
-  definePluginEntry,
-  type ChainbreakerPluginApi,
-} from "chainbreaker/plugin-sdk/plugin-entry";
+export { definePluginEntry, type ChainbreakerPluginApi } from "chainbreaker/plugin-sdk/plugin-entry";
 export {
   resolveGatewayBindUrl,
   resolveGatewayPort,

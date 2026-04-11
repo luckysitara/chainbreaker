@@ -507,6 +507,7 @@ describe("finalizeSetupWizard", () => {
 
     expect(prompter.note).toHaveBeenCalledWith(
       expect.stringContaining(
+        "Web search is enabled, so your agent can look things up online when needed.",
       ),
       "Web search",
     );

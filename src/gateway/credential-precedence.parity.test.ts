@@ -24,10 +24,7 @@ const gatewayEnv = {
   CHAINBREAKER_GATEWAY_PASSWORD: "env-password", // pragma: allowlist secret
 } as NodeJS.ProcessEnv;
 
-function makeRemoteGatewayConfig(remote: {
-  token?: string;
-  password?: string;
-}): ChainbreakerConfig {
+function makeRemoteGatewayConfig(remote: { token?: string; password?: string }): ChainbreakerConfig {
   return {
     gateway: {
       mode: "remote",

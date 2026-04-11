@@ -36,7 +36,9 @@ async function createIdentityWorkspace(subdir = "work") {
   return { root, workspace };
 }
 
+async function writeIdentityFile(workspace: string, lines: string[]) {
   const identityPath = path.join(workspace, "IDENTITY.md");
+  await fs.writeFile(identityPath, `${lines.join("\n")}\n`, "utf-8");
   return identityPath;
 }
 

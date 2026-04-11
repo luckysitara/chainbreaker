@@ -146,6 +146,7 @@ describe("agents helpers", () => {
         {
           agentId: "main",
           match: {
+            channel: "discord",
             accountId: "guild-a",
             guildId: "123",
             roles: ["111", "222"],
@@ -158,6 +159,7 @@ describe("agents helpers", () => {
       {
         agentId: "work",
         match: {
+          channel: "discord",
           accountId: "guild-a",
           guildId: "123",
         },
@@ -175,6 +177,7 @@ describe("agents helpers", () => {
         {
           agentId: "main",
           match: {
+            channel: "discord",
             accountId: "guild-a",
             guildId: "123",
             roles: ["111", "222"],
@@ -183,6 +186,7 @@ describe("agents helpers", () => {
         {
           agentId: "main",
           match: {
+            channel: "discord",
             accountId: "guild-a",
             guildId: "123",
           },
@@ -194,6 +198,7 @@ describe("agents helpers", () => {
       {
         agentId: "main",
         match: {
+          channel: "discord",
           accountId: "guild-a",
           guildId: "123",
         },
@@ -206,6 +211,7 @@ describe("agents helpers", () => {
       {
         agentId: "main",
         match: {
+          channel: "discord",
           accountId: "guild-a",
           guildId: "123",
           roles: ["111", "222"],

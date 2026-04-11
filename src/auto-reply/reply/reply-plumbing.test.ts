@@ -20,6 +20,7 @@ import {
 
 function createSlackThreadingPlugin(): ChannelPlugin {
   return {
+    ...createChannelTestPluginBase({ id: "slack", label: "Slack" }),
     threading: {
       buildToolContext: ({ context }) => ({
         currentChannelId: context.To?.replace(/^channel:/, ""),
@@ -85,8 +86,12 @@ describe("buildThreadingToolContext", () => {
     expect(result.currentChannelId).toBe("chat:99");
   });
 
+  it("uses raw signal direct targets for tool context without provider-specific normalization", () => {
     const sessionCtx = {
+      Provider: "signal",
       ChatType: "direct",
+      From: "signal:+15550001",
+      To: "signal:+15550002",
     } as TemplateContext;
 
     const result = buildThreadingToolContext({
@@ -95,10 +100,14 @@ describe("buildThreadingToolContext", () => {
       hasRepliedRef: undefined,
     });
 
+    expect(result.currentChannelId).toBe("signal:+15550002");
   });
 
+  it("keeps raw signal group ids for tool context", () => {
     const sessionCtx = {
+      Provider: "signal",
       ChatType: "group",
+      To: "signal:group:VWATOdKF2hc8zdOS76q9tb0+5BI522e03QLDAq/9yPg=",
     } as TemplateContext;
 
     const result = buildThreadingToolContext({
@@ -108,12 +117,15 @@ describe("buildThreadingToolContext", () => {
     });
 
     expect(result.currentChannelId).toBe(
+      "signal:group:VWATOdKF2hc8zdOS76q9tb0+5BI522e03QLDAq/9yPg=",
     );
   });
 
   it("uses chat_id for iMessage direct chats without provider-specific normalization", () => {
     const sessionCtx = {
+      Provider: "imessage",
       ChatType: "direct",
+      From: "imessage:+15550001",
       To: "chat_id:12",
     } as TemplateContext;
 
@@ -128,7 +140,9 @@ describe("buildThreadingToolContext", () => {
 
   it("uses chat_id for iMessage groups", () => {
     const sessionCtx = {
+      Provider: "imessage",
       ChatType: "group",
+      From: "imessage:group:7",
       To: "chat_id:7",
     } as TemplateContext;
 
@@ -143,12 +157,14 @@ describe("buildThreadingToolContext", () => {
 
   it("uses raw Slack channel ids without implicit thread context", () => {
     const sessionCtx = {
+      Provider: "slack",
       To: "channel:C1",
       MessageThreadId: "123.456",
     } as TemplateContext;
 
     const result = buildThreadingToolContext({
       sessionCtx,
+      config: { channels: { slack: { replyToMode: "all" } } } as ChainbreakerConfig,
       hasRepliedRef: undefined,
     });
 
@@ -159,15 +175,18 @@ describe("buildThreadingToolContext", () => {
   it("uses Slack plugin threading context when the plugin registry is active", () => {
     setActivePluginRegistry(
       createTestRegistry([
+        { pluginId: "slack", plugin: createSlackThreadingPlugin(), source: "test" },
       ]),
     );
     const sessionCtx = {
+      Provider: "slack",
       To: "channel:C1",
       MessageThreadId: "123.456",
     } as TemplateContext;
 
     const result = buildThreadingToolContext({
       sessionCtx,
+      config: { channels: { slack: { replyToMode: "all" } } } as ChainbreakerConfig,
       hasRepliedRef: undefined,
     });
 
@@ -227,6 +246,7 @@ describe("applyReplyThreading auto-threading", () => {
     const result = applyReplyThreading({
       payloads: [{ text: "A" }],
       replyToMode: "off",
+      replyToChannel: "slack",
       currentMessageId: "42",
     });
 
@@ -238,6 +258,7 @@ describe("applyReplyThreading auto-threading", () => {
     const result = applyReplyThreading({
       payloads: [{ text: "[[reply_to_current]]A" }],
       replyToMode: "off",
+      replyToChannel: "slack",
       currentMessageId: "42",
     });
 

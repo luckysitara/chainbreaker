@@ -125,6 +125,7 @@ describe("agent delivery helpers", () => {
         sessionEntry: {
           sessionId: "s4",
           updatedAt: 4,
+          deliveryContext: { channel: "slack", to: "U_WRONG", accountId: "wrong" },
         },
         requestedChannel: "last",
         turnSourceChannel: "whatsapp",
@@ -144,6 +145,7 @@ describe("agent delivery helpers", () => {
         sessionEntry: {
           sessionId: "s5",
           updatedAt: 5,
+          deliveryContext: { channel: "slack", to: "U_WRONG" },
         },
         requestedChannel: "last",
         turnSourceChannel: "whatsapp",

@@ -62,6 +62,7 @@ describe("log file size cap", () => {
     expect(sizeAfterCap).toBeLessThanOrEqual(1024 + 512);
     const capWarnings = stderrSpy.mock.calls
       .map(([firstArg]) => String(firstArg))
+      .filter((line) => line.includes("log file size cap reached"));
     expect(capWarnings).toHaveLength(1);
   });
 });

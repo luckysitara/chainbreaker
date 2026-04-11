@@ -33,14 +33,20 @@ export type RunSshSandboxCommandParams = {
   remoteCommand: string;
   stdin?: Buffer | string;
   allowFailure?: boolean;
+  signal?: AbortSignal;
   tty?: boolean;
 };
 
+function normalizeInlineSshMaterial(contents: string, filename: string): string {
   const withoutBom = contents.replace(/^\uFEFF/, "");
+  const normalizedNewlines = withoutBom.replace(/\r\n?/g, "\n");
+  const normalizedEscapedNewlines = normalizedNewlines
     .replace(/\\r\\n/g, "\\n")
     .replace(/\\r/g, "\\n");
   const expanded =
     filename === "identity" || filename === "certificate.pub"
+      ? normalizedEscapedNewlines.replace(/\\n/g, "\n")
+      : normalizedEscapedNewlines;
   return expanded.endsWith("\n") ? expanded : `${expanded}\n`;
 }
 
@@ -50,6 +56,7 @@ function buildSshFailureMessage(stderr: string, exitCode?: number): string {
     trimmed.includes("error in libcrypto") &&
     (trimmed.includes('Load key "') || trimmed.includes("Permission denied (publickey)"))
   ) {
+    return `${trimmed}\nSSH sandbox failed to load the configured identity. The private key contents may be malformed (for example CRLF or escaped newlines). Prefer identityFile when possible.`;
   }
   return (
     trimmed ||
@@ -151,6 +158,7 @@ export async function createSshSandboxSessionFromSettings(
       materializedKnownHosts ?? resolveOptionalLocalPath(settings.knownHostsFile);
     const hostAlias = "chainbreaker-sandbox";
     const configPath = path.join(configDir, "config");
+    const lines = [
       `Host ${hostAlias}`,
       `  HostName ${parsed.host}`,
       `  Port ${parsed.port}`,
@@ -162,16 +170,23 @@ export async function createSshSandboxSessionFromSettings(
       `  UpdateHostKeys ${settings.updateHostKeys ? "yes" : "no"}`,
     ];
     if (parsed.user) {
+      lines.push(`  User ${parsed.user}`);
     }
     if (knownHostsFile) {
+      lines.push(`  UserKnownHostsFile ${knownHostsFile}`);
     } else if (!settings.strictHostKeyChecking) {
+      lines.push("  UserKnownHostsFile /dev/null");
     }
     if (identityFile) {
+      lines.push(`  IdentityFile ${identityFile}`);
     }
     if (certificateFile) {
+      lines.push(`  CertificateFile ${certificateFile}`);
     }
     if (identityFile || certificateFile) {
+      lines.push("  IdentitiesOnly yes");
     }
+    await fs.writeFile(configPath, `${lines.join("\n")}\n`, {
       encoding: "utf8",
       mode: 0o600,
     });
@@ -204,6 +219,7 @@ export async function runSshSandboxCommand(
     const child = spawn(argv[0], argv.slice(1), {
       stdio: ["pipe", "pipe", "pipe"],
       env: sshEnv,
+      signal: params.signal,
     });
     const stdoutChunks: Buffer[] = [];
     const stderrChunks: Buffer[] = [];
@@ -240,6 +256,7 @@ export async function uploadDirectoryToSshTarget(params: {
   session: SshSandboxSession;
   localDir: string;
   remoteDir: string;
+  signal?: AbortSignal;
 }): Promise<void> {
   await assertSafeUploadSymlinks(params.localDir);
   const remoteCommand = buildRemoteCommand([
@@ -257,10 +274,12 @@ export async function uploadDirectoryToSshTarget(params: {
   await new Promise<void>((resolve, reject) => {
     const tar = spawn("tar", ["-C", params.localDir, "-cf", "-", "."], {
       stdio: ["ignore", "pipe", "pipe"],
+      signal: params.signal,
     });
     const ssh = spawn(sshArgv[0], sshArgv.slice(1), {
       stdio: ["pipe", "pipe", "pipe"],
       env: sshEnv,
+      signal: params.signal,
     });
     const tarStderr: Buffer[] = [];
     const sshStdout: Buffer[] = [];
@@ -371,6 +390,7 @@ async function writeSecretMaterial(
   contents: string,
 ): Promise<string> {
   const pathname = path.join(dir, filename);
+  await fs.writeFile(pathname, normalizeInlineSshMaterial(contents, filename), {
     encoding: "utf8",
     mode: 0o600,
   });

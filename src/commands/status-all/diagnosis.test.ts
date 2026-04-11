@@ -29,6 +29,7 @@ function createBaseParams(
   listeners: NonNullable<DiagnosisParams["portUsage"]>["listeners"],
 ): DiagnosisParams {
   return {
+    lines: [] as string[],
     progress: createProgressReporter(),
     muted: (text: string) => text,
     ok: (text: string) => text,
@@ -69,6 +70,7 @@ describe("status-all diagnosis port checks", () => {
 
     await appendStatusAllDiagnosis(params);
 
+    const output = params.lines.join("\n");
     expect(output).toContain("✓ Port 18789");
     expect(output).toContain("Detected dual-stack loopback listeners");
     expect(output).not.toContain("Port 18789 is already in use.");
@@ -82,6 +84,7 @@ describe("status-all diagnosis port checks", () => {
 
     await appendStatusAllDiagnosis(params);
 
+    const output = params.lines.join("\n");
     expect(output).toContain("! Port 18789");
     expect(output).toContain("Port 18789 is already in use.");
   });
@@ -108,6 +111,7 @@ describe("status-all diagnosis port checks", () => {
 
     await appendStatusAllDiagnosis(params);
 
+    const output = params.lines.join("\n");
     expect(output).toContain("Node-only mode detected");
     expect(output).toContain(
       "Channel issues skipped (node-only mode; query gateway.example.com:19000)",

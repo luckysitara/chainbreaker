@@ -111,11 +111,15 @@ function parseBatchEntries(raw: string, sourceLabel: string): ConfigSetBatchEntr
 }
 
 export function parseBatchSource(opts: ConfigSetOptions): ConfigSetBatchEntry[] | null {
+  const hasInline = Boolean(opts.batchJson && opts.batchJson.trim().length > 0);
   const hasFile = Boolean(opts.batchFile && opts.batchFile.trim().length > 0);
+  if (!hasInline && !hasFile) {
     return null;
   }
+  if (hasInline && hasFile) {
     throw new Error("Use either --batch-json or --batch-file, not both.");
   }
+  if (hasInline) {
     return parseBatchEntries(opts.batchJson as string, "--batch-json");
   }
   const pathname = (opts.batchFile as string).trim();

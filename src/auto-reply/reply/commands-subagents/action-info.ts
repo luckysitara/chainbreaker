@@ -42,6 +42,7 @@ export function handleSubagentsInfoAction(ctx: SubagentsCommandContext): Command
     callerOwnerKey: params.sessionKey,
   });
 
+  const lines = [
     "ℹ️ Subagent info",
     `Status: ${resolveDisplayStatus(run, { pendingDescendants: countPendingDescendantRuns(run.childSessionKey) })}`,
     `Label: ${formatRunLabel(run)}`,
@@ -66,4 +67,5 @@ export function handleSubagentsInfoAction(ctx: SubagentsCommandContext): Command
     linkedTask ? `Delivery: ${linkedTask.deliveryStatus}` : undefined,
   ].filter(Boolean);
 
+  return stopWithText(lines.join("\n"));
 }

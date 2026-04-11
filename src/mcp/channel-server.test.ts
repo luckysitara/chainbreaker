@@ -197,6 +197,7 @@ describe("chainbreaker channel mcp server", () => {
             }
           ).handleSessionMessageEvent({
             sessionKey,
+            lastChannel: "imessage",
             lastTo: "+15551234567",
             messageId: "msg-user-1",
             message: {
@@ -213,6 +214,7 @@ describe("chainbreaker channel mcp server", () => {
             content: "hello Claude",
             meta: expect.objectContaining({
               session_key: sessionKey,
+              channel: "imessage",
               to: "+15551234567",
               message_id: "msg-user-1",
             }),
@@ -234,6 +236,7 @@ describe("chainbreaker channel mcp server", () => {
             }
           ).handleSessionMessageEvent({
             sessionKey,
+            lastChannel: "imessage",
             lastTo: "+15551234567",
             messageId: "msg-user-2",
             message: {
@@ -257,6 +260,7 @@ describe("chainbreaker channel mcp server", () => {
             }
           ).handleSessionMessageEvent({
             sessionKey,
+            lastChannel: "imessage",
             lastTo: "+15551234567",
             messageId: "msg-user-3",
             message: {
@@ -354,6 +358,8 @@ describe("chainbreaker channel mcp server", () => {
           {
             key: "agent:main:origin-field",
             origin: {
+              provider: "imessage",
+              accountId: "imessage-default",
               threadId: "thread-7",
             },
             deliveryContext: {
@@ -393,7 +399,9 @@ describe("chainbreaker channel mcp server", () => {
         }),
         expect.objectContaining({
           sessionKey: "agent:main:origin-field",
+          channel: "imessage",
           to: "+15551230000",
+          accountId: "imessage-default",
           threadId: "thread-7",
         }),
       ]);

@@ -935,11 +935,13 @@ export async function updateLastRoute(params: {
     const existing = resolved.existing;
     const now = Date.now();
     const explicitContext = normalizeDeliveryContext(params.deliveryContext);
+    const inlineContext = normalizeDeliveryContext({
       channel,
       to,
       accountId,
       threadId,
     });
+    const mergedInput = mergeDeliveryContext(explicitContext, inlineContext);
     const explicitDeliveryContext = params.deliveryContext;
     const explicitThreadFromDeliveryContext =
       explicitDeliveryContext != null &&
@@ -952,6 +954,8 @@ export async function updateLastRoute(params: {
     const explicitRouteProvided = Boolean(
       explicitContext?.channel ||
       explicitContext?.to ||
+      inlineContext?.channel ||
+      inlineContext?.to,
     );
     const clearThreadFromFallback = explicitRouteProvided && explicitThreadValue == null;
     const fallbackContext = clearThreadFromFallback

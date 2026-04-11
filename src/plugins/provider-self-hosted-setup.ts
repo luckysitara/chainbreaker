@@ -53,6 +53,7 @@ export async function discoverOpenAICompatibleLocalModels(params: {
     const trimmedApiKey = params.apiKey?.trim();
     const response = await fetch(url, {
       headers: trimmedApiKey ? { Authorization: `Bearer ${trimmedApiKey}` } : undefined,
+      signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) {
       log.warn(`Failed to discover ${params.label} models: ${response.status}`);
@@ -86,10 +87,7 @@ export async function discoverOpenAICompatibleLocalModels(params: {
   }
 }
 
-export function applyProviderDefaultModel(
-  cfg: ChainbreakerConfig,
-  modelRef: string,
-): ChainbreakerConfig {
+export function applyProviderDefaultModel(cfg: ChainbreakerConfig, modelRef: string): ChainbreakerConfig {
   const existingModel = cfg.agents?.defaults?.model;
   const fallbacks =
     existingModel && typeof existingModel === "object" && "fallbacks" in existingModel

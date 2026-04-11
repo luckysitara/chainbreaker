@@ -119,13 +119,18 @@ function scrubEnvRaw(
   if (migratedValues.size === 0 || allowedEnvKeys.size === 0) {
     return { nextRaw: raw, removed: 0 };
   }
+  const lines = raw.split(/\r?\n/);
   const nextLines: string[] = [];
   let removed = 0;
+  for (const line of lines) {
+    const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
     if (!match) {
+      nextLines.push(line);
       continue;
     }
     const envKey = match[1] ?? "";
     if (!allowedEnvKeys.has(envKey)) {
+      nextLines.push(line);
       continue;
     }
     const parsedValue = parseEnvAssignmentValue(match[2] ?? "");
@@ -133,10 +138,13 @@ function scrubEnvRaw(
       removed += 1;
       continue;
     }
+    nextLines.push(line);
   }
+  const hadTrailingNewline = raw.endsWith("\n");
   const joined = nextLines.join("\n");
   return {
     nextRaw:
+      hadTrailingNewline || joined.length === 0
         ? `${joined}${joined.endsWith("\n") ? "" : "\n"}`
         : joined,
     removed,

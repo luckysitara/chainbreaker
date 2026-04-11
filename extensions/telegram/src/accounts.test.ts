@@ -15,9 +15,11 @@ const { warnMock } = vi.hoisted(() => ({
 }));
 
 function warningLines(): string[] {
+  return warnMock.mock.calls.map(([line]) => String(line));
 }
 
 function expectNoMissingDefaultWarning() {
+  expect(warningLines().every((line) => !line.includes("accounts.default is missing"))).toBe(true);
 }
 
 function resolveAccountWithEnv(
@@ -114,6 +116,9 @@ describe("resolveTelegramAccount", () => {
       resolveTelegramAccount({ cfg, accountId: "work" });
     });
 
+    const lines = warnMock.mock.calls.map(([line]) => String(line));
+    expect(lines).toContain("listTelegramAccountIds [ 'work' ]");
+    expect(lines).toContain("resolve { accountId: 'work', enabled: true, tokenSource: 'config' }");
   });
 });
 
@@ -194,6 +199,8 @@ describe("resolveDefaultTelegramAccountId", () => {
     resolveDefaultTelegramAccountId(cfg);
     resolveDefaultTelegramAccountId(cfg);
 
+    const missingDefaultWarns = warningLines().filter((line) =>
+      line.includes("accounts.default is missing"),
     );
     expect(missingDefaultWarns).toHaveLength(1);
   });

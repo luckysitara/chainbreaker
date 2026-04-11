@@ -60,10 +60,14 @@ export function writeCache<T>(
   });
 }
 
+export function withTimeout(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal {
   if (timeoutMs <= 0) {
+    return signal ?? new AbortController().signal;
   }
   const controller = new AbortController();
   const timer = setTimeout(controller.abort.bind(controller), timeoutMs);
+  if (signal) {
+    signal.addEventListener(
       "abort",
       () => {
         clearTimeout(timer);
@@ -72,12 +76,14 @@ export function writeCache<T>(
       { once: true },
     );
   }
+  controller.signal.addEventListener(
     "abort",
     () => {
       clearTimeout(timer);
     },
     { once: true },
   );
+  return controller.signal;
 }
 
 export type ReadResponseTextResult = {

@@ -31,6 +31,7 @@ describe("provider-usage.shared", () => {
   });
 
   it.each([
+    { value: "z-ai", expected: "zai" },
     { value: " GOOGLE-GEMINI-CLI ", expected: "google-gemini-cli" },
     { value: "unknown-provider", expected: undefined },
     { value: undefined, expected: undefined },
@@ -87,6 +88,8 @@ describe("provider-usage.shared", () => {
   it.each([
     {
       name: "reads legacy pi auth tokens for known provider aliases",
+      contents: `${JSON.stringify({ "z-ai": { access: "legacy-zai-key" } }, null, 2)}\n`,
+      expected: "legacy-zai-key",
     },
     {
       name: "returns undefined for invalid legacy pi auth files",
@@ -95,6 +98,7 @@ describe("provider-usage.shared", () => {
     },
   ])("$name", async ({ contents, expected }) => {
     await withLegacyPiAuthFile(contents, async (home) => {
+      expect(resolveLegacyPiAgentAccessToken({ HOME: home }, ["z-ai", "zai"])).toBe(expected);
     });
   });
 });

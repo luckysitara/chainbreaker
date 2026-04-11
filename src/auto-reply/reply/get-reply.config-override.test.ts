@@ -17,6 +17,8 @@ vi.mock("./directive-handling.defaults.js", () => ({
 vi.mock("./get-reply-directives.js", () => ({
   resolveReplyDirectives: (...args: unknown[]) => mocks.resolveReplyDirectives(...args),
 }));
+vi.mock("./get-reply-inline-actions.js", () => ({
+  handleInlineActions: vi.fn(async () => ({ kind: "reply", reply: { text: "ok" } })),
 }));
 vi.mock("./session.js", () => ({
   initSessionState: (...args: unknown[]) => mocks.initSessionState(...args),

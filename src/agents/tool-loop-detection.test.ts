@@ -418,6 +418,8 @@ describe("tool-loop-detection", () => {
 
       for (let i = 0; i < CRITICAL_THRESHOLD + 5; i += 1) {
         const result = {
+          content: [{ type: "text", text: `line ${i}` }],
+          details: { status: "running", aggregated: `line ${i}` },
         };
         recordSuccessfulCall(state, "process", params, result, i);
       }

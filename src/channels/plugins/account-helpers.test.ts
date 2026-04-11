@@ -14,10 +14,7 @@ import {
 const { listConfiguredAccountIds, listAccountIds, resolveDefaultAccountId } =
   createAccountListHelpers("testchannel");
 
-function cfg(
-  accounts?: Record<string, unknown> | null,
-  defaultAccount?: string,
-): ChainbreakerConfig {
+function cfg(accounts?: Record<string, unknown> | null, defaultAccount?: string): ChainbreakerConfig {
   if (accounts === null) {
     return {
       channels: {

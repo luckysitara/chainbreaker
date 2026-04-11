@@ -66,10 +66,7 @@ export type {
   ProviderWrapStreamFnContext,
   SpeechProviderPlugin,
 } from "./plugin-entry.js";
-export type {
-  ChainbreakerPluginToolContext,
-  ChainbreakerPluginToolFactory,
-} from "../plugins/types.js";
+export type { ChainbreakerPluginToolContext, ChainbreakerPluginToolFactory } from "../plugins/types.js";
 export type { ChainbreakerConfig } from "../config/config.js";
 export { isSecretRef } from "../config/types.secrets.js";
 export type { GatewayRequestHandlerOptions } from "../gateway/server-methods/types.js";
@@ -78,6 +75,7 @@ export type {
   ChannelMessagingAdapter,
 } from "../channels/plugins/types.core.js";
 
+function createInlineTextPairingAdapter(params: {
   idLabel: string;
   message: string;
   normalizeAllowEntry?: ChannelPairingAdapter["normalizeAllowEntry"];
@@ -402,6 +400,7 @@ type ChatChannelAttachedOutboundOptions = {
 
 type MaybePromise<T> = T | Promise<T>;
 
+function createInlineAttachedChannelResultAdapter(
   params: ChatChannelAttachedOutboundOptions["attachedResults"],
 ) {
   return {
@@ -467,6 +466,7 @@ function resolveChatChannelPairing(
   if (!("text" in pairing)) {
     return pairing;
   }
+  return createInlineTextPairingAdapter(pairing.text);
 }
 
 function resolveChatChannelThreading<TResolvedAccount>(
@@ -505,6 +505,7 @@ function resolveChatChannelOutbound(
   }
   return {
     ...outbound.base,
+    ...createInlineAttachedChannelResultAdapter(outbound.attachedResults),
   };
 }
 

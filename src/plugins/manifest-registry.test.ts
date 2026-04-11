@@ -418,8 +418,11 @@ describe("loadPluginManifestRegistry", () => {
   it("preserves channel config metadata from plugin manifests", () => {
     const dir = makeTempDir();
     writeManifest(dir, {
+      id: "matrix",
+      channels: ["matrix"],
       configSchema: { type: "object" },
       channelConfigs: {
+        matrix: {
           schema: {
             type: "object",
             properties: {
@@ -433,18 +436,21 @@ describe("loadPluginManifestRegistry", () => {
           },
           label: "Matrix",
           description: "Matrix config",
+          preferOver: ["matrix-legacy"],
         },
       },
     });
 
     const registry = loadRegistry([
       createPluginCandidate({
+        idHint: "matrix",
         rootDir: dir,
         origin: "workspace",
       }),
     ]);
 
     expect(registry.plugins[0]?.channelConfigs).toEqual({
+      matrix: {
         schema: {
           type: "object",
           properties: {
@@ -458,6 +464,7 @@ describe("loadPluginManifestRegistry", () => {
         },
         label: "Matrix",
         description: "Matrix config",
+        preferOver: ["matrix-legacy"],
       },
     });
   });
@@ -631,6 +638,7 @@ describe("loadPluginManifestRegistry", () => {
     { name: "provider-style", manifestId: "openai", idHint: "openai-provider" },
     { name: "plugin-style", manifestId: "brave", idHint: "brave-plugin" },
     { name: "sandbox-style", manifestId: "openshell", idHint: "openshell-sandbox" },
+    { name: "multi-entry-style", manifestId: "matrix", idHint: "matrix/index" },
     {
       name: "media-understanding-style",
       manifestId: "groq",
@@ -852,11 +860,17 @@ describe("loadPluginManifestRegistry", () => {
   it("does not reuse cached bundled plugin roots across env changes", () => {
     const bundledA = makeTempDir();
     const bundledB = makeTempDir();
+    const matrixA = createManifestPluginRoot({
       baseDir: bundledA,
+      pluginId: "matrix",
       name: "Matrix A",
+      relativePath: "matrix",
     });
+    const matrixB = createManifestPluginRoot({
       baseDir: bundledB,
+      pluginId: "matrix",
       name: "Matrix B",
+      relativePath: "matrix",
     });
 
     const first = loadPluginManifestRegistry({
@@ -875,6 +889,9 @@ describe("loadPluginManifestRegistry", () => {
     expectCachedPluginRoot({
       first,
       second,
+      pluginId: "matrix",
+      firstRoot: matrixA,
+      secondRoot: matrixB,
     });
   });
 

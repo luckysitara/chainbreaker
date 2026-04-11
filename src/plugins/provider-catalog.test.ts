@@ -186,6 +186,7 @@ describe("buildSingleProviderApiKeyCatalog", () => {
     {
       name: "matches explicit base url config across canonical provider aliases",
       ctx: createCatalogContext({
+        apiKeys: { zai: "secret-key" },
         config: {
           models: {
             providers: {
@@ -203,6 +204,7 @@ describe("buildSingleProviderApiKeyCatalog", () => {
         apiKey: "secret-key",
       }),
       providerId: "z-ai",
+      buildProvider: () => createProviderConfig({ baseUrl: "https://default.example/zai" }),
     },
   ] as const)(
     "$name",

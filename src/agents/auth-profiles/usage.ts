@@ -130,7 +130,10 @@ function applyWhamCooldownResult(params: {
       : 0;
   return {
     ...params.computed,
-    cooldownUntil: Math.max(existingActiveCooldownUntil, params.now + params.whamResult.cooldownMs),
+    cooldownUntil: Math.max(
+      existingActiveCooldownUntil,
+      params.now + params.whamResult.cooldownMs,
+    ),
   };
 }
 
@@ -158,6 +161,7 @@ export async function probeWhamForCooldown(
     const res = await fetch(WHAM_USAGE_URL, {
       method: "GET",
       headers,
+      signal: controller.signal,
     });
 
     if (!res.ok) {
@@ -269,6 +273,7 @@ function isActiveUnusableWindow(until: number | undefined, now: number): boolean
  * Infer the most likely reason all candidate profiles are currently unavailable.
  *
  * We prefer explicit active `disabledReason` values (for example billing/auth)
+ * over generic cooldown buckets, then fall back to failure-count signals.
  */
 export function resolveProfilesUnavailableReason(params: {
   store: AuthProfileStore;
@@ -292,6 +297,7 @@ export function resolveProfilesUnavailableReason(params: {
 
     const disabledActive = isActiveUnusableWindow(stats.disabledUntil, now);
     if (disabledActive && stats.disabledReason && FAILURE_REASON_SET.has(stats.disabledReason)) {
+      // Disabled reasons are explicit and high-signal; weight heavily.
       addScore(stats.disabledReason, 1_000);
       continue;
     }
@@ -687,6 +693,7 @@ function computeNextProfileUsageStats(params: {
       params.existing.cooldownUntil > params.now;
     if (existingCooldownActive) {
       // Always use the latest failure reason so that downstream consumers
+      // (e.g. isProfileInCooldown model-bypass) see the most recent signal.
       // A non-rate_limit failure (auth, billing, …) is profile-wide, so
       // upgrading from rate_limit → auth correctly blocks all models.
       updatedStats.cooldownReason = params.reason;

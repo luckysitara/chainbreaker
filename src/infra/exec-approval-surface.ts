@@ -13,6 +13,7 @@ export type ExecApprovalInitiatingSurfaceState =
 
 function labelForChannel(channel?: string): string {
   switch (channel) {
+    case "discord":
       return "Discord";
     case "telegram":
       return "Telegram";

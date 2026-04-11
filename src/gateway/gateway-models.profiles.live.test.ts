@@ -235,13 +235,16 @@ function formatFailurePreview(
   maxItems: number,
 ): string {
   const limit = Math.max(1, maxItems);
+  const lines = failures.slice(0, limit).map((failure, index) => {
     const normalized = failure.error.replace(/\s+/g, " ").trim();
     const clipped = normalized.length > 320 ? `${normalized.slice(0, 317)}...` : normalized;
     return `${index + 1}. ${failure.model}: ${clipped}`;
   });
   const remaining = failures.length - limit;
   if (remaining > 0) {
+    lines.push(`... and ${remaining} more`);
   }
+  return lines.join("\n");
 }
 
 function assertNoReasoningTags(params: {
@@ -288,6 +291,7 @@ function shouldStripAssistantScaffoldingForLiveModel(modelKey?: string): boolean
   }
   const [provider, ...rest] = modelKey.split("/");
   const modelId = rest.join("/");
+  if (provider === "minimax" || provider === "minimax-portal") {
     // MiniMax transcript persistence can mirror our <final> wrapper style even
     // though user-visible surfaces already strip it. Keep the live reader
     // aligned with the runtime-facing sanitizers for the whole provider family.
@@ -340,7 +344,9 @@ function shouldSkipEmptyResponseForLiveModel(params: {
   }
   return (
     params.provider === "google-antigravity" ||
+    params.provider === "minimax" ||
     params.provider === "openai-codex" ||
+    params.provider === "zai"
   );
 }
 
@@ -391,14 +397,17 @@ describe("maybeStripAssistantScaffoldingForLiveModel", () => {
     expect(
       maybeStripAssistantScaffoldingForLiveModel(
         "<final>Visible</final>",
+        "minimax/MiniMax-M2.5-highspeed",
       ),
     ).toBe("Visible");
     expect(
       maybeStripAssistantScaffoldingForLiveModel(
         "<final>Visible</final>",
+        "minimax-portal/MiniMax-M2.7-highspeed",
       ),
     ).toBe("Visible");
     expect(
+      maybeStripAssistantScaffoldingForLiveModel("<final>Visible</final>", "minimax/MiniMax-M2.7"),
     ).toBe("Visible");
   });
 });
@@ -508,18 +517,22 @@ function isPromptProbeMiss(error: string): boolean {
 function shouldSkipToolNonceProbeMiss(provider: string): boolean {
   return (
     provider === "anthropic" ||
+    provider === "minimax" ||
     provider === "opencode" ||
     provider === "opencode-go" ||
     provider === "xai" ||
+    provider === "zai"
   );
 }
 
 describe("shouldSkipToolNonceProbeMiss", () => {
   it.each([
     { provider: "anthropic", expected: true },
+    { provider: "minimax", expected: true },
     { provider: "opencode", expected: true },
     { provider: "opencode-go", expected: true },
     { provider: "xai", expected: true },
+    { provider: "zai", expected: true },
     { provider: "openai", expected: false },
   ])("returns $expected for $provider", ({ provider, expected }) => {
     expect(shouldSkipToolNonceProbeMiss(provider)).toBe(expected);
@@ -533,6 +546,9 @@ describe("shouldSkipEmptyResponseForLiveModel", () => {
     { provider: "openrouter", allowNotFoundSkip: false, expected: true },
     { provider: "opencode", allowNotFoundSkip: false, expected: true },
     { provider: "opencode-go", allowNotFoundSkip: false, expected: true },
+    { provider: "minimax", allowNotFoundSkip: false, expected: false },
+    { provider: "minimax", allowNotFoundSkip: true, expected: true },
+    { provider: "zai", allowNotFoundSkip: true, expected: true },
     { provider: "openai-codex", allowNotFoundSkip: true, expected: true },
     { provider: "xai", allowNotFoundSkip: true, expected: false },
   ])(
@@ -797,6 +813,7 @@ function readSessionAssistantTexts(sessionKey: string, modelKey?: string): strin
 
 async function waitForSessionAssistantText(params: {
   sessionKey: string;
+  baselineAssistantCount: number;
   context: string;
   modelKey?: string;
 }) {
@@ -805,7 +822,9 @@ async function waitForSessionAssistantText(params: {
   let delayMs = 50;
   while (Date.now() - startedAt < GATEWAY_LIVE_PROBE_TIMEOUT_MS) {
     const assistantTexts = readSessionAssistantTexts(params.sessionKey, params.modelKey);
+    if (assistantTexts.length > params.baselineAssistantCount) {
       const freshText = assistantTexts
+        .slice(params.baselineAssistantCount)
         .map((text) => text.trim())
         .findLast((text) => text.length > 0);
       if (freshText) {
@@ -838,6 +857,7 @@ async function requestGatewayAgentText(params: {
     content: string;
   }>;
 }) {
+  const baselineAssistantCount = readSessionAssistantTexts(
     params.sessionKey,
     params.modelKey,
   ).length;
@@ -857,6 +877,7 @@ async function requestGatewayAgentText(params: {
   }
   return await waitForSessionAssistantText({
     sessionKey: params.sessionKey,
+    baselineAssistantCount,
     context: `${params.context}: transcript-final`,
     modelKey: params.modelKey,
   });
@@ -974,6 +995,7 @@ function buildMinimaxProviderOverride(params: {
   api: "openai-completions" | "anthropic-messages";
   baseUrl: string;
 }): ModelProviderConfig | null {
+  const existing = params.cfg.models?.providers?.minimax;
   if (!existing || !Array.isArray(existing.models) || existing.models.length === 0) {
     return null;
   }
@@ -1531,8 +1553,10 @@ async function runGatewayModelSuite(params: GatewayModelSuiteParams) {
             break;
           }
           if (
+            (model.provider === "minimax" ||
               model.provider === "opencode" ||
               model.provider === "opencode-go" ||
+              model.provider === "zai") &&
             isRateLimitErrorMessage(message)
           ) {
             skippedCount += 1;
@@ -1622,7 +1646,9 @@ async function runGatewayModelSuite(params: GatewayModelSuiteParams) {
             logProgress(`${progressLabel}: skip (ollama unavailable)`);
             break;
           }
+          if (params.label.startsWith("minimax-")) {
             skippedCount += 1;
+            logProgress(`${progressLabel}: skip (minimax endpoint error)`);
             break;
           }
           logProgress(`${progressLabel}: failed`);
@@ -1730,6 +1756,7 @@ describeLive("gateway live (dev agent, profile keys)", () => {
         maxModels > 0 ? maxModels : candidates.length,
         (model) => model.provider,
       );
+      logProgress(`[all-models] selection=${useExplicit ? "explicit" : "high-signal"}`);
       if (selectedCandidates.length < candidates.length) {
         logProgress(
           `[all-models] capped to ${selectedCandidates.length}/${candidates.length} via CHAINBREAKER_LIVE_GATEWAY_MAX_MODELS=${maxModels}`,
@@ -1749,20 +1776,30 @@ describeLive("gateway live (dev agent, profile keys)", () => {
         thinkingLevel: THINKING_LEVEL,
       });
 
+      const minimaxCandidates = selectedCandidates.filter((model) => model.provider === "minimax");
+      if (minimaxCandidates.length === 0) {
+        logProgress("[minimax] no candidates with keys; skipping dual endpoint probes");
         return;
       }
 
+      const minimaxAnthropic = buildMinimaxProviderOverride({
         cfg,
         api: "anthropic-messages",
+        baseUrl: "https://api.minimax.io/anthropic",
       });
+      if (minimaxAnthropic) {
         await runGatewayModelSuite({
+          label: "minimax-anthropic",
           cfg,
+          candidates: minimaxCandidates,
           allowNotFoundSkip: useModern,
           extraToolProbes: true,
           extraImageProbes: true,
           thinkingLevel: THINKING_LEVEL,
+          providerOverrides: { minimax: minimaxAnthropic },
         });
       } else {
+        logProgress("[minimax-anthropic] missing minimax provider config; skipping");
       }
     },
     GATEWAY_LIVE_SUITE_TIMEOUT_MS,
@@ -1798,11 +1835,14 @@ describeLive("gateway live (dev agent, profile keys)", () => {
     const authStorage = discoverAuthStorage(agentDir);
     const modelRegistry = discoverModels(authStorage, agentDir);
     const anthropic = modelRegistry.find("anthropic", "claude-opus-4-6") as Model<Api> | null;
+    const zai = modelRegistry.find("zai", "glm-4.7") as Model<Api> | null;
 
+    if (!anthropic || !zai) {
       return;
     }
     try {
       await getApiKeyForModel({ model: anthropic, cfg });
+      await getApiKeyForModel({ model: zai, cfg });
     } catch {
       return;
     }
@@ -1812,6 +1852,7 @@ describeLive("gateway live (dev agent, profile keys)", () => {
     await fs.mkdir(workspaceDir, { recursive: true });
     const nonceA = randomUUID();
     const nonceB = randomUUID();
+    const toolProbePath = path.join(workspaceDir, `.chainbreaker-live-zai-fallback.${nonceA}.txt`);
     await fs.writeFile(toolProbePath, `nonceA=${nonceA}\nnonceB=${nonceB}\n`);
 
     let server: Awaited<ReturnType<typeof startGatewayServer>> | undefined;
@@ -1819,6 +1860,7 @@ describeLive("gateway live (dev agent, profile keys)", () => {
     try {
       const port = await withGatewayLiveProbeTimeout(
         getFreeGatewayPort(),
+        "zai-fallback: gateway-port",
       );
       server = await withGatewayLiveProbeTimeout(
         startGatewayServer(port, {
@@ -1826,6 +1868,7 @@ describeLive("gateway live (dev agent, profile keys)", () => {
           auth: { mode: "token", token },
           controlUiEnabled: false,
         }),
+        "zai-fallback: gateway-start",
       );
 
       client = await withGatewayLiveProbeTimeout(
@@ -1833,31 +1876,37 @@ describeLive("gateway live (dev agent, profile keys)", () => {
           url: `ws://127.0.0.1:${port}`,
           token,
         }),
+        "zai-fallback: gateway-connect",
       );
     } catch (error) {
       const message = String(error);
       if (isGatewayLiveProbeTimeout(message)) {
+        logProgress("[zai-fallback] skip (gateway startup timeout)");
         return;
       }
       throw error;
     }
 
     if (!server || !client) {
+      logProgress("[zai-fallback] skip (gateway startup incomplete)");
       return;
     }
 
     try {
+      const sessionKey = `agent:${agentId}:live-zai-fallback`;
 
       await withGatewayLiveProbeTimeout(
         client.request("sessions.patch", {
           key: sessionKey,
           model: "anthropic/claude-opus-4-6",
         }),
+        "zai-fallback: sessions-patch-anthropic",
       );
       await withGatewayLiveProbeTimeout(
         client.request("sessions.reset", {
           key: sessionKey,
         }),
+        "zai-fallback: sessions-reset",
       );
 
       const toolText = await requestGatewayAgentText({
@@ -1869,10 +1918,13 @@ describeLive("gateway live (dev agent, profile keys)", () => {
           `Call the tool named \`read\` (or \`Read\` if \`read\` is unavailable) with JSON arguments {"path":"${toolProbePath}"}. ` +
           `Then reply with exactly: ${nonceA} ${nonceB}. No extra text.`,
         thinkingLevel: THINKING_LEVEL,
+        context: "zai-fallback: tool-probe",
       });
       assertNoReasoningTags({
         text: toolText,
         model: "anthropic/claude-opus-4-6",
+        phase: "zai-fallback-tool",
+        label: "zai-fallback",
       });
       if (!toolText.includes(nonceA) || !toolText.includes(nonceB)) {
         throw new Error(`anthropic tool probe missing nonce: ${toolText}`);
@@ -1881,22 +1933,30 @@ describeLive("gateway live (dev agent, profile keys)", () => {
       await withGatewayLiveProbeTimeout(
         client.request("sessions.patch", {
           key: sessionKey,
+          model: "zai/glm-4.7",
         }),
+        "zai-fallback: sessions-patch-zai",
       );
 
       const followupText = await requestGatewayAgentText({
         client,
         sessionKey,
         idempotencyKey: `idem-${randomUUID()}-followup`,
+        modelKey: "zai/glm-4.7",
         message:
           `What are the values of nonceA and nonceB in "${toolProbePath}"? ` +
           `Reply with exactly: ${nonceA} ${nonceB}.`,
         thinkingLevel: THINKING_LEVEL,
+        context: "zai-fallback: followup",
       });
       assertNoReasoningTags({
         text: followupText,
+        model: "zai/glm-4.7",
+        phase: "zai-fallback-followup",
+        label: "zai-fallback",
       });
       if (!followupText.includes(nonceA) || !followupText.includes(nonceB)) {
+        throw new Error(`zai followup missing nonce: ${followupText}`);
       }
     } finally {
       clearRuntimeConfigSnapshot();

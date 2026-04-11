@@ -203,7 +203,10 @@ describe("buildAssistantMessage", () => {
   });
 });
 
+// Helper: build a ReadableStreamDefaultReader from NDJSON lines
+function mockNdjsonReader(lines: string[]): ReadableStreamDefaultReader<Uint8Array> {
   const encoder = new TextEncoder();
+  const payload = lines.join("\n") + "\n";
   let consumed = false;
   return {
     read: async () => {
@@ -219,6 +222,8 @@ describe("buildAssistantMessage", () => {
   } as unknown as ReadableStreamDefaultReader<Uint8Array>;
 }
 
+async function expectDoneEventContent(lines: string[], expectedContent: unknown) {
+  await withMockNdjsonFetch(lines, async () => {
     const stream = await createOllamaTestStream({ baseUrl: "http://ollama-host:11434" });
     const events = await collectStreamEvents(stream);
 
@@ -327,10 +332,12 @@ describe("parseNdjsonStream", () => {
 });
 
 async function withMockNdjsonFetch(
+  lines: string[],
   run: (fetchMock: ReturnType<typeof vi.fn>) => Promise<void>,
 ): Promise<void> {
   const originalFetch = globalThis.fetch;
   const fetchMock = vi.fn(async () => {
+    const payload = lines.join("\n");
     return new Response(`${payload}\n`, {
       status: 200,
       headers: { "Content-Type": "application/x-ndjson" },
@@ -346,6 +353,7 @@ async function withMockNdjsonFetch(
 
 function createControlledNdjsonFetch(): {
   fetchMock: ReturnType<typeof vi.fn>;
+  pushLine: (line: string) => void;
   close: () => void;
 } {
   const encoder = new TextEncoder();
@@ -362,9 +370,11 @@ function createControlledNdjsonFetch(): {
         headers: { "Content-Type": "application/x-ndjson" },
       });
     }),
+    pushLine(line: string) {
       if (!controller) {
         throw new Error("NDJSON controller not initialized");
       }
+      controller.enqueue(encoder.encode(`${line}\n`));
     },
     close() {
       if (!controller) {
@@ -381,6 +391,7 @@ async function createOllamaTestStream(params: {
   options?: {
     apiKey?: string;
     maxTokens?: number;
+    signal?: AbortSignal;
     headers?: Record<string, string>;
   };
 }) {
@@ -621,14 +632,17 @@ describe("createOllamaStreamFn streaming events", () => {
 });
 
 describe("createOllamaStreamFn", () => {
+  it("normalizes /v1 baseUrl and maps maxTokens + signal", async () => {
     await withMockNdjsonFetch(
       [
         '{"model":"m","created_at":"t","message":{"role":"assistant","content":"ok"},"done":false}',
         '{"model":"m","created_at":"t","message":{"role":"assistant","content":""},"done":true,"prompt_eval_count":1,"eval_count":1}',
       ],
       async (fetchMock) => {
+        const signal = new AbortController().signal;
         const stream = await createOllamaTestStream({
           baseUrl: "http://ollama-host:11434/v1/",
+          options: { maxTokens: 123, signal },
         });
 
         const events = await collectStreamEvents(stream);
@@ -637,6 +651,7 @@ describe("createOllamaStreamFn", () => {
         expect(fetchMock).toHaveBeenCalledTimes(1);
         const [url, requestInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
         expect(url).toBe("http://ollama-host:11434/api/chat");
+        expect(requestInit.signal).toBe(signal);
         if (typeof requestInit.body !== "string") {
           throw new Error("Expected string request body");
         }

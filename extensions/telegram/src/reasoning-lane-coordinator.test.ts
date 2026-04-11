@@ -9,6 +9,7 @@ describe("splitTelegramReasoningText", () => {
     });
   });
 
+  it("ignores literal think tags inside inline code", () => {
     const text = "Use `<think>example</think>` literally.";
     expect(splitTelegramReasoningText(text)).toEqual({
       answerText: text,

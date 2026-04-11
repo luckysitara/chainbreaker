@@ -104,6 +104,8 @@ function extractTextContent(result: ChromeMcpToolResult): string[] {
 function extractTextPages(result: ChromeMcpToolResult): ChromeMcpStructuredPage[] {
   const pages: ChromeMcpStructuredPage[] = [];
   for (const block of extractTextContent(result)) {
+    for (const line of block.split(/\r?\n/)) {
+      const match = line.match(/^\s*(\d+):\s+(.+?)(?:\s+\[(selected)\])?\s*$/i);
       if (!match) {
         continue;
       }

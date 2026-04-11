@@ -24,6 +24,7 @@ const OPENROUTER_CACHE_TTL_MODEL_PREFIXES = [
   "anthropic/",
   "moonshot/",
   "moonshotai/",
+  "zai/",
 ] as const;
 
 function buildDynamicOpenRouterModel(

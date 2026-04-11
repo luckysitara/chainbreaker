@@ -10,6 +10,7 @@ import type { EnvSanitizationOptions } from "./sanitize-env-vars.js";
 type ExecDockerRawOptions = {
   allowFailure?: boolean;
   input?: Buffer | string;
+  signal?: AbortSignal;
 };
 
 export type ExecDockerRawResult = {
@@ -78,6 +79,7 @@ export function execDockerRaw(
     const stderrChunks: Buffer[] = [];
     let aborted = false;
 
+    const signal = opts?.signal;
     const handleAbort = () => {
       if (aborted) {
         return;
@@ -85,8 +87,11 @@ export function execDockerRaw(
       aborted = true;
       child.kill("SIGTERM");
     };
+    if (signal) {
+      if (signal.aborted) {
         handleAbort();
       } else {
+        signal.addEventListener("abort", handleAbort);
       }
     }
 
@@ -98,6 +103,8 @@ export function execDockerRaw(
     });
 
     child.on("error", (error) => {
+      if (signal) {
+        signal.removeEventListener("abort", handleAbort);
       }
       if (
         error &&
@@ -118,9 +125,12 @@ export function execDockerRaw(
     });
 
     child.on("close", (code) => {
+      if (signal) {
+        signal.removeEventListener("abort", handleAbort);
       }
       const stdout = Buffer.concat(stdoutChunks);
       const stderr = Buffer.concat(stderrChunks);
+      if (aborted || signal?.aborted) {
         reject(createAbortError());
         return;
       }
@@ -207,6 +217,9 @@ export async function readDockerContainerEnvVar(
   if (result.code !== 0) {
     return null;
   }
+  for (const line of result.stdout.split(/\r?\n/)) {
+    if (line.startsWith(`${envVar}=`)) {
+      return line.slice(envVar.length + 1);
     }
   }
   return null;
@@ -219,6 +232,8 @@ export async function readDockerPort(containerName: string, port: number) {
   if (result.code !== 0) {
     return null;
   }
+  const line = result.stdout.trim().split(/\r?\n/)[0] ?? "";
+  const match = line.match(/:(\d+)\s*$/);
   if (!match) {
     return null;
   }

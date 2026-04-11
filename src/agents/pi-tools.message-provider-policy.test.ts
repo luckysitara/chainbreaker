@@ -12,6 +12,7 @@ describe("createChainbreakerCodingTools message provider policy", () => {
   );
 
   it("keeps tts tool for non-voice providers", () => {
+    const tools = createChainbreakerCodingTools({ messageProvider: "discord" });
     const names = new Set(tools.map((tool) => tool.name));
     expect(names.has("tts")).toBe(true);
   });

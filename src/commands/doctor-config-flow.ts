@@ -12,6 +12,7 @@ import { finalizeDoctorConfigFlow } from "./doctor/finalize-config-flow.js";
 import {
   cleanStaleMatrixPluginConfig,
   runMatrixDoctorSequence,
+} from "./doctor/providers/matrix.js";
 import { runDoctorRepairSequence } from "./doctor/repair-sequencing.js";
 import {
   applyLegacyCompatibilityStep,
@@ -78,12 +79,15 @@ export async function loadAndMaybeMigrateDoctorConfig(params: {
     }));
   }
 
+  const matrixSequence = await runMatrixDoctorSequence({
     cfg: candidate,
     env: process.env,
     shouldRepair,
   });
   emitDoctorNotes({
     note,
+    changeNotes: matrixSequence.changeNotes,
+    warningNotes: matrixSequence.warningNotes,
   });
 
   const staleMatrixCleanup = await cleanStaleMatrixPluginConfig(candidate);
@@ -140,6 +144,8 @@ export async function loadAndMaybeMigrateDoctorConfig(params: {
   });
   ({ cfg, candidate, pendingChanges, fixHints } = unknownStep.state);
   if (unknownStep.removed.length > 0) {
+    const lines = unknownStep.removed.map((path) => `- ${path}`).join("\n");
+    note(lines, shouldRepair ? "Doctor changes" : "Unknown config keys");
   }
 
   const finalized = await finalizeDoctorConfigFlow({

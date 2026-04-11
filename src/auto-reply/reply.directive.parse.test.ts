@@ -71,6 +71,7 @@ describe("directive parsing", () => {
     expect(res.elevatedLevel).toBe("full");
   });
 
+  it("matches think at start of line", () => {
     const res = extractThinkDirective("/think:high run slow");
     expect(res.hasDirective).toBe(true);
     expect(res.thinkLevel).toBe("high");
@@ -229,6 +230,9 @@ describe("directive parsing", () => {
     expect(res.cleaned).toBe("see now");
   });
 
+  it("preserves newlines when stripping reply tags", () => {
+    const res = extractReplyToTag("line 1\nline 2 [[reply_to_current]]\n\nline 3", "msg-2");
     expect(res.replyToId).toBe("msg-2");
+    expect(res.cleaned).toBe("line 1\nline 2\n\nline 3");
   });
 });

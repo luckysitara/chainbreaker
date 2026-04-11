@@ -12,7 +12,9 @@ import { escapeRegExp } from "../utils.js";
  *   bold:          **text** or __text__
  *   italic:        *text* or _text_
  *   strikethrough: ~~text~~
+ *   code:          `text` (inline) or ```text``` (block)
  *
+ * The conversion preserves fenced code blocks and inline code,
  * then converts bold and strikethrough markers.
  */
 
@@ -25,6 +27,7 @@ const INLINE_CODE_PLACEHOLDER = "\x00CODE";
  *
  * Order of operations matters:
  * 1. Protect fenced code blocks (```...```) — already WhatsApp-compatible
+ * 2. Protect inline code (`...`) — leave as-is
  * 3. Convert **bold** → *bold* and __bold__ → *bold*
  * 4. Convert ~~strike~~ → ~strike~
  * 5. Restore protected spans
@@ -44,7 +47,11 @@ export function markdownToWhatsApp(text: string): string {
     return `${FENCE_PLACEHOLDER}${fences.length - 1}`;
   });
 
+  // 2. Extract and protect inline code
+  const inlineCodes: string[] = [];
   result = result.replace(/`[^`\n]+`/g, (match) => {
+    inlineCodes.push(match);
+    return `${INLINE_CODE_PLACEHOLDER}${inlineCodes.length - 1}`;
   });
 
   // 3. Convert **bold** → *bold* and __bold__ → *bold*
@@ -54,8 +61,10 @@ export function markdownToWhatsApp(text: string): string {
   // 4. Convert ~~strikethrough~~ → ~strikethrough~
   result = result.replace(/~~(.+?)~~/g, "~$1~");
 
+  // 5. Restore inline code
   result = result.replace(
     new RegExp(`${escapeRegExp(INLINE_CODE_PLACEHOLDER)}(\\d+)`, "g"),
+    (_, idx) => inlineCodes[Number(idx)] ?? "",
   );
 
   // 6. Restore fenced code blocks

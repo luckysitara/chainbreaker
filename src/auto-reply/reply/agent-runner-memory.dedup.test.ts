@@ -3,12 +3,14 @@
  *
  * These tests verify that:
  * - Duplicate MEMORY.md writes are prevented when the transcript hasn't changed
+ * - Compaction events correctly signal completion status via `completed`
  * - Post-flush hash is stored correctly for subsequent dedup checks
  * - Session reset clears hash, allowing the first flush after reset
  */
 import crypto from "node:crypto";
 import { describe, expect, it } from "vitest";
 
+// Inline computeContextHash to avoid importing memory-flush.js (which
 // triggers the full agent import chain and hits the missing pi-ai/oauth
 // package in test environments).  This mirrors the implementation in
 // src/auto-reply/reply/memory-flush.ts exactly.

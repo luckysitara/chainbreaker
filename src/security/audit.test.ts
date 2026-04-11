@@ -37,6 +37,7 @@ const execDockerRawUnavailable: NonNullable<SecurityAuditOptions["execDockerRawF
 };
 
 function stubChannelPlugin(params: {
+  id: "discord" | "slack" | "synology-chat" | "telegram" | "zalouser";
   label: string;
   resolveAccount: (cfg: ChainbreakerConfig, accountId: string | null | undefined) => unknown;
   inspectAccount?: (cfg: ChainbreakerConfig, accountId: string | null | undefined) => unknown;
@@ -94,22 +95,32 @@ function stubChannelPlugin(params: {
   };
 }
 
+const discordPlugin = stubChannelPlugin({
+  id: "discord",
   label: "Discord",
   listAccountIds: (cfg) => {
+    const ids = Object.keys(cfg.channels?.discord?.accounts ?? {});
     return ids.length > 0 ? ids : ["default"];
   },
   resolveAccount: (cfg, accountId) => {
     const resolvedAccountId = typeof accountId === "string" && accountId ? accountId : "default";
+    const base = cfg.channels?.discord ?? {};
+    const account = cfg.channels?.discord?.accounts?.[resolvedAccountId] ?? {};
     return { config: { ...base, ...account } };
   },
 });
 
+const slackPlugin = stubChannelPlugin({
+  id: "slack",
   label: "Slack",
   listAccountIds: (cfg) => {
+    const ids = Object.keys(cfg.channels?.slack?.accounts ?? {});
     return ids.length > 0 ? ids : ["default"];
   },
   resolveAccount: (cfg, accountId) => {
     const resolvedAccountId = typeof accountId === "string" && accountId ? accountId : "default";
+    const base = cfg.channels?.slack ?? {};
+    const account = cfg.channels?.slack?.accounts?.[resolvedAccountId] ?? {};
     return { config: { ...base, ...account } };
   },
 });
@@ -901,6 +912,7 @@ description: test skill
     saveExecApprovals({ version: 1, agents: {} });
   });
 
+  it("warns when interpreter allowlists are present without strictInlineEval", async () => {
     saveExecApprovals({
       version: 1,
       agents: {
@@ -921,9 +933,11 @@ description: test skill
       },
       { preserveExecApprovals: true },
     );
+    expectFinding(res, "tools.exec.allowlist_interpreter_without_strict_inline_eval", "warn");
     saveExecApprovals({ version: 1, agents: {} });
   });
 
+  it("suppresses interpreter allowlist warnings when strictInlineEval is enabled", async () => {
     saveExecApprovals({
       version: 1,
       agents: {
@@ -937,17 +951,20 @@ description: test skill
       {
         tools: {
           exec: {
+            strictInlineEval: true,
           },
         },
       },
       { preserveExecApprovals: true },
     );
+    expectNoFinding(res, "tools.exec.allowlist_interpreter_without_strict_inline_eval");
     saveExecApprovals({ version: 1, agents: {} });
   });
 
   it("flags open channel access combined with exec-enabled scopes", async () => {
     const res = await audit({
       channels: {
+        discord: {
           groupPolicy: "open",
         },
       },
@@ -965,6 +982,7 @@ description: test skill
   it("escalates open channel exec exposure when full exec is configured", async () => {
     const res = await audit({
       channels: {
+        slack: {
           dmPolicy: "open",
         },
       },
@@ -1140,10 +1158,7 @@ description: test skill
                   code: 0,
                 };
               }
-              if (
-                args[0] === "inspect" &&
-                args.at(-1) === "chainbreaker-sbx-browser-missing-hash"
-              ) {
+              if (args[0] === "inspect" && args.at(-1) === "chainbreaker-sbx-browser-missing-hash") {
                 return {
                   stdout: Buffer.from("<no value>\t<no value>\n"),
                   stderr: Buffer.alloc(0),
@@ -2253,6 +2268,7 @@ description: test skill
         name: "flags missing guild user allowlists",
         cfg: {
           channels: {
+            discord: {
               enabled: true,
               token: "t",
               groupPolicy: "allowlist",
@@ -2272,6 +2288,7 @@ description: test skill
         name: "does not flag when dm.allowFrom includes a Discord snowflake id",
         cfg: {
           channels: {
+            discord: {
               enabled: true,
               token: "t",
               dm: { allowFrom: ["387380367612706819"] },
@@ -2295,10 +2312,12 @@ description: test skill
         config: testCase.cfg,
         includeFilesystem: false,
         includeChannelSecurity: true,
+        plugins: [discordPlugin],
       });
 
       expect(
         res.findings.some(
+          (finding) => finding.checkId === "channels.discord.commands.native.no_allowlists",
         ),
         testCase.name,
       ).toBe(testCase.expectFinding);
@@ -2308,8 +2327,10 @@ description: test skill
   it("keeps source-configured channel security findings when resolved inspection is incomplete", async () => {
     const cases = [
       {
+        name: "discord SecretRef configured but unavailable",
         sourceConfig: {
           channels: {
+            discord: {
               enabled: true,
               token: { source: "env", provider: "default", id: "DISCORD_BOT_TOKEN" },
               groupPolicy: "allowlist",
@@ -2325,6 +2346,7 @@ description: test skill
         } as ChainbreakerConfig,
         resolvedConfig: {
           channels: {
+            discord: {
               enabled: true,
               groupPolicy: "allowlist",
               guilds: {
@@ -2339,8 +2361,10 @@ description: test skill
         } as ChainbreakerConfig,
         plugin: () =>
           stubChannelPlugin({
+            id: "discord",
             label: "Discord",
             inspectAccount: (cfg) => {
+              const channel = cfg.channels?.discord ?? {};
               const token = channel.token;
               return {
                 accountId: "default",
@@ -2368,12 +2392,16 @@ description: test skill
                 config: channel,
               };
             },
+            resolveAccount: (cfg) => ({ config: cfg.channels?.discord ?? {} }),
             isConfigured: (account) => Boolean((account as { configured?: boolean }).configured),
           }),
+        expectedCheckId: "channels.discord.commands.native.no_allowlists",
       },
       {
+        name: "slack resolved inspection only exposes signingSecret status",
         sourceConfig: {
           channels: {
+            slack: {
               enabled: true,
               mode: "http",
               groupPolicy: "open",
@@ -2383,6 +2411,7 @@ description: test skill
         } as ChainbreakerConfig,
         resolvedConfig: {
           channels: {
+            slack: {
               enabled: true,
               mode: "http",
               groupPolicy: "open",
@@ -2392,8 +2421,10 @@ description: test skill
         } as ChainbreakerConfig,
         plugin: (sourceConfig: ChainbreakerConfig) =>
           stubChannelPlugin({
+            id: "slack",
             label: "Slack",
             inspectAccount: (cfg) => {
+              const channel = cfg.channels?.slack ?? {};
               if (cfg === sourceConfig) {
                 return {
                   accountId: "default",
@@ -2419,12 +2450,16 @@ description: test skill
                 config: channel,
               };
             },
+            resolveAccount: (cfg) => ({ config: cfg.channels?.slack ?? {} }),
             isConfigured: (account) => Boolean((account as { configured?: boolean }).configured),
           }),
+        expectedCheckId: "channels.slack.commands.slash.no_allowlists",
       },
       {
+        name: "slack source config still wins when resolved inspection is unconfigured",
         sourceConfig: {
           channels: {
+            slack: {
               enabled: true,
               mode: "http",
               groupPolicy: "open",
@@ -2434,6 +2469,7 @@ description: test skill
         } as ChainbreakerConfig,
         resolvedConfig: {
           channels: {
+            slack: {
               enabled: true,
               mode: "http",
               groupPolicy: "open",
@@ -2443,8 +2479,10 @@ description: test skill
         } as ChainbreakerConfig,
         plugin: (sourceConfig: ChainbreakerConfig) =>
           stubChannelPlugin({
+            id: "slack",
             label: "Slack",
             inspectAccount: (cfg) => {
+              const channel = cfg.channels?.slack ?? {};
               if (cfg === sourceConfig) {
                 return {
                   accountId: "default",
@@ -2470,8 +2508,10 @@ description: test skill
                 config: channel,
               };
             },
+            resolveAccount: (cfg) => ({ config: cfg.channels?.slack ?? {} }),
             isConfigured: (account) => Boolean((account as { configured?: boolean }).configured),
           }),
+        expectedCheckId: "channels.slack.commands.slash.no_allowlists",
       },
     ] as const;
 
@@ -2534,11 +2574,13 @@ description: test skill
       name: "warns when Discord allowlists contain name-based entries",
       setup: async (tmp: string) => {
         await fs.writeFile(
+          path.join(tmp, "credentials", "discord-allowFrom.json"),
           JSON.stringify({ version: 1, allowFrom: ["team.owner"] }),
         );
       },
       cfg: {
         channels: {
+          discord: {
             enabled: true,
             token: "t",
             allowFrom: ["Alice#1234", "<@123456789012345678>"],
@@ -2555,8 +2597,13 @@ description: test skill
           },
         },
       } satisfies ChainbreakerConfig,
+      plugins: [discordPlugin],
       expectNameBasedSeverity: "warn",
       detailIncludes: [
+        "channels.discord.allowFrom:Alice#1234",
+        "channels.discord.guilds.123.users:trusted.operator",
+        "channels.discord.guilds.123.channels.general.users:security-team",
+        "~/.chainbreaker/credentials/discord-allowFrom.json:team.owner",
       ],
       detailExcludes: ["<@123456789012345678>"],
     },
@@ -2564,6 +2611,7 @@ description: test skill
       name: "marks Discord name-based allowlists as break-glass when dangerous matching is enabled",
       cfg: {
         channels: {
+          discord: {
             enabled: true,
             token: "t",
             dangerouslyAllowNameMatching: true,
@@ -2571,9 +2619,11 @@ description: test skill
           },
         },
       } satisfies ChainbreakerConfig,
+      plugins: [discordPlugin],
       expectNameBasedSeverity: "info",
       detailIncludes: ["out-of-scope"],
       expectFindingMatch: {
+        checkId: "channels.discord.allowFrom.dangerous_name_matching_enabled",
         severity: "info",
       },
     },
@@ -2581,6 +2631,7 @@ description: test skill
       name: "audits non-default Discord accounts for dangerous name matching",
       cfg: {
         channels: {
+          discord: {
             enabled: true,
             token: "t",
             accounts: {
@@ -2593,8 +2644,10 @@ description: test skill
           },
         },
       } satisfies ChainbreakerConfig,
+      plugins: [discordPlugin],
       expectNoNameBasedFinding: true,
       expectFindingMatch: {
+        checkId: "channels.discord.allowFrom.dangerous_name_matching_enabled",
         title: expect.stringContaining("(account: beta)"),
         severity: "info",
       },
@@ -2603,6 +2656,7 @@ description: test skill
       name: "audits name-based allowlists on non-default Discord accounts",
       cfg: {
         channels: {
+          discord: {
             enabled: true,
             token: "t",
             accounts: {
@@ -2618,18 +2672,22 @@ description: test skill
           },
         },
       } satisfies ChainbreakerConfig,
+      plugins: [discordPlugin],
       expectNameBasedSeverity: "warn",
+      detailIncludes: ["channels.discord.accounts.beta.allowFrom:Alice#1234"],
     },
     {
       name: "does not warn when Discord allowlists use ID-style entries only",
       cfg: {
         channels: {
+          discord: {
             enabled: true,
             token: "t",
             allowFrom: [
               "123456789012345678",
               "<@223456789012345678>",
               "user:323456789012345678",
+              "discord:423456789012345678",
               "pk:member-123",
             ],
             guilds: {
@@ -2645,6 +2703,7 @@ description: test skill
           },
         },
       } satisfies ChainbreakerConfig,
+      plugins: [discordPlugin],
       expectNoNameBasedFinding: true,
     },
   ])("$name", async (testCase) => {
@@ -2652,6 +2711,7 @@ description: test skill
       await testCase.setup?.(tmp);
       const res = await runChannelSecurityAudit(testCase.cfg, testCase.plugins);
       const nameBasedFinding = res.findings.find(
+        (entry) => entry.checkId === "channels.discord.allowFrom.name_based_entries",
       );
 
       if (testCase.expectNoNameBasedFinding) {
@@ -2739,6 +2799,7 @@ description: test skill
     await withChannelSecurityStateDir(async () => {
       const cfg: ChainbreakerConfig = {
         channels: {
+          discord: {
             enabled: true,
             token: "t",
             dangerouslyAllowNameMatching: true,
@@ -2749,7 +2810,9 @@ description: test skill
       };
 
       const pluginWithProtoDefaultAccount: ChannelPlugin = {
+        ...discordPlugin,
         config: {
+          ...discordPlugin.config,
           listAccountIds: () => [],
           defaultAccountId: () => "toString",
         },
@@ -2763,13 +2826,17 @@ description: test skill
       });
 
       const dangerousMatchingFinding = res.findings.find(
+        (entry) => entry.checkId === "channels.discord.allowFrom.dangerous_name_matching_enabled",
       );
       expect(dangerousMatchingFinding).toBeDefined();
       expect(dangerousMatchingFinding?.title).not.toContain("(account: toString)");
 
       const nameBasedFinding = res.findings.find(
+        (entry) => entry.checkId === "channels.discord.allowFrom.name_based_entries",
       );
       expect(nameBasedFinding).toBeDefined();
+      expect(nameBasedFinding?.detail).toContain("channels.discord.allowFrom:Alice#1234");
+      expect(nameBasedFinding?.detail).not.toContain("channels.discord.accounts.toString");
     });
   });
 
@@ -2840,6 +2907,7 @@ description: test skill
       cfg: {
         commands: { useAccessGroups: false },
         channels: {
+          discord: {
             enabled: true,
             token: "t",
             groupPolicy: "allowlist",
@@ -2853,7 +2921,9 @@ description: test skill
           },
         },
       } satisfies ChainbreakerConfig,
+      plugins: [discordPlugin],
       expectedFinding: {
+        checkId: "channels.discord.commands.native.unrestricted",
         severity: "critical",
       },
     },
@@ -2861,6 +2931,7 @@ description: test skill
       name: "flags Slack slash commands without a channel users allowlist",
       cfg: {
         channels: {
+          slack: {
             enabled: true,
             botToken: "xoxb-test",
             appToken: "xapp-test",
@@ -2869,7 +2940,9 @@ description: test skill
           },
         },
       } satisfies ChainbreakerConfig,
+      plugins: [slackPlugin],
       expectedFinding: {
+        checkId: "channels.slack.commands.slash.no_allowlists",
         severity: "warn",
       },
     },
@@ -2878,6 +2951,7 @@ description: test skill
       cfg: {
         commands: { useAccessGroups: false },
         channels: {
+          slack: {
             enabled: true,
             botToken: "xoxb-test",
             appToken: "xapp-test",
@@ -2886,7 +2960,9 @@ description: test skill
           },
         },
       } satisfies ChainbreakerConfig,
+      plugins: [slackPlugin],
       expectedFinding: {
+        checkId: "channels.slack.commands.slash.useAccessGroups_off",
         severity: "critical",
       },
     },
@@ -3086,10 +3162,7 @@ description: test skill
       },
       {
         name: "scores unrestricted hooks.allowedAgentIds by remote exposure",
-        cfg: {
-          gateway: { bind: "lan" },
-          hooks: unrestrictedBaseHooks,
-        } satisfies ChainbreakerConfig,
+        cfg: { gateway: { bind: "lan" }, hooks: unrestrictedBaseHooks } satisfies ChainbreakerConfig,
         expectedFinding: "hooks.allowed_agent_ids_unrestricted",
         expectedSeverity: "critical" as const,
       },
@@ -3468,6 +3541,7 @@ description: test skill
         name: "flags unallowlisted extensions as critical when native skill commands are exposed",
         cfg: {
           channels: {
+            discord: { enabled: true, token: "t" },
           },
         } satisfies ChainbreakerConfig,
         assert: (res: SecurityAuditReport) => {
@@ -3485,6 +3559,7 @@ description: test skill
         name: "treats SecretRef channel credentials as configured for extension allowlist severity",
         cfg: {
           channels: {
+            discord: {
               enabled: true,
               token: {
                 source: "env",
@@ -3722,6 +3797,7 @@ description: test skill
         name: "warns when config heuristics suggest a likely multi-user setup",
         cfg: {
           channels: {
+            discord: {
               groupPolicy: "allowlist",
               guilds: {
                 "1234567890": {
@@ -3740,14 +3816,17 @@ description: test skill
           );
           expect(finding?.severity).toBe("warn");
           expect(finding?.detail).toContain(
+            'channels.discord.groupPolicy="allowlist" with configured group targets',
           );
           expect(finding?.detail).toContain("personal-assistant");
           expect(finding?.remediation).toContain('agents.defaults.sandbox.mode="all"');
         },
       },
       {
+        name: "does not warn for multi-user heuristic when no shared-user signals are configured",
         cfg: {
           channels: {
+            discord: {
               groupPolicy: "allowlist",
             },
           },

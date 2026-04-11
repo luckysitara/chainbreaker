@@ -30,12 +30,15 @@ function makeProcessMessageArgs(params: {
   rememberSentText?: (text: string | undefined, opts: unknown) => void;
 }) {
   return {
+    // oxlint-disable-next-line typescript/no-explicit-any
     cfg: (params.cfg ?? { messages: {}, session: { store: sessionStorePath } }) as any,
+    // oxlint-disable-next-line typescript/no-explicit-any
     msg: params.msg as any,
     route: {
       agentId: "main",
       accountId: "default",
       sessionKey: params.routeSessionKey,
+      // oxlint-disable-next-line typescript/no-explicit-any
     } as any,
     groupHistoryKey: params.groupHistoryKey,
     groupHistories: params.groupHistories ?? new Map(),
@@ -43,7 +46,9 @@ function makeProcessMessageArgs(params: {
     connectionId: "conn",
     verbose: false,
     maxMediaBytes: 1,
+    // oxlint-disable-next-line typescript/no-explicit-any
     replyResolver: (async () => undefined) as any,
+    // oxlint-disable-next-line typescript/no-explicit-any
     replyLogger: defaultReplyLogger as any,
     backgroundTasks,
     rememberSentText:
@@ -52,6 +57,7 @@ function makeProcessMessageArgs(params: {
     echoForget: () => {},
     buildCombinedEchoKey: () => "echo",
     ...(params.groupHistory ? { groupHistory: params.groupHistory } : {}),
+    // oxlint-disable-next-line typescript/no-explicit-any
   } as any;
 }
 
@@ -78,6 +84,7 @@ function createWhatsAppDirectStreamingArgs(params?: {
 }
 
 vi.mock("../../../../../src/auto-reply/reply/provider-dispatcher.js", () => ({
+  // oxlint-disable-next-line typescript/no-explicit-any
   dispatchReplyWithBufferedBlockDispatcher: vi.fn(async (params: any) => {
     capturedDispatchParams = params;
     capturedCtx = params.ctx;
@@ -146,7 +153,9 @@ describe("web processMessage inbound context", () => {
   }
 
   function getDispatcherResponsePrefix() {
+    // oxlint-disable-next-line typescript/no-explicit-any
     const dispatcherOptions = (capturedDispatchParams as any)?.dispatcherOptions;
+    // oxlint-disable-next-line typescript/no-explicit-any
     return dispatcherOptions?.responsePrefix as string | undefined;
   }
 
@@ -173,6 +182,7 @@ describe("web processMessage inbound context", () => {
     );
 
     expect(capturedCtx).toBeTruthy();
+    // oxlint-disable-next-line typescript/no-explicit-any
     const ctx = capturedCtx as any;
     expectInboundContextContract(ctx);
     expect(ctx.Timestamp).toBe(1737158400000);
@@ -198,6 +208,7 @@ describe("web processMessage inbound context", () => {
     );
 
     expect(capturedCtx).toBeTruthy();
+    // oxlint-disable-next-line typescript/no-explicit-any
     const ctx = capturedCtx as any;
     expect(ctx.SenderId).toBe("+1000");
     expect(ctx.SenderE164).toBe("+1000");
@@ -256,9 +267,7 @@ describe("web processMessage inbound context", () => {
         cfg: {
           messages: {},
           session: { store: sessionStorePath },
-        } as unknown as ReturnType<
-          typeof import("chainbreaker/plugin-sdk/config-runtime").loadConfig
-        >,
+        } as unknown as ReturnType<typeof import("chainbreaker/plugin-sdk/config-runtime").loadConfig>,
         msg: {
           id: "g1",
           from: "123@g.us",
@@ -284,6 +293,7 @@ describe("web processMessage inbound context", () => {
     const rememberSentText = vi.fn();
     await processMessage(createWhatsAppDirectStreamingArgs({ rememberSentText }));
 
+    // oxlint-disable-next-line typescript/no-explicit-any
     const deliver = (capturedDispatchParams as any)?.dispatcherOptions?.deliver as
       | ((payload: { text?: string }, info: { kind: "tool" | "block" | "final" }) => Promise<void>)
       | undefined;
@@ -302,6 +312,7 @@ describe("web processMessage inbound context", () => {
   it("forces disableBlockStreaming for WhatsApp dispatch", async () => {
     await processMessage(createWhatsAppDirectStreamingArgs());
 
+    // oxlint-disable-next-line typescript/no-explicit-any
     const replyOptions = (capturedDispatchParams as any)?.replyOptions;
     expect(replyOptions?.disableBlockStreaming).toBe(true);
   });
@@ -316,6 +327,7 @@ describe("web processMessage inbound context", () => {
 
     await processMessage(args);
 
+    // oxlint-disable-next-line typescript/no-explicit-any
     const dispatcherOptions = (capturedDispatchParams as any)?.dispatcherOptions;
     expect(dispatcherOptions?.onReplyStart).toBe(sendComposing);
   });
@@ -390,9 +402,7 @@ describe("web processMessage inbound context", () => {
         },
         messages: {},
         session: { store: sessionStorePath, dmScope: "main" },
-      } as unknown as ReturnType<
-        typeof import("chainbreaker/plugin-sdk/config-runtime").loadConfig
-      >,
+      } as unknown as ReturnType<typeof import("chainbreaker/plugin-sdk/config-runtime").loadConfig>,
       msg: {
         id: params.messageId,
         from: params.from,

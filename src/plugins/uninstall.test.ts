@@ -229,7 +229,9 @@ describe("resolveUninstallChannelConfigKeys", () => {
   it("filters shared keys and duplicate channel ids", () => {
     expect(
       resolveUninstallChannelConfigKeys("bad-plugin", {
+        channelIds: ["defaults", "discord", "discord", "modelByChannel", "slack"],
       }),
+    ).toEqual(["discord", "slack"]);
   });
 });
 
@@ -434,11 +436,13 @@ describe("removePluginFromConfig", () => {
         },
         channels: {
           telegram: { enabled: true },
+          discord: { enabled: true },
         },
       }),
       pluginId: "telegram",
       expectedChannels: {
         telegram: { enabled: true },
+        discord: { enabled: true },
       },
       expectedChanged: false,
     },
@@ -475,11 +479,15 @@ describe("removePluginFromConfig", () => {
       name: "does not remove channel config when plugin has no install record",
       config: createPluginConfig({
         entries: {
+          discord: { enabled: true },
         },
         channels: {
+          discord: { enabled: true, token: "abc" },
         },
       }),
+      pluginId: "discord",
       expectedChannels: {
+        discord: {
           enabled: true,
           token: "abc",
         },

@@ -12,6 +12,7 @@ import {
 } from "./pairing-security.test-harness.js";
 
 // Avoid exporting vitest mock types (TS2742 under pnpm + d.ts emit).
+// oxlint-disable-next-line typescript/no-explicit-any
 type AnyMockFn = any;
 
 export const DEFAULT_ACCOUNT_ID = "default";
@@ -41,6 +42,7 @@ export type MockSock = {
   groupFetchAllParticipating: AnyMockFn;
   updateMediaMessage: AnyMockFn;
   logger: Record<string, unknown>;
+  signalRepository: {
     lidMapping: {
       getPNForLID: AnyMockFn;
     };
@@ -67,6 +69,7 @@ function createMockSock(): MockSock {
     groupFetchAllParticipating: vi.fn().mockResolvedValue({}),
     updateMediaMessage: vi.fn(),
     logger: {},
+    signalRepository: {
       lidMapping: {
         getPNForLID: vi.fn().mockResolvedValue(null),
       },

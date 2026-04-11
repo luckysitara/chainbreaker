@@ -126,6 +126,8 @@ describe("timeout-triggered compaction", () => {
 
     await runEmbeddedPiAgent({
       ...overflowBaseRunParams,
+      messageChannel: "slack",
+      messageProvider: "slack",
       agentAccountId: "acct-1",
       currentChannelId: "channel-1",
       currentThreadTs: "thread-1",
@@ -137,6 +139,8 @@ describe("timeout-triggered compaction", () => {
     expect(mockedCompactDirect).toHaveBeenCalledWith(
       expect.objectContaining({
         runtimeContext: expect.objectContaining({
+          messageChannel: "slack",
+          messageProvider: "slack",
           agentAccountId: "acct-1",
           currentChannelId: "channel-1",
           currentThreadTs: "thread-1",

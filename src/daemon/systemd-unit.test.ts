@@ -8,6 +8,7 @@ describe("buildSystemdUnit", () => {
       programArguments: ["/usr/bin/chainbreaker", "gateway", "--name", "My Bot"],
       environment: {},
     });
+    const execStart = unit.split("\n").find((line) => line.startsWith("ExecStart="));
     expect(execStart).toBe('ExecStart=/usr/bin/chainbreaker gateway --name "My Bot"');
   });
 
@@ -23,6 +24,7 @@ describe("buildSystemdUnit", () => {
     expect(unit).toContain("SuccessExitStatus=0 143");
   });
 
+  it("rejects environment values with line breaks", () => {
     expect(() =>
       buildSystemdUnit({
         description: "Chainbreaker Gateway",

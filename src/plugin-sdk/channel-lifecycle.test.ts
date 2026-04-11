@@ -57,7 +57,9 @@ describe("plugin-sdk channel lifecycle helpers", () => {
     });
   });
 
+  it("resolves waitUntilAbort when signal aborts", async () => {
     const abort = new AbortController();
+    const task = waitUntilAbort(abort.signal);
     await expectTaskPending(task);
 
     abort.abort();
@@ -68,6 +70,7 @@ describe("plugin-sdk channel lifecycle helpers", () => {
     const abort = new AbortController();
     const onAbort = vi.fn(async () => undefined);
 
+    const task = waitUntilAbort(abort.signal, onAbort);
     abort.abort();
 
     await expect(task).resolves.toBeUndefined();
@@ -78,6 +81,7 @@ describe("plugin-sdk channel lifecycle helpers", () => {
     const abort = new AbortController();
     const stop = vi.fn();
     const task = runPassiveAccountLifecycle({
+      abortSignal: abort.signal,
       start: async () => ({ stop }),
       stop: async (handle) => {
         handle.stop();
@@ -110,6 +114,7 @@ describe("plugin-sdk channel lifecycle helpers", () => {
 
     const task = keepHttpServerTaskAlive({
       server,
+      abortSignal: abort.signal,
       onAbort,
     });
 

@@ -56,6 +56,7 @@ function buildAgentSessionLines(params: {
       : undefined,
     `Agent 2 (target) session: ${params.targetSessionKey}.`,
     params.targetChannel ? `Agent 2 (target) channel: ${params.targetChannel}.` : undefined,
+  ].filter((line): line is string => Boolean(line));
 }
 
 export function buildAgentToAgentMessageContext(params: {
@@ -63,8 +64,10 @@ export function buildAgentToAgentMessageContext(params: {
   requesterChannel?: string;
   targetSessionKey: string;
 }) {
+  const lines = ["Agent-to-agent message context:", ...buildAgentSessionLines(params)].filter(
     Boolean,
   );
+  return lines.join("\n");
 }
 
 export function buildAgentToAgentReplyContext(params: {
@@ -78,12 +81,14 @@ export function buildAgentToAgentReplyContext(params: {
 }) {
   const currentLabel =
     params.currentRole === "requester" ? "Agent 1 (requester)" : "Agent 2 (target)";
+  const lines = [
     "Agent-to-agent reply step:",
     `Current agent: ${currentLabel}.`,
     `Turn ${params.turn} of ${params.maxTurns}.`,
     ...buildAgentSessionLines(params),
     `If you want to stop the ping-pong, reply exactly "${REPLY_SKIP_TOKEN}".`,
   ].filter(Boolean);
+  return lines.join("\n");
 }
 
 export function buildAgentToAgentAnnounceContext(params: {
@@ -95,6 +100,7 @@ export function buildAgentToAgentAnnounceContext(params: {
   roundOneReply?: string;
   latestReply?: string;
 }) {
+  const lines = [
     "Agent-to-agent announce step:",
     ...buildAgentSessionLines(params),
     `Original request: ${params.originalMessage}`,
@@ -106,6 +112,7 @@ export function buildAgentToAgentAnnounceContext(params: {
     "Any other reply will be posted to the target channel.",
     "After this reply, the agent-to-agent conversation is over.",
   ].filter(Boolean);
+  return lines.join("\n");
 }
 
 export function isAnnounceSkip(text?: string) {

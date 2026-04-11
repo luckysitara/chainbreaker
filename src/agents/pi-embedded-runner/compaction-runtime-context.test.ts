@@ -10,6 +10,8 @@ describe("buildEmbeddedCompactionRuntimeContext", () => {
     expect(
       buildEmbeddedCompactionRuntimeContext({
         sessionKey: "agent:main:thread:1",
+        messageChannel: "slack",
+        messageProvider: "slack",
         agentAccountId: "acct-1",
         currentChannelId: "C123",
         currentThreadTs: "thread-9",
@@ -29,6 +31,8 @@ describe("buildEmbeddedCompactionRuntimeContext", () => {
       }),
     ).toMatchObject({
       sessionKey: "agent:main:thread:1",
+      messageChannel: "slack",
+      messageProvider: "slack",
       agentAccountId: "acct-1",
       currentChannelId: "C123",
       currentThreadTs: "thread-9",
@@ -82,6 +86,7 @@ describe("buildEmbeddedCompactionRuntimeContext", () => {
         agents: { defaults: { compaction: { model: "anthropic/claude-opus-4-6" } } },
       } as ChainbreakerConfig,
       provider: "ollama",
+      modelId: "minimax-m2.7:cloud",
       authProfileId: "ollama:default",
     });
     expect(result.provider).toBe("anthropic");
@@ -113,9 +118,11 @@ describe("buildEmbeddedCompactionRuntimeContext", () => {
       agentDir: "/tmp/agent",
       config: {} as ChainbreakerConfig,
       provider: "ollama",
+      modelId: "minimax-m2.7:cloud",
       authProfileId: "ollama:default",
     });
     expect(result.provider).toBe("ollama");
+    expect(result.model).toBe("minimax-m2.7:cloud");
     expect(result.authProfileId).toBe("ollama:default");
   });
 

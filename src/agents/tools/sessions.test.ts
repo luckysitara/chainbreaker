@@ -66,11 +66,15 @@ const installRegistry = async () => {
   setActivePluginRegistry(
     createTestRegistry([
       {
+        pluginId: "discord",
         source: "test",
         plugin: {
+          id: "discord",
           meta: {
+            id: "discord",
             label: "Discord",
             selectionLabel: "Discord",
+            docsPath: "/channels/discord",
             blurb: "Discord test stub.",
           },
           capabilities: { chatTypes: ["direct", "channel", "thread"] },
@@ -151,7 +155,9 @@ async function withStubbedStateDir<T>(
 }
 
 describe("sanitizeTextContent", () => {
+  it("strips minimax tool call XML and downgraded markers", () => {
     const input =
+      'Hello <invoke name="tool">payload</invoke></minimax:tool_call> ' +
       "[Tool Call: foo (ID: 1)] world";
     const result = sanitizeTextContent(input).trim();
     expect(result).toBe("Hello  world");
@@ -176,6 +182,7 @@ beforeEach(async () => {
 });
 
 describe("extractAssistantText", () => {
+  it("sanitizes blocks without injecting newlines", () => {
     const message = {
       role: "assistant",
       content: [
@@ -230,7 +237,10 @@ describe("resolveAnnounceTarget", () => {
 
   it("derives non-WhatsApp announce targets from the session key", async () => {
     const target = await resolveAnnounceTarget({
+      sessionKey: "agent:main:discord:group:dev",
+      displayKey: "agent:main:discord:group:dev",
     });
+    expect(target).toEqual({ channel: "discord", to: "group:dev" });
     expect(callGatewayMock).not.toHaveBeenCalled();
   });
 
@@ -464,7 +474,9 @@ describe("sessions_list channel derivation", () => {
       path: "/tmp/sessions.json",
       sessions: [
         {
+          key: "agent:main:discord:group:ops",
           kind: "group",
+          origin: { provider: "discord" },
         },
       ],
     });
@@ -472,6 +484,7 @@ describe("sessions_list channel derivation", () => {
     const result = await executeMainSessionsList();
 
     expect(result.details).toMatchObject({
+      sessions: [{ key: "agent:main:discord:group:ops", channel: "discord" }],
     });
   });
 });

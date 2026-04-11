@@ -34,6 +34,7 @@ async function fetchCopilotUsageFallback(
       "User-Agent": "GitHubCopilotChat/0.26.7",
       "X-Github-Api-Version": "2025-04-01",
     },
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) {
     return {
@@ -94,7 +95,9 @@ async function fetchProviderUsageSnapshotFallback(params: {
         params.timeoutMs,
         params.fetchFn,
       );
+    case "zai":
       return await fetchZaiUsage(params.auth.token, params.timeoutMs, params.fetchFn);
+    case "minimax":
       return await fetchMinimaxUsage(params.auth.token, params.timeoutMs, params.fetchFn);
     case "xiaomi":
       return {

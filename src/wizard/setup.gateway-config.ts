@@ -4,11 +4,7 @@ import {
   validateGatewayPasswordInput,
 } from "../commands/onboard-helpers.js";
 import type { GatewayAuthChoice, SecretInputMode } from "../commands/onboard-types.js";
-import type {
-  GatewayBindMode,
-  GatewayTailscaleMode,
-  ChainbreakerConfig,
-} from "../config/config.js";
+import type { GatewayBindMode, GatewayTailscaleMode, ChainbreakerConfig } from "../config/config.js";
 import { ensureControlUiAllowedOriginsForNonLoopbackBind } from "../config/gateway-control-ui-origins.js";
 import {
   normalizeSecretInputString,
@@ -207,8 +203,7 @@ export async function configureGatewayForSetup(
       }
     } else if (flow === "quickstart") {
       gatewayToken =
-        (quickstartTokenString ??
-          normalizeGatewayTokenInput(process.env.CHAINBREAKER_GATEWAY_TOKEN)) ||
+        (quickstartTokenString ?? normalizeGatewayTokenInput(process.env.CHAINBREAKER_GATEWAY_TOKEN)) ||
         randomToken();
       gatewayTokenInput = gatewayToken;
     } else {

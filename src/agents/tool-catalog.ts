@@ -298,9 +298,9 @@ function buildCoreToolGroupMap() {
     list.push(tool.id);
     sectionToolMap.set(groupId, list);
   }
-  const chainbreakerTools = CORE_TOOL_DEFINITIONS.filter(
-    (tool) => tool.includeInChainbreakerGroup,
-  ).map((tool) => tool.id);
+  const chainbreakerTools = CORE_TOOL_DEFINITIONS.filter((tool) => tool.includeInChainbreakerGroup).map(
+    (tool) => tool.id,
+  );
   return {
     "group:chainbreaker": chainbreakerTools,
     ...Object.fromEntries(sectionToolMap.entries()),

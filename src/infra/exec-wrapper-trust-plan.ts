@@ -4,6 +4,7 @@ import {
   unwrapKnownDispatchWrapperInvocation,
 } from "./dispatch-wrapper-resolution.js";
 import {
+  extractShellWrapperInlineCommand,
   isShellWrapperExecutable,
   unwrapKnownShellMultiplexerInvocation,
 } from "./shell-wrapper-resolution.js";
@@ -15,6 +16,7 @@ export type ExecWrapperTrustPlan = {
   policyBlocked: boolean;
   blockedWrapper?: string;
   shellWrapperExecutable: boolean;
+  shellInlineCommand: string | null;
 };
 
 function blockedExecWrapperTrustPlan(params: {
@@ -30,6 +32,7 @@ function blockedExecWrapperTrustPlan(params: {
     policyBlocked: true,
     blockedWrapper: params.blockedWrapper,
     shellWrapperExecutable: false,
+    shellInlineCommand: null,
   };
 }
 
@@ -50,6 +53,7 @@ function finalizeExecWrapperTrustPlan(
     policyBlocked,
     blockedWrapper,
     shellWrapperExecutable,
+    shellInlineCommand: shellWrapperExecutable ? extractShellWrapperInlineCommand(argv) : null,
   };
 }
 

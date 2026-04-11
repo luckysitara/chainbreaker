@@ -2,7 +2,9 @@ import { z } from "zod";
 import type { ChannelsConfig } from "./types.channels.js";
 import { ChannelHeartbeatVisibilitySchema } from "./zod-schema.channels.js";
 import { GroupPolicySchema } from "./zod-schema.core.js";
-import { TelegramConfigSchema } from "./zod-schema.providers-core.js";
+import {
+  TelegramConfigSchema,
+} from "./zod-schema.providers-core.js";
 import { WhatsAppConfigSchema } from "./zod-schema.providers-whatsapp.js";
 
 export * from "./zod-schema.providers-core.js";
@@ -95,6 +97,7 @@ export const ChannelsSchema: z.ZodType<ChannelsConfig | undefined> = z
       .optional(),
     modelByChannel: ChannelModelByChannelSchema,
   })
+  .passthrough() // Allow extension channel configs (nostr, matrix, zalo, etc.)
   .superRefine((value, ctx) => {
     addLegacyChannelAcpBindingIssues(value, ctx);
   })

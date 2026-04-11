@@ -139,11 +139,13 @@ describe("plugin-sdk subpath exports", () => {
       "reply-prefix",
       "secret-input-runtime",
       "secret-input-schema",
+      "signal-core",
       "synology-chat",
       "typing",
       "whatsapp",
       "whatsapp-action-runtime",
       "whatsapp-login-qr",
+      "zai",
     ]) {
       expect(pluginSdkSubpaths).not.toContain(deniedSubpath);
     }
@@ -202,12 +204,15 @@ describe("plugin-sdk subpath exports", () => {
       "resolveChannelMediaMaxBytes",
       "collectBlueBubblesStatusIssues",
       "createChannelPairingController",
+      "createChannelReplyPipeline",
       "resolveRequestUrl",
       "buildProbeChannelStatusSummary",
       "extractToolSend",
       "createFixedWindowRateLimiter",
+      "withResolvedWebhookRequestPipeline",
     ]);
     expectSourceMentions("irc", [
+      "createChannelReplyPipeline",
       "chunkTextForOutbound",
       "createChannelPairingController",
       "createLoggerBackedRuntime",
@@ -222,6 +227,7 @@ describe("plugin-sdk subpath exports", () => {
     for (const subpath of [
       "feishu",
       "googlechat",
+      "matrix",
       "mattermost",
       "msteams",
       "zalo",
@@ -229,6 +235,7 @@ describe("plugin-sdk subpath exports", () => {
     ]) {
       expectSourceMentions(subpath, ["chunkTextForOutbound"]);
     }
+    expectSourceMentions("signal", ["chunkText"]);
     expectSourceMentions("reply-history", [
       "buildPendingHistoryContextFromMap",
       "clearHistoryEntriesIfEnabled",
@@ -277,6 +284,7 @@ describe("plugin-sdk subpath exports", () => {
       ],
     });
     expectSourceMentions("runtime", ["createLoggerBackedRuntime"]);
+    expectSourceMentions("discord", [
       "buildDiscordComponentMessage",
       "editDiscordComponentMessage",
       "registerBuiltDiscordComponentMessage",
@@ -574,6 +582,7 @@ describe("plugin-sdk subpath exports", () => {
       "unregisterSessionBindingAdapter",
       "SessionBindingAdapter",
     ]);
+    expectSourceMentions("matrix-runtime-shared", ["formatZonedTimestamp"]);
     expectSourceMentions("ssrf-runtime", [
       "closeDispatcher",
       "createPinnedDispatcher",
@@ -699,6 +708,7 @@ describe("plugin-sdk subpath exports", () => {
       "readRequestBodyWithLimit",
       "readJsonWebhookBodyOrReject",
       "requestBodyErrorToText",
+      "withResolvedWebhookRequestPipeline",
     ]);
     expectSourceMentions("testing", ["removeAckReactionAfterReply", "shouldAckReaction"]);
   });
@@ -734,6 +744,7 @@ describe("plugin-sdk subpath exports", () => {
       pluginEntrySdk,
       channelLifecycleSdk,
       channelPairingSdk,
+      channelReplyPipelineSdk,
       ...representativeModules
     ] = await Promise.all([
       importResolvedPluginSdkSubpath("chainbreaker/plugin-sdk/core"),
@@ -744,6 +755,7 @@ describe("plugin-sdk subpath exports", () => {
       importResolvedPluginSdkSubpath("chainbreaker/plugin-sdk/plugin-entry"),
       importResolvedPluginSdkSubpath("chainbreaker/plugin-sdk/channel-lifecycle"),
       importResolvedPluginSdkSubpath("chainbreaker/plugin-sdk/channel-pairing"),
+      importResolvedPluginSdkSubpath("chainbreaker/plugin-sdk/channel-reply-pipeline"),
       ...representativeRuntimeSmokeSubpaths.map((id) =>
         importResolvedPluginSdkSubpath(`chainbreaker/plugin-sdk/${id}`),
       ),
@@ -781,6 +793,10 @@ describe("plugin-sdk subpath exports", () => {
     ]);
     expect("createScopedPairingAccess" in channelPairingSdk).toBe(false);
 
+    expectSourceMentions("channel-reply-pipeline", ["createChannelReplyPipeline"]);
+    expect("createTypingCallbacks" in channelReplyPipelineSdk).toBe(false);
+    expect("createReplyPrefixContext" in channelReplyPipelineSdk).toBe(false);
+    expect("createReplyPrefixOptions" in channelReplyPipelineSdk).toBe(false);
 
     expect(pluginSdkSubpaths.length).toBeGreaterThan(representativeRuntimeSmokeSubpaths.length);
     for (const [index, id] of representativeRuntimeSmokeSubpaths.entries()) {

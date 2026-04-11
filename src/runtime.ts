@@ -1,3 +1,4 @@
+import { clearActiveProgressLine } from "./terminal/progress-line.js";
 import { restoreTerminalState } from "./terminal/restore.js";
 
 export type RuntimeEnv = {
@@ -53,7 +54,9 @@ function writeStdout(value: string): void {
     return;
   }
   clearActiveProgressLine();
+  const line = value.endsWith("\n") ? value : `${value}\n`;
   try {
+    process.stdout.write(line);
   } catch (err) {
     if (isPipeClosedError(err)) {
       return;

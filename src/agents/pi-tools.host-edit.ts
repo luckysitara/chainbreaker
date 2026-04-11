@@ -162,6 +162,7 @@ export function wrapEditToolWithRecovery(
     execute: async (
       toolCallId: string,
       params: unknown,
+      signal: AbortSignal | undefined,
       onUpdate?: AgentToolUpdateCallback<unknown>,
     ) => {
       const { pathParam, edits } = readEditToolParams(params);
@@ -178,6 +179,7 @@ export function wrapEditToolWithRecovery(
       }
 
       try {
+        return await base.execute(toolCallId, params, signal, onUpdate);
       } catch (err) {
         if (!absolutePath) {
           throw err;

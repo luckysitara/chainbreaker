@@ -145,6 +145,7 @@ export async function elevenLabsTTS(params: {
           speed: voiceSettings.speed,
         },
       }),
+      signal: controller.signal,
     });
 
     if (!response.ok) {

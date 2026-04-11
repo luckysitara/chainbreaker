@@ -349,8 +349,10 @@ describe("gateway bonjour advertiser", () => {
       console.log(
         "[test._chainbreaker-gw._tcp.local.] failed probing with reason: Error: Can't probe for a service which is announced already. Received announcing for service test._chainbreaker-gw._tcp.local.. Trying again in 2 seconds!",
       );
+      console.log("ordinary console line");
 
       expect(baseConsoleLog).toHaveBeenCalledTimes(1);
+      expect(baseConsoleLog).toHaveBeenCalledWith("ordinary console line");
 
       await started.stop();
     } finally {

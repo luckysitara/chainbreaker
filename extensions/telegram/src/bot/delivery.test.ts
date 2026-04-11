@@ -1,5 +1,5 @@
-import type { RuntimeEnv } from "chainbreaker/plugin-sdk/runtime-env";
 import type { Bot } from "grammy";
+import type { RuntimeEnv } from "chainbreaker/plugin-sdk/runtime-env";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { loadWebMedia } = vi.hoisted(() => ({
@@ -751,6 +751,7 @@ describe("deliverReplies", () => {
         reply_to_message_id: 77,
         allow_sending_without_reply: true,
         reply_markup: {
+          inline_keyboard: [[{ text: "Ack", callback_data: "ack" }]],
         },
       }),
     );

@@ -196,6 +196,7 @@ export const ModelCompatSchema = z
       .union([
         z.literal("openai"),
         z.literal("openrouter"),
+        z.literal("zai"),
         z.literal("qwen"),
         z.literal("qwen-chat-template"),
       ])
@@ -250,7 +251,9 @@ export const ModelProviderSchema = z
   .object({
     baseUrl: z.string().min(1),
     apiKey: SecretInputSchema.optional().register(sensitive),
-    auth: z.union([z.literal("api-key"), z.literal("oauth"), z.literal("token")]).optional(),
+    auth: z
+      .union([z.literal("api-key"), z.literal("oauth"), z.literal("token")])
+      .optional(),
     api: ModelApiSchema.optional(),
     injectNumCtxForOpenAICompat: z.boolean().optional(),
     headers: z.record(z.string(), SecretInputSchema.register(sensitive)).optional(),
@@ -334,6 +337,7 @@ export const ReplyRuntimeConfigSchemaShape = {
   dmHistoryLimit: z.number().int().min(0).optional(),
   dms: z.record(z.string(), DmConfigSchema.optional()).optional(),
   textChunkLimit: z.number().int().positive().optional(),
+  chunkMode: z.enum(["length", "newline"]).optional(),
   blockStreaming: z.boolean().optional(),
   blockStreamingCoalesce: BlockStreamingCoalesceSchema.optional(),
   responsePrefix: z.string().optional(),
@@ -345,6 +349,7 @@ export const BlockStreamingChunkSchema = z
     minChars: z.number().int().positive().optional(),
     maxChars: z.number().int().positive().optional(),
     breakPreference: z
+      .union([z.literal("paragraph"), z.literal("newline"), z.literal("sentence")])
       .optional(),
   })
   .strict();

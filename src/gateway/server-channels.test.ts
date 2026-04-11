@@ -50,6 +50,7 @@ function createTestPlugin(params?: {
   resolveAccount?: ChannelPlugin<TestAccount>["config"]["resolveAccount"];
   isConfigured?: ChannelPlugin<TestAccount>["config"]["isConfigured"];
 }): ChannelPlugin<TestAccount> {
+  const id = params?.id ?? "discord";
   const account = params?.account ?? { enabled: true, configured: true };
   const includeDescribeAccount = params?.includeDescribeAccount !== false;
   const config: ChannelPlugin<TestAccount>["config"] = {
@@ -114,7 +115,10 @@ function createManager(options?: {
   channelIds?: ChannelId[];
 }) {
   const log = createSubsystemLogger("gateway/server-channels-test");
+  const channelLogs = { discord: log } as Record<ChannelId, SubsystemLogger>;
   const runtime = runtimeForLogger(log);
+  const channelRuntimeEnvs = { discord: runtime } as unknown as Record<ChannelId, RuntimeEnv>;
+  const channelIds = options?.channelIds ?? ["discord"];
   for (const channelId of channelIds) {
     channelLogs[channelId] ??= log.child(channelId);
     channelRuntimeEnvs[channelId] ??= runtime;
@@ -159,6 +163,7 @@ describe("server-channels auto restart", () => {
 
     expect(startAccount).toHaveBeenCalledTimes(11);
     const snapshot = manager.getRuntimeSnapshot();
+    const account = snapshot.channelAccounts.discord?.[DEFAULT_ACCOUNT_ID];
     expect(account?.running).toBe(false);
     expect(account?.reconnectAttempts).toBe(11);
 
@@ -177,6 +182,7 @@ describe("server-channels auto restart", () => {
 
     await manager.startChannels();
     vi.runAllTicks();
+    await manager.stopChannel("discord", DEFAULT_ACCOUNT_ID);
 
     await vi.advanceTimersByTimeAsync(200);
     expect(startAccount).toHaveBeenCalledTimes(1);
@@ -190,6 +196,7 @@ describe("server-channels auto restart", () => {
     );
     const manager = createManager();
     const snapshot = manager.getRuntimeSnapshot();
+    const account = snapshot.channelAccounts.discord?.[DEFAULT_ACCOUNT_ID];
     expect(account?.enabled).toBe(true);
     expect(account?.configured).toBe(true);
   });
@@ -207,6 +214,7 @@ describe("server-channels auto restart", () => {
     );
     const manager = createManager();
     const snapshot = manager.getRuntimeSnapshot();
+    const account = snapshot.channelAccounts.discord?.[DEFAULT_ACCOUNT_ID];
     expect(account?.configured).toBe(false);
     expect(account?.mode).toBe("webhook");
   });
@@ -235,6 +243,8 @@ describe("server-channels auto restart", () => {
     installTestRegistry(createTestPlugin({ startAccount, isConfigured }));
     const manager = createManager();
 
+    const firstStart = manager.startChannel("discord", DEFAULT_ACCOUNT_ID);
+    const secondStart = manager.startChannel("discord", DEFAULT_ACCOUNT_ID);
 
     await Promise.resolve();
     expect(isConfigured).toHaveBeenCalledTimes(1);
@@ -257,8 +267,10 @@ describe("server-channels auto restart", () => {
     installTestRegistry(createTestPlugin({ startAccount, isConfigured }));
     const manager = createManager();
 
+    const startTask = manager.startChannel("discord", DEFAULT_ACCOUNT_ID);
     await Promise.resolve();
 
+    const stopTask = manager.stopChannel("discord", DEFAULT_ACCOUNT_ID);
     startupGate.resolve();
 
     await Promise.all([startTask, stopTask]);
@@ -295,7 +307,10 @@ describe("server-channels auto restart", () => {
     });
     const succeedingStart = vi.fn(async () => {});
     installTestRegistry(
+      createTestPlugin({ id: "discord", order: 1, startAccount: failingStart }),
+      createTestPlugin({ id: "slack", order: 2, startAccount: succeedingStart }),
     );
+    const manager = createManager({ channelIds: ["discord", "slack"] });
 
     await expect(manager.startChannels()).resolves.toBeUndefined();
 
@@ -310,6 +325,7 @@ describe("server-channels auto restart", () => {
           const accounts = (
             cfg as {
               channels?: {
+                discord?: {
                   accounts?: Record<
                     string,
                     TestAccount & { healthMonitor?: { enabled?: boolean } }
@@ -317,6 +333,7 @@ describe("server-channels auto restart", () => {
                 };
               };
             }
+          ).channels?.discord?.accounts;
           if (!accounts) {
             return { enabled: true, configured: true };
           }
@@ -336,6 +353,7 @@ describe("server-channels auto restart", () => {
     const manager = createManager({
       loadConfig: () => ({
         channels: {
+          discord: {
             accounts: {
               "Router D": {
                 enabled: true,
@@ -348,6 +366,7 @@ describe("server-channels auto restart", () => {
       }),
     });
 
+    expect(manager.isHealthMonitorEnabled("discord", "router-d")).toBe(false);
   });
 
   it("falls back to channel-level health monitor overrides when account resolution omits them", () => {
@@ -363,12 +382,14 @@ describe("server-channels auto restart", () => {
     const manager = createManager({
       loadConfig: () => ({
         channels: {
+          discord: {
             healthMonitor: { enabled: false },
           },
         },
       }),
     });
 
+    expect(manager.isHealthMonitorEnabled("discord", DEFAULT_ACCOUNT_ID)).toBe(false);
   });
 
   it("uses raw account config overrides when resolvers omit health monitor fields", () => {
@@ -384,6 +405,7 @@ describe("server-channels auto restart", () => {
     const manager = createManager({
       loadConfig: () => ({
         channels: {
+          discord: {
             accounts: {
               [DEFAULT_ACCOUNT_ID]: {
                 healthMonitor: { enabled: false },
@@ -394,6 +416,7 @@ describe("server-channels auto restart", () => {
       }),
     });
 
+    expect(manager.isHealthMonitorEnabled("discord", DEFAULT_ACCOUNT_ID)).toBe(false);
   });
 
   it("fails closed when account resolution throws during health monitor gating", () => {
@@ -407,6 +430,7 @@ describe("server-channels auto restart", () => {
 
     const manager = createManager();
 
+    expect(manager.isHealthMonitorEnabled("discord", DEFAULT_ACCOUNT_ID)).toBe(false);
   });
 
   it("does not treat an empty account id as the default account when matching raw overrides", () => {
@@ -422,6 +446,7 @@ describe("server-channels auto restart", () => {
     const manager = createManager({
       loadConfig: () => ({
         channels: {
+          discord: {
             accounts: {
               default: {
                 healthMonitor: { enabled: false },
@@ -432,5 +457,6 @@ describe("server-channels auto restart", () => {
       }),
     });
 
+    expect(manager.isHealthMonitorEnabled("discord", "")).toBe(true);
   });
 });

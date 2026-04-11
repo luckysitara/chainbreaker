@@ -61,6 +61,7 @@ async function readLogSlice(params: {
     return {
       cursor: 0,
       size: 0,
+      lines: [] as string[],
       truncated: false,
       reset: false,
     };
@@ -99,6 +100,7 @@ async function readLogSlice(params: {
     return {
       cursor: size,
       size,
+      lines: [] as string[],
       truncated,
       reset,
     };
@@ -117,9 +119,15 @@ async function readLogSlice(params: {
     const buffer = Buffer.alloc(length);
     const readResult = await handle.read(buffer, 0, length, start);
     const text = buffer.toString("utf8", 0, readResult.bytesRead);
+    let lines = text.split("\n");
     if (start > 0 && prefix !== "\n") {
+      lines = lines.slice(1);
     }
+    if (lines.length > 0 && lines[lines.length - 1] === "") {
+      lines = lines.slice(0, -1);
     }
+    if (lines.length > limit) {
+      lines = lines.slice(lines.length - limit);
     }
 
     cursor = size;
@@ -127,6 +135,7 @@ async function readLogSlice(params: {
     return {
       cursor,
       size,
+      lines,
       truncated,
       reset,
     };

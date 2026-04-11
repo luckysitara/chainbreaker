@@ -84,11 +84,13 @@ function resolveScopedAccount(
 }
 
 function createScopedCommandTestPlugin(params: {
+  id: "discord" | "signal" | "slack" | "telegram" | "whatsapp";
   label: string;
   buildPatch: (input: {
     token?: string;
     botToken?: string;
     appToken?: string;
+    signalNumber?: string;
   }) => Record<string, unknown>;
   clearBaseFields: string[];
   onAccountConfigChanged?: NonNullable<ChannelPlugin["lifecycle"]>["onAccountConfigChanged"];
@@ -118,6 +120,7 @@ function createScopedCommandTestPlugin(params: {
           token: input.token,
           botToken: input.botToken,
           appToken: input.appToken,
+          signalNumber: input.signalNumber,
         }),
     }),
     lifecycle:
@@ -223,7 +226,9 @@ function setMinimalChannelsCommandRegistryForTests(): void {
         source: "test",
       },
       {
+        pluginId: "discord",
         plugin: createScopedCommandTestPlugin({
+          id: "discord",
           label: "Discord",
           buildPatch: ({ token }) => (token ? { token } : {}),
           clearBaseFields: ["token", "name"],
@@ -238,6 +243,7 @@ function setMinimalChannelsCommandRegistryForTests(): void {
               )?.intents?.messageContent;
               if (messageContent === "disabled") {
                 issues.push({
+                  channel: "discord",
                   accountId: String(account.accountId ?? DEFAULT_ACCOUNT_ID),
                   kind: "intent",
                   message:
@@ -259,6 +265,7 @@ function setMinimalChannelsCommandRegistryForTests(): void {
                   continue;
                 }
                 issues.push({
+                  channel: "discord",
                   accountId: String(account.accountId ?? DEFAULT_ACCOUNT_ID),
                   kind: "permissions",
                   message: `Channel ${channel.channelId} permission audit failed.${channel.missing?.length ? ` missing ${channel.missing.join(", ")}` : ""}${channel.error ? `: ${channel.error}` : ""}`,
@@ -270,7 +277,9 @@ function setMinimalChannelsCommandRegistryForTests(): void {
         source: "test",
       },
       {
+        pluginId: "slack",
         plugin: createScopedCommandTestPlugin({
+          id: "slack",
           label: "Slack",
           buildPatch: ({ botToken, appToken }) => ({
             ...(botToken ? { botToken } : {}),
@@ -281,8 +290,11 @@ function setMinimalChannelsCommandRegistryForTests(): void {
         source: "test",
       },
       {
+        pluginId: "signal",
         plugin: createScopedCommandTestPlugin({
+          id: "signal",
           label: "Signal",
+          buildPatch: ({ signalNumber }) => (signalNumber ? { account: signalNumber } : {}),
           clearBaseFields: ["account", "name"],
         }),
         source: "test",
@@ -435,9 +447,11 @@ describe("channels command", () => {
     expect(next.channels?.telegram?.accounts?.alerts?.botToken).toBe("alerts-token");
   });
 
+  it("adds a default slack account with tokens", async () => {
     configMocks.readConfigFileSnapshot.mockResolvedValue({ ...baseConfigSnapshot });
     await channelsAddCommand(
       {
+        channel: "slack",
         account: "default",
         botToken: "xoxb-1",
         appToken: "xapp-1",
@@ -448,14 +462,20 @@ describe("channels command", () => {
 
     const next = getWrittenConfig<{
       channels?: {
+        slack?: { enabled?: boolean; botToken?: string; appToken?: string };
       };
     }>();
+    expect(next.channels?.slack?.enabled).toBe(true);
+    expect(next.channels?.slack?.botToken).toBe("xoxb-1");
+    expect(next.channels?.slack?.appToken).toBe("xapp-1");
   });
 
+  it("deletes a non-default discord account", async () => {
     configMocks.readConfigFileSnapshot.mockResolvedValue({
       ...baseConfigSnapshot,
       config: {
         channels: {
+          discord: {
             accounts: {
               default: { token: "d0" },
               work: { token: "d1" },
@@ -465,13 +485,17 @@ describe("channels command", () => {
       },
     });
 
+    await channelsRemoveCommand({ channel: "discord", account: "work", delete: true }, runtime, {
       hasFlags: true,
     });
 
     const next = getWrittenConfig<{
       channels?: {
+        discord?: { accounts?: Record<string, { token?: string }> };
       };
     }>();
+    expect(next.channels?.discord?.accounts?.work).toBeUndefined();
+    expect(next.channels?.discord?.accounts?.default?.token).toBe("d0");
   });
 
   it("adds a named WhatsApp account", async () => {
@@ -490,10 +514,12 @@ describe("channels command", () => {
     expect(next.channels?.whatsapp?.accounts?.family?.name).toBe("Family Phone");
   });
 
+  it("adds a second signal account with a distinct name", async () => {
     configMocks.readConfigFileSnapshot.mockResolvedValue({
       ...baseConfigSnapshot,
       config: {
         channels: {
+          signal: {
             accounts: {
               default: { account: "+15555550111", name: "Primary" },
             },
@@ -504,8 +530,10 @@ describe("channels command", () => {
 
     await channelsAddCommand(
       {
+        channel: "signal",
         account: "lab",
         name: "Lab",
+        signalNumber: "+15555550123",
       },
       runtime,
       { hasFlags: true },
@@ -513,22 +541,30 @@ describe("channels command", () => {
 
     const next = getWrittenConfig<{
       channels?: {
+        signal?: {
           accounts?: Record<string, { account?: string; name?: string }>;
         };
       };
     }>();
+    expect(next.channels?.signal?.accounts?.lab?.account).toBe("+15555550123");
+    expect(next.channels?.signal?.accounts?.lab?.name).toBe("Lab");
+    expect(next.channels?.signal?.accounts?.default?.name).toBe("Primary");
   });
 
   it("disables a default provider account when remove has no delete flag", async () => {
     configMocks.readConfigFileSnapshot.mockResolvedValue({
       ...baseConfigSnapshot,
       config: {
+        channels: { discord: { token: "d0", enabled: true } },
       },
     });
 
+    await runRemoveWithConfirm({ channel: "discord", account: "default" });
 
     const next = getWrittenConfig<{
+      channels?: { discord?: { enabled?: boolean } };
     }>();
+    expect(next.channels?.discord?.enabled).toBe(false);
   });
 
   it("includes external auth profiles in JSON output", async () => {
@@ -610,6 +646,7 @@ describe("channels command", () => {
       ...baseConfigSnapshot,
       config: {
         channels: {
+          discord: {
             name: "Primary Bot",
             token: "d0",
           },
@@ -617,24 +654,33 @@ describe("channels command", () => {
       },
     });
 
+    await channelsAddCommand({ channel: "discord", account: "work", token: "d1" }, runtime, {
       hasFlags: true,
     });
 
     const next = getWrittenConfig<{
       channels?: {
+        discord?: {
           name?: string;
           accounts?: Record<string, { name?: string; token?: string }>;
         };
       };
     }>();
+    expect(next.channels?.discord?.name).toBeUndefined();
+    expect(next.channels?.discord?.accounts?.default?.name).toBe("Primary Bot");
+    expect(next.channels?.discord?.accounts?.work?.token).toBe("d1");
   });
 
+  it("formats gateway channel status lines in registry order", () => {
+    const lines = formatGatewayChannelsStatusLines({
       channelAccounts: {
         telegram: [{ accountId: "default", configured: true }],
         whatsapp: [{ accountId: "default", linked: true }],
       },
     });
 
+    const telegramIndex = lines.findIndex((line) => line.includes("Telegram default"));
+    const whatsappIndex = lines.findIndex((line) => line.includes("WhatsApp default"));
     expect(telegramIndex).toBeGreaterThan(-1);
     expect(whatsappIndex).toBeGreaterThan(-1);
     expect(telegramIndex).toBeLessThan(whatsappIndex);
@@ -644,6 +690,7 @@ describe("channels command", () => {
     {
       name: "surfaces Discord privileged intent issues in channels status output",
       channelAccounts: {
+        discord: [
           {
             accountId: "default",
             enabled: true,
@@ -661,6 +708,7 @@ describe("channels command", () => {
     {
       name: "surfaces Discord permission audit issues in channels status output",
       channelAccounts: {
+        discord: [
           {
             accountId: "default",
             enabled: true,
@@ -795,6 +843,7 @@ describe("channels command", () => {
       ...baseConfigSnapshot,
       config: {
         channels: {
+          discord: {
             accounts: {
               default: { token: "d0" },
             },
@@ -803,6 +852,7 @@ describe("channels command", () => {
       },
     });
 
+    await channelsRemoveCommand({ channel: "discord", account: "default", delete: true }, runtime, {
       hasFlags: true,
     });
 

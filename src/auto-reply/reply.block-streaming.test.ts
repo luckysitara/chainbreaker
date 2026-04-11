@@ -5,6 +5,7 @@ import type { MsgContext } from "./templating.js";
 
 const mocks = vi.hoisted(() => ({
   resolveReplyDirectives: vi.fn(),
+  handleInlineActions: vi.fn(),
   initSessionState: vi.fn(),
   runPreparedReply: vi.fn(),
 }));
@@ -68,6 +69,8 @@ vi.mock("./reply/typing.js", () => ({
 vi.mock("./reply/get-reply-directives.js", () => ({
   resolveReplyDirectives: (...args: unknown[]) => mocks.resolveReplyDirectives(...args),
 }));
+vi.mock("./reply/get-reply-inline-actions.js", () => ({
+  handleInlineActions: (...args: unknown[]) => mocks.handleInlineActions(...args),
 }));
 vi.mock("./reply/session.js", () => ({
   initSessionState: (...args: unknown[]) => mocks.initSessionState(...args),
@@ -150,6 +153,7 @@ function createContinueDirectivesResult() {
         resolveDefaultThinkingLevel: async () => undefined,
       },
       contextTokens: 0,
+      inlineStatusRequested: false,
       directiveAck: undefined,
       perMessageQueueMode: undefined,
       perMessageQueueOptions: undefined,
@@ -162,10 +166,12 @@ describe("block streaming", () => {
     await loadFreshGetReplyModuleForTest();
     vi.stubEnv("CHAINBREAKER_TEST_FAST", "1");
     mocks.resolveReplyDirectives.mockReset();
+    mocks.handleInlineActions.mockReset();
     mocks.initSessionState.mockReset();
     mocks.runPreparedReply.mockReset();
 
     mocks.resolveReplyDirectives.mockResolvedValue(createContinueDirectivesResult());
+    mocks.handleInlineActions.mockImplementation(async (params) => ({
       kind: "continue",
       directives: params.directives,
       abortedLastRun: false,

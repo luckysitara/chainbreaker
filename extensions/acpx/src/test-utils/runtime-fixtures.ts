@@ -414,7 +414,9 @@ export async function readMockRuntimeLogEntries(
   const raw = await readFile(logPath, "utf8");
   return raw
     .split(/\r?\n/)
+    .map((line) => line.trim())
     .filter(Boolean)
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
 export async function cleanupMockRuntimeFixtures(): Promise<void> {

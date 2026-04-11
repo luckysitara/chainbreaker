@@ -164,10 +164,12 @@ function isFreeOpenRouterModel(entry: OpenRouterModelMeta): boolean {
 
 async function withTimeout<T>(
   timeoutMs: number,
+  fn: (signal: AbortSignal) => Promise<T>,
 ): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(controller.abort.bind(controller), timeoutMs);
   try {
+    return await fn(controller.signal);
   } finally {
     clearTimeout(timer);
   }
@@ -258,11 +260,13 @@ async function probeTool(
   };
   const startedAt = Date.now();
   try {
+    const message = await withTimeout(timeoutMs, (signal) =>
       complete(model, context, {
         apiKey,
         maxTokens: 256,
         temperature: 0,
         toolChoice: "required",
+        signal,
       } satisfies OpenAICompletionsOptions),
     );
 
@@ -304,10 +308,12 @@ async function probeImage(
   };
   const startedAt = Date.now();
   try {
+    await withTimeout(timeoutMs, (signal) =>
       complete(model, context, {
         apiKey,
         maxTokens: 16,
         temperature: 0,
+        signal,
       } satisfies OpenAICompletionsOptions),
     );
     return { ok: true, latencyMs: Date.now() - startedAt };

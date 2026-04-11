@@ -381,4 +381,7 @@ export async function noteSecurityWarnings(cfg: ChainbreakerConfig) {
     }
   }
 
+  const lines = warnings.length > 0 ? warnings : ["- No channel security warnings detected."];
+  lines.push(auditHint);
+  note(lines.join("\n"), "Security");
 }

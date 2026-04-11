@@ -472,9 +472,7 @@ describe("killSubagentRunAdmin", () => {
   });
 
   it("still terminates the run when session store persistence fails during kill", async () => {
-    const tmpDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "chainbreaker-subagent-admin-kill-store-"),
-    );
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "chainbreaker-subagent-admin-kill-store-"));
     const storePath = path.join(tmpDir, "sessions.json");
     const childSessionKey = "agent:main:subagent:worker-store-fail";
 

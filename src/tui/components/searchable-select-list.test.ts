@@ -60,6 +60,7 @@ describe("SearchableSelectList", () => {
   function expectNoMatchesForQuery(list: SearchableSelectList, query: string) {
     typeInput(list, query);
     const output = list.render(80);
+    expect(output.some((line) => line.includes("No matches"))).toBe(true);
   }
 
   function expectDescriptionVisibilityAtWidth(width: number, shouldContainDescription: boolean) {
@@ -82,6 +83,7 @@ describe("SearchableSelectList", () => {
     const list = new SearchableSelectList(testItems, 5, mockTheme);
     const output = list.render(80);
 
+    // Should have search prompt line, spacer, and items
     expect(output.length).toBeGreaterThanOrEqual(3);
     expect(output[0]).toContain("search");
   });
@@ -117,12 +119,17 @@ describe("SearchableSelectList", () => {
 
     const width = 80;
     const output = list.render(width);
+    for (const line of output) {
+      expect(visibleWidth(line)).toBeLessThanOrEqual(width);
     }
   });
 
   it("keeps model-search rows within width when filtering by m", () => {
     const items = [
+      { value: "minimax-cn/MiniMax-M2", label: "minimax-cn/MiniMax-M2", description: "MiniMax M2" },
       {
+        value: "minimax-cn/MiniMax-M2.1",
+        label: "minimax-cn/MiniMax-M2.1",
         description: "MiniMax M2.1",
       },
       {
@@ -140,6 +147,8 @@ describe("SearchableSelectList", () => {
     typeInput(list, "m");
 
     const width = 209;
+    for (const line of list.render(width)) {
+      expect(visibleWidth(line)).toBeLessThanOrEqual(width);
     }
   });
 
@@ -159,6 +168,7 @@ describe("SearchableSelectList", () => {
 
     typeInput(list, "gpt m");
 
+    const renderedLine = list.render(80).find((line) => stripAnsi(line).includes("gpt-model"));
     expect(renderedLine).toBeDefined();
     const highlightOpens = renderedLine ? renderedLine.split("\u001b[31m").length - 1 : 0;
     expect(highlightOpens).toBe(2);

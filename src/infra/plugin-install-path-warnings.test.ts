@@ -10,10 +10,12 @@ import {
 
 async function detectMatrixCustomPathIssue(sourcePath: string | ((pluginPath: string) => string)) {
   return withTempHome(async (home) => {
+    const pluginPath = path.join(home, "matrix-plugin");
     await fs.mkdir(pluginPath, { recursive: true });
     const resolvedSourcePath =
       typeof sourcePath === "function" ? sourcePath(pluginPath) : sourcePath;
     const issue = await detectPluginInstallPathIssue({
+      pluginId: "matrix",
       install: {
         source: "path",
         sourcePath: resolvedSourcePath,
@@ -25,16 +27,19 @@ async function detectMatrixCustomPathIssue(sourcePath: string | ((pluginPath: st
   });
 }
 
+const MATRIX_REPO_INSTALL_COMMAND = `chainbreaker plugins install ${repoInstallSpec("matrix")}`;
 
 describe("plugin install path warnings", () => {
   it("ignores non-path installs and blank path candidates", async () => {
     expect(
       await detectPluginInstallPathIssue({
+        pluginId: "matrix",
         install: null,
       }),
     ).toBeNull();
     expect(
       await detectPluginInstallPathIssue({
+        pluginId: "matrix",
         install: {
           source: "npm",
           sourcePath: " ",
@@ -46,30 +51,38 @@ describe("plugin install path warnings", () => {
 
   it("detects stale custom plugin install paths", async () => {
     const issue = await detectPluginInstallPathIssue({
+      pluginId: "matrix",
       install: {
         source: "path",
+        sourcePath: "/tmp/chainbreaker-matrix-missing",
+        installPath: "/tmp/chainbreaker-matrix-missing",
       },
     });
 
     expect(issue).toEqual({
       kind: "missing-path",
+      pluginId: "matrix",
+      path: "/tmp/chainbreaker-matrix-missing",
     });
     expect(
       formatPluginInstallPathIssue({
         issue: issue!,
         pluginLabel: "Matrix",
+        defaultInstallCommand: "chainbreaker plugins install @chainbreaker/matrix",
         repoInstallCommand: MATRIX_REPO_INSTALL_COMMAND,
       }),
     ).toEqual([
+      "Matrix is installed from a custom path that no longer exists: /tmp/chainbreaker-matrix-missing",
+      'Reinstall with "chainbreaker plugins install @chainbreaker/matrix".',
       `If you are running from a repo checkout, you can also use "${MATRIX_REPO_INSTALL_COMMAND}".`,
     ]);
   });
 
   it("uses the second candidate path when the first one is stale", async () => {
-    const { issue, pluginPath } = await detectMatrixCustomPathIssue(
-    );
+    const { issue, pluginPath } = await detectMatrixCustomPathIssue("/tmp/chainbreaker-matrix-missing");
     expect(issue).toEqual({
       kind: "custom-path",
+      pluginId: "matrix",
       path: pluginPath,
     });
   });
@@ -80,6 +93,7 @@ describe("plugin install path warnings", () => {
     );
     expect(issue).toEqual({
       kind: "custom-path",
+      pluginId: "matrix",
       path: pluginPath,
     });
   });
@@ -89,13 +103,18 @@ describe("plugin install path warnings", () => {
       formatPluginInstallPathIssue({
         issue: {
           kind: "custom-path",
+          pluginId: "matrix",
+          path: "/tmp/matrix-plugin",
         },
         pluginLabel: "Matrix",
+        defaultInstallCommand: "chainbreaker plugins install @chainbreaker/matrix",
         repoInstallCommand: MATRIX_REPO_INSTALL_COMMAND,
         formatCommand: (command) => `<${command}>`,
       }),
     ).toEqual([
+      "Matrix is installed from a custom path: /tmp/matrix-plugin",
       "Main updates will not automatically replace that plugin with the repo's default Matrix package.",
+      'Reinstall with "<chainbreaker plugins install @chainbreaker/matrix>" when you want to return to the standard Matrix plugin.',
       `If you are intentionally running from a repo checkout, reinstall that checkout explicitly with "<${MATRIX_REPO_INSTALL_COMMAND}>" after updates.`,
     ]);
   });
@@ -105,11 +124,16 @@ describe("plugin install path warnings", () => {
       formatPluginInstallPathIssue({
         issue: {
           kind: "missing-path",
+          pluginId: "matrix",
+          path: "/tmp/chainbreaker-matrix-missing",
         },
         pluginLabel: "Matrix",
+        defaultInstallCommand: "chainbreaker plugins install @chainbreaker/matrix",
         repoInstallCommand: null,
       }),
     ).toEqual([
+      "Matrix is installed from a custom path that no longer exists: /tmp/chainbreaker-matrix-missing",
+      'Reinstall with "chainbreaker plugins install @chainbreaker/matrix".',
     ]);
   });
 });

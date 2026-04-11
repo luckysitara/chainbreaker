@@ -10,8 +10,10 @@ describe("mergeDmAllowFromSources", () => {
   it("merges, trims, and filters empty values", () => {
     expect(
       mergeDmAllowFromSources({
+        allowFrom: ["  line:user:abc  ", "", 123],
         storeAllowFrom: ["   ", "telegram:456"],
       }),
+    ).toEqual(["line:user:abc", "123", "telegram:456"]);
   });
 
   it.each([

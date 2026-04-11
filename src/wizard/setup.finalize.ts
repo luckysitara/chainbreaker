@@ -236,6 +236,7 @@ export async function finalizeSetupWizard(
     gatewayProbe = await waitForGatewayReachable({
       url: probeLinks.wsUrl,
       token: settings.gatewayToken,
+      deadlineMs: 15_000,
     });
     if (gatewayProbe.ok) {
       try {
@@ -549,6 +550,7 @@ export async function finalizeSetupWizard(
     } else if (webSearchEnabled !== false && hasKey) {
       await prompter.note(
         [
+          "Web search is enabled, so your agent can look things up online when needed.",
           "",
           `Provider: ${label}`,
           ...(keySource ? [keySource] : []),

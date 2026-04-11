@@ -109,6 +109,7 @@ export async function anthropicAnalyzePdf(params: {
 // Google Gemini – native PDF via generateContent API
 // ---------------------------------------------------------------------------
 
+type GeminiPart = { inline_data: { mime_type: string; data: string } } | { text: string };
 
 type GeminiCandidate = {
   content?: { parts?: Array<{ text?: string }> };
@@ -129,6 +130,7 @@ export async function geminiAnalyzePdf(params: {
   const parts: GeminiPart[] = [];
   for (const pdf of params.pdfs) {
     parts.push({
+      inline_data: {
         mime_type: "application/pdf",
         data: pdf.base64,
       },

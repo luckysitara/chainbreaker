@@ -10,6 +10,7 @@ describe("sanitizeTerminalText", () => {
     expect(sanitizeTerminalText("\u001b[2K\u001b[1Arewritten")).toBe("rewritten");
   });
 
+  it("escapes line controls while preserving printable text", () => {
     expect(sanitizeTerminalText("a\tb\nc\rd")).toBe("a\\tb\\nc\\rd");
   });
 });

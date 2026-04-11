@@ -80,14 +80,18 @@ function makeManifestRegistry() {
         },
       },
       {
+        id: "slack",
         name: "Slack",
         description: "Slack plugin",
         origin: "bundled",
+        channels: ["slack"],
         channelCatalogMeta: {
+          id: "slack",
           label: "Slack",
           blurb: "Slack channel",
         },
         channelConfigs: {
+          slack: {
             schema: {
               type: "object",
               properties: {
@@ -99,14 +103,18 @@ function makeManifestRegistry() {
         },
       },
       {
+        id: "matrix",
         name: "Matrix",
         description: "Matrix plugin",
         origin: "workspace",
+        channels: ["matrix"],
         channelCatalogMeta: {
+          id: "matrix",
           label: "Matrix",
           blurb: "Matrix channel",
         },
         channelConfigs: {
+          matrix: {
             schema: {
               type: "object",
               properties: {
@@ -162,6 +170,7 @@ describe("readBestEffortRuntimeConfigSchema", () => {
       }),
     );
     expect(channelProps?.telegram).toBeTruthy();
+    expect(channelProps?.matrix).toBeTruthy();
     expect(entryProps?.demo).toBeTruthy();
   });
 
@@ -177,6 +186,7 @@ describe("readBestEffortRuntimeConfigSchema", () => {
       }),
     );
     expect(channelProps?.telegram).toBeTruthy();
+    expect(channelProps?.slack).toBeTruthy();
     expect(entryProps?.demo).toBeUndefined();
   });
 });
@@ -201,5 +211,6 @@ describe("loadGatewayRuntimeConfigSchema", () => {
       }),
     );
     expect(channelProps?.telegram).toBeTruthy();
+    expect(channelProps?.matrix).toBeTruthy();
   });
 });

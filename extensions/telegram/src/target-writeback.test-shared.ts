@@ -103,6 +103,7 @@ export function installMaybePersistResolvedTelegramTargetTests(params?: {
         version: 1,
         jobs: [
           { id: "a", delivery: { channel: "telegram", to: "https://t.me/mychannel" } },
+          { id: "b", delivery: { channel: "slack", to: "C123" } },
         ],
       });
 
@@ -136,6 +137,7 @@ export function installMaybePersistResolvedTelegramTargetTests(params?: {
         expect.objectContaining({
           jobs: [
             { id: "a", delivery: { channel: "telegram", to: "-100123" } },
+            { id: "b", delivery: { channel: "slack", to: "C123" } },
           ],
         }),
       );

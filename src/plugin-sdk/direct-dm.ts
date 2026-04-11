@@ -220,6 +220,7 @@ type DirectDmRuntime = {
   };
 };
 
+/** Route, envelope, record, and dispatch one direct-DM turn through the standard pipeline. */
 export async function dispatchInboundDirectDmWithRuntime(params: {
   cfg: ChainbreakerConfig;
   runtime: DirectDmRuntime;

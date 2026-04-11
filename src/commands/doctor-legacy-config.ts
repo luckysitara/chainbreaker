@@ -1,7 +1,16 @@
+import { normalizeProviderId } from "../agents/model-selection.js";
 import { shouldMoveSingleAccountChannelKey } from "../channels/plugins/setup-helpers.js";
 import type { ChainbreakerConfig } from "../config/config.js";
+import { resolveNormalizedProviderModelMaxTokens } from "../config/defaults.js";
+import {
+  formatSlackStreamingBooleanMigrationMessage,
+  formatSlackStreamModeMigrationMessage,
+  resolveDiscordPreviewStreamMode,
+  resolveSlackNativeStreaming,
+  resolveSlackStreamingMode,
+  resolveTelegramPreviewStreamMode,
+} from "../config/streaming.js";
 import { migrateLegacyWebSearchConfig } from "../config/legacy-web-search.js";
-import { resolveTelegramPreviewStreamMode } from "../config/streaming.js";
 import { LEGACY_TALK_PROVIDER_ID, normalizeTalkSection } from "../config/talk.js";
 import { DEFAULT_GOOGLE_API_BASE_URL } from "../infra/google-api-base-url.js";
 import { DEFAULT_ACCOUNT_ID } from "../routing/session-key.js";
@@ -17,6 +26,87 @@ export function normalizeCompatibilityConfigValues(cfg: ChainbreakerConfig): {
 
   const isRecord = (value: unknown): value is Record<string, unknown> =>
     Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+  const normalizeDmAliases = (params: {
+    provider: "slack" | "discord";
+    entry: Record<string, unknown>;
+    pathPrefix: string;
+  }): { entry: Record<string, unknown>; changed: boolean } => {
+    let changed = false;
+    let updated: Record<string, unknown> = params.entry;
+    const rawDm = updated.dm;
+    const dm = isRecord(rawDm) ? structuredClone(rawDm) : null;
+    let dmChanged = false;
+
+    const allowFromEqual = (a: unknown, b: unknown): boolean => {
+      if (!Array.isArray(a) || !Array.isArray(b)) {
+        return false;
+      }
+      const na = a.map((v) => String(v).trim()).filter(Boolean);
+      const nb = b.map((v) => String(v).trim()).filter(Boolean);
+      if (na.length !== nb.length) {
+        return false;
+      }
+      return na.every((v, i) => v === nb[i]);
+    };
+
+    const topDmPolicy = updated.dmPolicy;
+    const legacyDmPolicy = dm?.policy;
+    if (topDmPolicy === undefined && legacyDmPolicy !== undefined) {
+      updated = { ...updated, dmPolicy: legacyDmPolicy };
+      changed = true;
+      if (dm) {
+        delete dm.policy;
+        dmChanged = true;
+      }
+      changes.push(`Moved ${params.pathPrefix}.dm.policy → ${params.pathPrefix}.dmPolicy.`);
+    } else if (topDmPolicy !== undefined && legacyDmPolicy !== undefined) {
+      if (topDmPolicy === legacyDmPolicy) {
+        if (dm) {
+          delete dm.policy;
+          dmChanged = true;
+          changes.push(`Removed ${params.pathPrefix}.dm.policy (dmPolicy already set).`);
+        }
+      }
+    }
+
+    const topAllowFrom = updated.allowFrom;
+    const legacyAllowFrom = dm?.allowFrom;
+    if (topAllowFrom === undefined && legacyAllowFrom !== undefined) {
+      updated = { ...updated, allowFrom: legacyAllowFrom };
+      changed = true;
+      if (dm) {
+        delete dm.allowFrom;
+        dmChanged = true;
+      }
+      changes.push(`Moved ${params.pathPrefix}.dm.allowFrom → ${params.pathPrefix}.allowFrom.`);
+    } else if (topAllowFrom !== undefined && legacyAllowFrom !== undefined) {
+      if (allowFromEqual(topAllowFrom, legacyAllowFrom)) {
+        if (dm) {
+          delete dm.allowFrom;
+          dmChanged = true;
+          changes.push(`Removed ${params.pathPrefix}.dm.allowFrom (allowFrom already set).`);
+        }
+      }
+    }
+
+    if (dm && isRecord(rawDm) && dmChanged) {
+      const keys = Object.keys(dm);
+      if (keys.length === 0) {
+        if (updated.dm !== undefined) {
+          const { dm: _ignored, ...rest } = updated;
+          updated = rest;
+          changed = true;
+          changes.push(`Removed empty ${params.pathPrefix}.dm after migration.`);
+        }
+      } else {
+        updated = { ...updated, dm };
+        changed = true;
+      }
+    }
+
+    return { entry: updated, changed };
+  };
 
   const normalizePreviewStreamingAliases = (params: {
     entry: Record<string, unknown>;
@@ -55,12 +145,71 @@ export function normalizeCompatibilityConfigValues(cfg: ChainbreakerConfig): {
         `Normalized ${params.pathPrefix}.streaming (${beforeStreaming}) → (${resolved}).`,
       );
     }
+    if (
+      params.pathPrefix.startsWith("channels.discord") &&
+      resolved === "off" &&
+      hadLegacyStreamMode
+    ) {
+      changes.push(
+        `${params.pathPrefix}.streaming remains off by default to avoid Discord preview-edit rate limits; set ${params.pathPrefix}.streaming="partial" to opt in explicitly.`,
+      );
+    }
+
+    return { entry: updated, changed };
+  };
+
+  const normalizeSlackStreamingAliases = (params: {
+    entry: Record<string, unknown>;
+    pathPrefix: string;
+  }): { entry: Record<string, unknown>; changed: boolean } => {
+    let updated = params.entry;
+    const hadLegacyStreamMode = updated.streamMode !== undefined;
+    const legacyStreaming = updated.streaming;
+    const beforeStreaming = updated.streaming;
+    const beforeNativeStreaming = updated.nativeStreaming;
+    const resolvedStreaming = resolveSlackStreamingMode(updated);
+    const resolvedNativeStreaming = resolveSlackNativeStreaming(updated);
+    const shouldNormalize =
+      hadLegacyStreamMode ||
+      typeof legacyStreaming === "boolean" ||
+      (typeof legacyStreaming === "string" && legacyStreaming !== resolvedStreaming);
+    if (!shouldNormalize) {
+      return { entry: updated, changed: false };
+    }
+
+    let changed = false;
+    if (beforeStreaming !== resolvedStreaming) {
+      updated = { ...updated, streaming: resolvedStreaming };
+      changed = true;
+    }
+    if (
+      typeof beforeNativeStreaming !== "boolean" ||
+      beforeNativeStreaming !== resolvedNativeStreaming
+    ) {
+      updated = { ...updated, nativeStreaming: resolvedNativeStreaming };
+      changed = true;
+    }
+    if (hadLegacyStreamMode) {
+      const { streamMode: _ignored, ...rest } = updated;
+      updated = rest;
+      changed = true;
+      changes.push(formatSlackStreamModeMigrationMessage(params.pathPrefix, resolvedStreaming));
+    }
+    if (typeof legacyStreaming === "boolean") {
+      changes.push(
+        formatSlackStreamingBooleanMigrationMessage(params.pathPrefix, resolvedNativeStreaming),
+      );
+    } else if (typeof legacyStreaming === "string" && legacyStreaming !== resolvedStreaming) {
+      changes.push(
+        `Normalized ${params.pathPrefix}.streaming (${legacyStreaming}) → (${resolvedStreaming}).`,
+      );
+    }
 
     return { entry: updated, changed };
   };
 
   const normalizeStreamingAliasesForProvider = (params: {
-    provider: "telegram";
+    provider: "telegram" | "slack" | "discord";
     entry: Record<string, unknown>;
     pathPrefix: string;
   }): { entry: Record<string, unknown>; changed: boolean } => {
@@ -71,10 +220,20 @@ export function normalizeCompatibilityConfigValues(cfg: ChainbreakerConfig): {
         resolveStreaming: resolveTelegramPreviewStreamMode,
       });
     }
-    return { entry: params.entry, changed: false };
+    if (params.provider === "discord") {
+      return normalizePreviewStreamingAliases({
+        entry: params.entry,
+        pathPrefix: params.pathPrefix,
+        resolveStreaming: resolveDiscordPreviewStreamMode,
+      });
+    }
+    return normalizeSlackStreamingAliases({
+      entry: params.entry,
+      pathPrefix: params.pathPrefix,
+    });
   };
 
-  const normalizeProvider = (provider: "telegram") => {
+  const normalizeProvider = (provider: "telegram" | "slack" | "discord") => {
     const channels = next.channels as Record<string, unknown> | undefined;
     const rawEntry = channels?.[provider];
     if (!isRecord(rawEntry)) {
@@ -83,6 +242,15 @@ export function normalizeCompatibilityConfigValues(cfg: ChainbreakerConfig): {
 
     let updated = rawEntry;
     let changed = false;
+    if (provider !== "telegram") {
+      const base = normalizeDmAliases({
+        provider,
+        entry: rawEntry,
+        pathPrefix: `channels.${provider}`,
+      });
+      updated = base.entry;
+      changed = base.changed;
+    }
     const providerStreaming = normalizeStreamingAliasesForProvider({
       provider,
       entry: updated,
@@ -101,6 +269,15 @@ export function normalizeCompatibilityConfigValues(cfg: ChainbreakerConfig): {
         }
         let accountEntry = rawAccount;
         let accountChanged = false;
+        if (provider !== "telegram") {
+          const res = normalizeDmAliases({
+            provider,
+            entry: rawAccount,
+            pathPrefix: `channels.${provider}.accounts.${accountId}`,
+          });
+          accountEntry = res.entry;
+          accountChanged = res.changed;
+        }
         const accountStreaming = normalizeStreamingAliasesForProvider({
           provider,
           entry: accountEntry,
@@ -262,6 +439,8 @@ export function normalizeCompatibilityConfigValues(cfg: ChainbreakerConfig): {
   };
 
   normalizeProvider("telegram");
+  normalizeProvider("slack");
+  normalizeProvider("discord");
   seedMissingDefaultAccountsFromSingleAccountBase();
   normalizeLegacyBrowserProfiles();
   const webSearchMigration = migrateLegacyWebSearchConfig(next);
@@ -518,10 +697,210 @@ export function normalizeCompatibilityConfigValues(cfg: ChainbreakerConfig): {
     };
   };
 
+  const mapDeepgramCompatToProviderOptions = (
+    rawCompat: Record<string, unknown>,
+  ): Record<string, string | number | boolean> => {
+    const providerOptions: Record<string, string | number | boolean> = {};
+    if (typeof rawCompat.detectLanguage === "boolean") {
+      providerOptions.detect_language = rawCompat.detectLanguage;
+    }
+    if (typeof rawCompat.punctuate === "boolean") {
+      providerOptions.punctuate = rawCompat.punctuate;
+    }
+    if (typeof rawCompat.smartFormat === "boolean") {
+      providerOptions.smart_format = rawCompat.smartFormat;
+    }
+    return providerOptions;
+  };
+
+  const migrateLegacyDeepgramCompat = (params: {
+    owner: Record<string, unknown>;
+    pathPrefix: string;
+  }): boolean => {
+    const rawCompat = isRecord(params.owner.deepgram)
+      ? structuredClone(params.owner.deepgram)
+      : null;
+    if (!rawCompat) {
+      return false;
+    }
+
+    const compatProviderOptions = mapDeepgramCompatToProviderOptions(rawCompat);
+    const currentProviderOptions = isRecord(params.owner.providerOptions)
+      ? structuredClone(params.owner.providerOptions)
+      : {};
+    const currentDeepgram = isRecord(currentProviderOptions.deepgram)
+      ? structuredClone(currentProviderOptions.deepgram)
+      : {};
+    const mergedDeepgram = { ...compatProviderOptions, ...currentDeepgram };
+
+    delete params.owner.deepgram;
+    currentProviderOptions.deepgram = mergedDeepgram;
+    params.owner.providerOptions = currentProviderOptions;
+
+    const hadCanonicalDeepgram = Object.keys(currentDeepgram).length > 0;
+    changes.push(
+      hadCanonicalDeepgram
+        ? `Merged ${params.pathPrefix}.deepgram → ${params.pathPrefix}.providerOptions.deepgram (filled missing canonical fields from legacy).`
+        : `Moved ${params.pathPrefix}.deepgram → ${params.pathPrefix}.providerOptions.deepgram.`,
+    );
+    return true;
+  };
+
+  const normalizeLegacyMediaProviderOptions = () => {
+    const rawTools = next.tools;
+    if (!isRecord(rawTools)) {
+      return;
+    }
+    const rawMedia = rawTools.media;
+    if (!isRecord(rawMedia)) {
+      return;
+    }
+
+    let mediaChanged = false;
+    const nextMedia = structuredClone(rawMedia);
+    const migrateModelList = (models: unknown, pathPrefix: string): boolean => {
+      if (!Array.isArray(models)) {
+        return false;
+      }
+      let changed = false;
+      for (const [index, entry] of models.entries()) {
+        if (!isRecord(entry)) {
+          continue;
+        }
+        if (
+          migrateLegacyDeepgramCompat({
+            owner: entry,
+            pathPrefix: `${pathPrefix}[${index}]`,
+          })
+        ) {
+          changed = true;
+        }
+      }
+      return changed;
+    };
+
+    for (const capability of ["audio", "image", "video"] as const) {
+      const config = isRecord(nextMedia[capability])
+        ? structuredClone(nextMedia[capability])
+        : null;
+      if (!config) {
+        continue;
+      }
+      let configChanged = false;
+      if (migrateLegacyDeepgramCompat({ owner: config, pathPrefix: `tools.media.${capability}` })) {
+        configChanged = true;
+      }
+      if (migrateModelList(config.models, `tools.media.${capability}.models`)) {
+        configChanged = true;
+      }
+      if (configChanged) {
+        nextMedia[capability] = config;
+        mediaChanged = true;
+      }
+    }
+
+    if (migrateModelList(nextMedia.models, "tools.media.models")) {
+      mediaChanged = true;
+    }
+
+    if (!mediaChanged) {
+      return;
+    }
+
+    next = {
+      ...next,
+      tools: {
+        ...next.tools,
+        media: nextMedia as NonNullable<ChainbreakerConfig["tools"]>["media"],
+      },
+    };
+  };
+
+  const normalizeLegacyMistralModelMaxTokens = () => {
+    const rawProviders = next.models?.providers;
+    if (!isRecord(rawProviders)) {
+      return;
+    }
+
+    let providersChanged = false;
+    const nextProviders = { ...rawProviders };
+    for (const [providerId, rawProvider] of Object.entries(rawProviders)) {
+      if (normalizeProviderId(providerId) !== "mistral" || !isRecord(rawProvider)) {
+        continue;
+      }
+      const rawModels = rawProvider.models;
+      if (!Array.isArray(rawModels)) {
+        continue;
+      }
+
+      let modelsChanged = false;
+      const nextModels = rawModels.map((model, index) => {
+        if (!isRecord(model)) {
+          return model;
+        }
+        const modelId = typeof model.id === "string" ? model.id.trim() : "";
+        const contextWindow =
+          typeof model.contextWindow === "number" && Number.isFinite(model.contextWindow)
+            ? model.contextWindow
+            : null;
+        const maxTokens =
+          typeof model.maxTokens === "number" && Number.isFinite(model.maxTokens)
+            ? model.maxTokens
+            : null;
+        if (!modelId || contextWindow === null || maxTokens === null) {
+          return model;
+        }
+
+        const normalizedMaxTokens = resolveNormalizedProviderModelMaxTokens({
+          providerId,
+          modelId,
+          contextWindow,
+          rawMaxTokens: maxTokens,
+        });
+        if (normalizedMaxTokens === maxTokens) {
+          return model;
+        }
+
+        modelsChanged = true;
+        changes.push(
+          `Normalized models.providers.${providerId}.models[${index}].maxTokens (${maxTokens} → ${normalizedMaxTokens}) to avoid Mistral context-window rejects.`,
+        );
+        return {
+          ...model,
+          maxTokens: normalizedMaxTokens,
+        };
+      });
+
+      if (!modelsChanged) {
+        continue;
+      }
+
+      nextProviders[providerId] = {
+        ...rawProvider,
+        models: nextModels,
+      };
+      providersChanged = true;
+    }
+
+    if (!providersChanged) {
+      return;
+    }
+
+    next = {
+      ...next,
+      models: {
+        ...next.models,
+        providers: nextProviders as NonNullable<ChainbreakerConfig["models"]>["providers"],
+      },
+    };
+  };
+
   normalizeBrowserSsrFPolicyAlias();
   normalizeLegacyNanoBananaSkill();
   normalizeLegacyTalkConfig();
   normalizeLegacyCrossContextMessageConfig();
+  normalizeLegacyMediaProviderOptions();
+  normalizeLegacyMistralModelMaxTokens();
 
   const legacyAckReaction = cfg.messages?.ackReaction?.trim();
   const hasWhatsAppConfig = cfg.channels?.whatsapp !== undefined;

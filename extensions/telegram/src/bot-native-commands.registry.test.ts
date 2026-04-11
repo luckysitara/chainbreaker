@@ -12,6 +12,7 @@ let resetNativeCommandMenuMocks: typeof import("./bot-native-commands.menu-test-
 let waitForRegisteredCommands: typeof import("./bot-native-commands.menu-test-support.js").waitForRegisteredCommands;
 
 function registerPairPluginCommand(params?: {
+  nativeNames?: { telegram?: string; discord?: string };
 }) {
   expect(
     registerPluginCommand("demo-plugin", {
@@ -28,6 +29,7 @@ function registerPairPluginCommand(params?: {
 async function registerPairMenu(params: {
   bot: ReturnType<typeof createCommandBot>["bot"];
   setMyCommands: ReturnType<typeof createCommandBot>["setMyCommands"];
+  nativeNames?: { telegram?: string; discord?: string };
 }) {
   registerPairPluginCommand({
     ...(params.nativeNames ? { nativeNames: params.nativeNames } : {}),
@@ -95,6 +97,7 @@ describe("registerTelegramNativeCommands real plugin registry", () => {
       setMyCommands,
       nativeNames: {
         telegram: "pair_device",
+        discord: "pairdiscord",
       },
     });
     expect(registeredCommands).toEqual(

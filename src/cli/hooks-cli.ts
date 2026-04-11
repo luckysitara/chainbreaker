@@ -222,14 +222,18 @@ export function formatHooksList(report: HookStatusReport, opts: HooksListOptions
     columns.push({ key: "Missing", header: "Missing", minWidth: 18, flex: true });
   }
 
+  const lines: string[] = [];
+  lines.push(
     `${theme.heading("Hooks")} ${theme.muted(`(${eligible.length}/${hooks.length} ready)`)}`,
   );
+  lines.push(
     renderTable({
       width: tableWidth,
       columns,
       rows,
     }).trimEnd(),
   );
+  return lines.join("\n");
 }
 
 /**
@@ -261,6 +265,7 @@ export function formatHookInfo(
     );
   }
 
+  const lines: string[] = [];
   const emoji = hook.emoji ?? "🔗";
   const status = hook.loadable
     ? theme.success("✓ Ready")
@@ -268,18 +273,31 @@ export function formatHookInfo(
       ? theme.warn("⏸ Disabled")
       : theme.error("✗ Missing requirements");
 
+  lines.push(`${emoji} ${theme.heading(hook.name)} ${status}`);
+  lines.push("");
+  lines.push(hook.description);
+  lines.push("");
 
   // Details
+  lines.push(theme.heading("Details:"));
   if (hook.managedByPlugin) {
+    lines.push(`${theme.muted("  Source:")} ${hook.source} (${hook.pluginId ?? "unknown"})`);
   } else {
+    lines.push(`${theme.muted("  Source:")} ${hook.source}`);
   }
+  lines.push(`${theme.muted("  Path:")} ${shortenHomePath(hook.filePath)}`);
+  lines.push(`${theme.muted("  Handler:")} ${shortenHomePath(hook.handlerPath)}`);
   if (hook.homepage) {
+    lines.push(`${theme.muted("  Homepage:")} ${hook.homepage}`);
   }
   if (hook.events.length > 0) {
+    lines.push(`${theme.muted("  Events:")} ${hook.events.join(", ")}`);
   }
   if (hook.managedByPlugin) {
+    lines.push(theme.muted("  Managed by plugin; enable/disable via hooks CLI not available."));
   }
   if (hook.blockedReason) {
+    lines.push(`${theme.muted("  Blocked reason:")} ${hook.blockedReason}`);
   }
 
   // Requirements
@@ -291,37 +309,45 @@ export function formatHookInfo(
     hook.requirements.os.length > 0;
 
   if (hasRequirements) {
+    lines.push("");
+    lines.push(theme.heading("Requirements:"));
     if (hook.requirements.bins.length > 0) {
       const binsStatus = hook.requirements.bins.map((bin) => {
         const missing = hook.missing.bins.includes(bin);
         return missing ? theme.error(`✗ ${bin}`) : theme.success(`✓ ${bin}`);
       });
+      lines.push(`${theme.muted("  Binaries:")} ${binsStatus.join(", ")}`);
     }
     if (hook.requirements.anyBins.length > 0) {
       const anyBinsStatus =
         hook.missing.anyBins.length > 0
           ? theme.error(`✗ (any of: ${hook.requirements.anyBins.join(", ")})`)
           : theme.success(`✓ (any of: ${hook.requirements.anyBins.join(", ")})`);
+      lines.push(`${theme.muted("  Any binary:")} ${anyBinsStatus}`);
     }
     if (hook.requirements.env.length > 0) {
       const envStatus = hook.requirements.env.map((env) => {
         const missing = hook.missing.env.includes(env);
         return missing ? theme.error(`✗ ${env}`) : theme.success(`✓ ${env}`);
       });
+      lines.push(`${theme.muted("  Environment:")} ${envStatus.join(", ")}`);
     }
     if (hook.requirements.config.length > 0) {
       const configStatus = hook.configChecks.map((check) => {
         return check.satisfied ? theme.success(`✓ ${check.path}`) : theme.error(`✗ ${check.path}`);
       });
+      lines.push(`${theme.muted("  Config:")} ${configStatus.join(", ")}`);
     }
     if (hook.requirements.os.length > 0) {
       const osStatus =
         hook.missing.os.length > 0
           ? theme.error(`✗ (${hook.requirements.os.join(", ")})`)
           : theme.success(`✓ (${hook.requirements.os.join(", ")})`);
+      lines.push(`${theme.muted("  OS:")} ${osStatus}`);
     }
   }
 
+  return lines.join("\n");
 }
 
 /**
@@ -353,8 +379,16 @@ export function formatHooksCheck(report: HookStatusReport, opts: HooksCheckOptio
   const eligible = report.hooks.filter((h) => h.loadable);
   const notEligible = report.hooks.filter((h) => !h.loadable);
 
+  const lines: string[] = [];
+  lines.push(theme.heading("Hooks Status"));
+  lines.push("");
+  lines.push(`${theme.muted("Total hooks:")} ${report.hooks.length}`);
+  lines.push(`${theme.success("Ready:")} ${eligible.length}`);
+  lines.push(`${theme.warn("Not ready:")} ${notEligible.length}`);
 
   if (notEligible.length > 0) {
+    lines.push("");
+    lines.push(theme.heading("Hooks not ready:"));
     for (const hook of notEligible) {
       const reasons = [];
       if (hook.blockedReason && hook.blockedReason !== "missing requirements") {
@@ -375,9 +409,11 @@ export function formatHooksCheck(report: HookStatusReport, opts: HooksCheckOptio
       if (hook.missing.os.length > 0) {
         reasons.push(`os: ${hook.missing.os.join(", ")}`);
       }
+      lines.push(`  ${hook.emoji ?? "🔗"} ${hook.name} - ${reasons.join("; ")}`);
     }
   }
 
+  return lines.join("\n");
 }
 
 export async function enableHook(hookName: string): Promise<void> {
@@ -489,9 +525,7 @@ export function registerHooksCli(program: Command): void {
     .option("--pin", "Record npm installs as exact resolved <name>@<version>", false)
     .action(async (raw: string, opts: { link?: boolean; pin?: boolean }) => {
       defaultRuntime.log(
-        theme.warn(
-          "`chainbreaker hooks install` is deprecated; use `chainbreaker plugins install`.",
-        ),
+        theme.warn("`chainbreaker hooks install` is deprecated; use `chainbreaker plugins install`."),
       );
       await runPluginInstallCommand({ raw, opts });
     });

@@ -111,11 +111,18 @@ function formatGenericProbeLines(probe: unknown): ChannelCapabilitiesDisplayLine
   return [];
 }
 
+function renderDisplayLine(line: ChannelCapabilitiesDisplayLine) {
+  switch (line.tone) {
     case "muted":
+      return theme.muted(line.text);
     case "success":
+      return theme.success(line.text);
     case "warn":
+      return theme.warn(line.text);
     case "error":
+      return theme.error(line.text);
     default:
+      return line.text;
   }
 }
 
@@ -271,6 +278,7 @@ export async function channelsCapabilitiesCommand(
     return;
   }
 
+  const lines: string[] = [];
   for (const report of reports) {
     const label = formatChannelAccountLabel({
       channel: report.channel,
@@ -279,20 +287,30 @@ export async function channelsCapabilitiesCommand(
       channelStyle: theme.accent,
       accountStyle: theme.heading,
     });
+    lines.push(theme.heading(label));
+    lines.push(`Support: ${formatSupport(report.support)}`);
     if (report.actions && report.actions.length > 0) {
+      lines.push(`Actions: ${report.actions.join(", ")}`);
     }
     if (report.configured === false || report.enabled === false) {
       const configuredLabel = report.configured === false ? "not configured" : "configured";
       const enabledLabel = report.enabled === false ? "disabled" : "enabled";
+      lines.push(`Status: ${configuredLabel}, ${enabledLabel}`);
     }
     const probeLines =
       report.plugin.status?.formatCapabilitiesProbe?.({
         probe: report.probe,
       }) ?? formatGenericProbeLines(report.probe);
     if (probeLines.length > 0) {
+      lines.push(...probeLines.map(renderDisplayLine));
     } else if (report.configured && report.enabled) {
+      lines.push(theme.muted("Probe: unavailable"));
     }
+    if (report.diagnostics?.lines?.length) {
+      lines.push(...report.diagnostics.lines.map(renderDisplayLine));
     }
+    lines.push("");
   }
 
+  runtime.log(lines.join("\n").trimEnd());
 }

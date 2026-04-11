@@ -64,10 +64,7 @@ describe("program routes", () => {
   });
 
   it("returns false for gateway status route when option values are missing", async () => {
-    await expectRunFalse(
-      ["gateway", "status"],
-      ["node", "chainbreaker", "gateway", "status", "--url"],
-    );
+    await expectRunFalse(["gateway", "status"], ["node", "chainbreaker", "gateway", "status", "--url"]);
     await expectRunFalse(
       ["gateway", "status"],
       ["node", "chainbreaker", "gateway", "status", "--token"],
@@ -136,9 +133,9 @@ describe("program routes", () => {
 
   it("passes --no-probe through to daemon status", async () => {
     const route = expectRoute(["gateway", "status"]);
-    await expect(
-      route?.run(["node", "chainbreaker", "gateway", "status", "--no-probe"]),
-    ).resolves.toBe(true);
+    await expect(route?.run(["node", "chainbreaker", "gateway", "status", "--no-probe"])).resolves.toBe(
+      true,
+    );
 
     expect(runDaemonStatusMock).toHaveBeenCalledWith({
       rpc: {
@@ -226,15 +223,7 @@ describe("program routes", () => {
   it("passes config unset path correctly when root option values precede command", async () => {
     const route = expectRoute(["config", "unset"]);
     await expect(
-      route?.run([
-        "node",
-        "chainbreaker",
-        "--profile",
-        "work",
-        "config",
-        "unset",
-        "update.channel",
-      ]),
+      route?.run(["node", "chainbreaker", "--profile", "work", "config", "unset", "update.channel"]),
     ).resolves.toBe(true);
     expect(runConfigUnsetMock).toHaveBeenCalledWith({ path: "update.channel" });
   });
@@ -259,15 +248,7 @@ describe("program routes", () => {
   it("passes config unset path when root value options appear after subcommand", async () => {
     const route = expectRoute(["config", "unset"]);
     await expect(
-      route?.run([
-        "node",
-        "chainbreaker",
-        "config",
-        "unset",
-        "--profile",
-        "work",
-        "update.channel",
-      ]),
+      route?.run(["node", "chainbreaker", "config", "unset", "--profile", "work", "update.channel"]),
     ).resolves.toBe(true);
     expect(runConfigUnsetMock).toHaveBeenCalledWith({ path: "update.channel" });
   });
@@ -280,10 +261,7 @@ describe("program routes", () => {
   });
 
   it("returns false for models list route when --provider value is missing", async () => {
-    await expectRunFalse(
-      ["models", "list"],
-      ["node", "chainbreaker", "models", "list", "--provider"],
-    );
+    await expectRunFalse(["models", "list"], ["node", "chainbreaker", "models", "list", "--provider"]);
   });
 
   it("returns false for models status route when probe flags are missing values", async () => {

@@ -29,6 +29,7 @@ const {
   createShouldEmitToolResult,
   finalizeWithFollowup,
   isAudioPayload,
+  signalTypingIfNeeded,
 } = await import("./agent-runner-helpers.js");
 
 describe("agent runner helpers", () => {
@@ -98,7 +99,14 @@ describe("agent runner helpers", () => {
     expect(hoisted.scheduleFollowupDrainMock).toHaveBeenCalledWith("queue-key", runFollowupTurn);
   });
 
+  it("signals typing only when any payload has text or media", async () => {
+    const signalRunStart = vi.fn().mockResolvedValue(undefined);
+    const typingSignals = { signalRunStart } as unknown as TypingSignaler;
     const emptyPayloads: ReplyPayload[] = [{ text: "   " }, {}];
+    await signalTypingIfNeeded(emptyPayloads, typingSignals);
+    expect(signalRunStart).not.toHaveBeenCalled();
 
+    await signalTypingIfNeeded([{ mediaUrl: "https://example.test/img.png" }], typingSignals);
+    expect(signalRunStart).toHaveBeenCalledOnce();
   });
 });

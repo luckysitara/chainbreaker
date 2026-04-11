@@ -118,6 +118,8 @@ describe("normalizePluginsConfig", () => {
 
   it("normalizes legacy plugin ids to their merged bundled plugin id", () => {
     const result = normalizePluginsConfig({
+      allow: ["openai-codex", "google-gemini-cli", "minimax-portal-auth"],
+      deny: ["openai-codex", "google-gemini-cli", "minimax-portal-auth"],
       entries: {
         "openai-codex": {
           enabled: true,
@@ -125,13 +127,17 @@ describe("normalizePluginsConfig", () => {
         "google-gemini-cli": {
           enabled: true,
         },
+        "minimax-portal-auth": {
           enabled: false,
         },
       },
     });
 
+    expect(result.allow).toEqual(["openai", "google", "minimax"]);
+    expect(result.deny).toEqual(["openai", "google", "minimax"]);
     expect(result.entries.openai?.enabled).toBe(true);
     expect(result.entries.google?.enabled).toBe(true);
+    expect(result.entries.minimax?.enabled).toBe(false);
   });
 });
 

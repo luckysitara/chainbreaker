@@ -3,7 +3,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { CHAINBREAKER_CLI_ENV_VALUE } from "./chainbreaker-exec-env.js";
 import {
   isDangerousHostEnvOverrideVarName,
   isDangerousHostEnvVarName,
@@ -12,6 +11,7 @@ import {
   sanitizeHostExecEnvWithDiagnostics,
   sanitizeSystemRunEnvOverrides,
 } from "./host-env-security.js";
+import { CHAINBREAKER_CLI_ENV_VALUE } from "./chainbreaker-exec-env.js";
 
 function findSystemCommandPath(command: string) {
   if (process.platform === "win32") {
@@ -459,6 +459,7 @@ describe("sanitizeHostExecEnv", () => {
       baseEnv: {
         PATH: "/usr/bin:/bin",
         GOOD: "1",
+        // oxlint-disable-next-line typescript/no-explicit-any
         BAD_NUMBER: 1 as any,
         "NOT-PORTABLE": "x",
         "ProgramFiles(x86)": "C:\\Program Files (x86)",
@@ -988,10 +989,7 @@ describe("git env exploit regression", () => {
       return;
     }
 
-    const marker = path.join(
-      os.tmpdir(),
-      `chainbreaker-git-ssh-command-${process.pid}-${Date.now()}`,
-    );
+    const marker = path.join(os.tmpdir(), `chainbreaker-git-ssh-command-${process.pid}-${Date.now()}`);
     clearMarker(marker);
 
     const target = "ssh://127.0.0.1:1/does-not-matter";

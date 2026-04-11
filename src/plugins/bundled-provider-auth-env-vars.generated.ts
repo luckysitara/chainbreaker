@@ -18,6 +18,8 @@ export const BUNDLED_PROVIDER_AUTH_ENV_VAR_CANDIDATES = {
   "kimi-coding": ["KIMI_API_KEY", "KIMICODE_API_KEY"],
   litellm: ["LITELLM_API_KEY"],
   "microsoft-foundry": ["AZURE_OPENAI_API_KEY"],
+  minimax: ["MINIMAX_API_KEY"],
+  "minimax-portal": ["MINIMAX_OAUTH_TOKEN", "MINIMAX_API_KEY"],
   mistral: ["MISTRAL_API_KEY"],
   modelstudio: ["MODELSTUDIO_API_KEY"],
   moonshot: ["MOONSHOT_API_KEY"],
@@ -39,4 +41,5 @@ export const BUNDLED_PROVIDER_AUTH_ENV_VAR_CANDIDATES = {
   volcengine: ["VOLCANO_ENGINE_API_KEY"],
   xai: ["XAI_API_KEY"],
   xiaomi: ["XIAOMI_API_KEY"],
+  zai: ["ZAI_API_KEY", "Z_AI_API_KEY"],
 } as const satisfies Record<string, readonly string[]>;

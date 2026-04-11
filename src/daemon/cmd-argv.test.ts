@@ -18,6 +18,7 @@ describe("cmd argv helpers", () => {
     expect(parseCmdScriptCommandLine(encoded)).toEqual([arg]);
   });
 
+  it("round-trips mixed command lines", () => {
     const args = [
       "node",
       "gateway.js",

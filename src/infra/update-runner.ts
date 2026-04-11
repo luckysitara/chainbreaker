@@ -171,6 +171,7 @@ async function listGitTags(
   }
   return res.stdout
     .split("\n")
+    .map((line) => line.trim())
     .filter(Boolean);
 }
 
@@ -629,6 +630,7 @@ export async function runGatewayUpdate(opts: UpdateRunnerOptions = {}): Promise<
 
       const candidates = (revListStep.stdoutTail ?? "")
         .split("\n")
+        .map((line) => line.trim())
         .filter(Boolean);
       if (candidates.length === 0) {
         return {
@@ -643,9 +645,7 @@ export async function runGatewayUpdate(opts: UpdateRunnerOptions = {}): Promise<
       }
 
       const manager = await resolveAvailableManager(runCommand, gitRoot, timeoutMs);
-      const preflightRoot = await fs.mkdtemp(
-        path.join(os.tmpdir(), "chainbreaker-update-preflight-"),
-      );
+      const preflightRoot = await fs.mkdtemp(path.join(os.tmpdir(), "chainbreaker-update-preflight-"));
       const worktreeDir = path.join(preflightRoot, "worktree");
       const worktreeStep = await runStep(
         step(

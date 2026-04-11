@@ -69,20 +69,28 @@ function spawnGogServe(cfg: GmailHookRuntimeConfig): ChildProcess {
   });
 
   child.stdout?.on("data", (data: Buffer) => {
+    const line = data.toString().trim();
+    if (line) {
+      log.info(`[gog] ${line}`);
     }
   });
 
   child.stderr?.on("data", (data: Buffer) => {
+    const line = data.toString().trim();
+    if (!line) {
       return;
     }
+    if (isAddressInUseError(line)) {
       addressInUse = true;
     }
+    log.warn(`[gog] ${line}`);
   });
 
   child.on("error", (err) => {
     log.error(`gog process error: ${String(err)}`);
   });
 
+  child.on("exit", (code, signal) => {
     if (shuttingDown) {
       return;
     }
@@ -94,6 +102,7 @@ function spawnGogServe(cfg: GmailHookRuntimeConfig): ChildProcess {
       watcherProcess = null;
       return;
     }
+    log.warn(`gog exited (code=${code}, signal=${signal}); restarting in 5s`);
     watcherProcess = null;
     setTimeout(() => {
       if (shuttingDown || !currentConfig) {

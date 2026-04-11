@@ -7,6 +7,8 @@ import { normalizeExecutableToken } from "./exec-wrapper-tokens.js";
 import {
   POSIX_INLINE_COMMAND_FLAGS,
   POWERSHELL_INLINE_COMMAND_FLAGS,
+  resolveInlineCommandMatch,
+} from "./shell-inline-command.js";
 
 const POSIX_SHELL_WRAPPER_NAMES = ["ash", "bash", "dash", "fish", "ksh", "sh", "zsh"] as const;
 const WINDOWS_CMD_WRAPPER_NAMES = ["cmd"] as const;
@@ -109,8 +111,11 @@ export function unwrapKnownShellMultiplexerInvocation(
   return { kind: "unwrapped", wrapper, argv: unwrapped };
 }
 
+function extractPosixShellInlineCommand(argv: string[]): string | null {
+  return extractInlineCommandByFlags(argv, POSIX_INLINE_COMMAND_FLAGS, { allowCombinedC: true });
 }
 
+function extractCmdInlineCommand(argv: string[]): string | null {
   const idx = argv.findIndex((item) => {
     const token = item.trim().toLowerCase();
     return token === "/c" || token === "/k";
@@ -126,19 +131,26 @@ export function unwrapKnownShellMultiplexerInvocation(
   return cmd.length > 0 ? cmd : null;
 }
 
+function extractPowerShellInlineCommand(argv: string[]): string | null {
+  return extractInlineCommandByFlags(argv, POWERSHELL_INLINE_COMMAND_FLAGS);
 }
 
+function extractInlineCommandByFlags(
   argv: string[],
   flags: ReadonlySet<string>,
   options: { allowCombinedC?: boolean } = {},
 ): string | null {
+  return resolveInlineCommandMatch(argv, flags, options).command;
 }
 
 function extractShellWrapperPayload(argv: string[], spec: ShellWrapperSpec): string | null {
   switch (spec.kind) {
     case "posix":
+      return extractPosixShellInlineCommand(argv);
     case "cmd":
+      return extractCmdInlineCommand(argv);
     case "powershell":
+      return extractPowerShellInlineCommand(argv);
   }
 }
 
@@ -239,6 +251,7 @@ function extractShellWrapperCommandInternal(
   return { isWrapper: true, command: rawCommand ?? payload };
 }
 
+export function extractShellWrapperInlineCommand(argv: string[]): string | null {
   const extracted = extractShellWrapperCommandInternal(argv, null, 0);
   return extracted.isWrapper ? extracted.command : null;
 }

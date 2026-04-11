@@ -40,7 +40,9 @@ export type OffloadedRef = {
 
 export type ParsedMessageWithImages = {
   message: string;
+  /** Small attachments (≤ OFFLOAD_THRESHOLD_BYTES) passed inline to the model */
   images: ChatImageContent[];
+  /** Original accepted attachment order after inline/offloaded split. */
   imageOrder: PromptImageOrderEntry[];
   /**
    * Large attachments (> OFFLOAD_THRESHOLD_BYTES) that were offloaded to the
@@ -49,6 +51,7 @@ export type ParsedMessageWithImages = {
    *
    * Callers MUST persist this list separately for transcript media metadata.
    * It is intentionally separate from `images` because downstream model calls
+   * do not receive these as inline image blocks.
    *
    * ⚠️  Call sites (chat.ts, agent.ts, server-node-events.ts) MUST also pass
    * `supportsImages: modelSupportsImages(model)` so that text-only model runs
@@ -137,6 +140,7 @@ function isValidBase64(value: string): boolean {
   if (value.length === 0 || value.length % 4 !== 0) {
     return false;
   }
+  // A full O(n) regex scan is safe: no overlapping quantifiers, fails linearly.
   // Prevents adversarial payloads padded with megabytes of whitespace from
   // bypassing length thresholds.
   return /^[A-Za-z0-9+/]+={0,2}$/.test(value);
@@ -149,6 +153,7 @@ function isValidBase64(value: string): boolean {
  * Node's Buffer.from silently drops invalid base64 characters rather than
  * throwing. A material size discrepancy means the source string contained
  * embedded garbage that was silently stripped, which would produce a corrupted
+ * file on disk. ±3 bytes of slack accounts for base64 padding rounding.
  *
  * IMPORTANT: this is an input-validation check (4xx client error).
  * It MUST be called OUTSIDE the MediaOffloadError try/catch so that
@@ -247,6 +252,7 @@ function validateAttachmentBase64OrThrow(
 
 /**
  * Parse attachments and extract images as structured content blocks.
+ * Returns the message text, inline image blocks, and offloaded media refs.
  *
  * ## Offload behaviour
  * Attachments whose decoded size exceeds OFFLOAD_THRESHOLD_BYTES are saved to
@@ -257,6 +263,7 @@ function validateAttachmentBase64OrThrow(
  * ## Transcript metadata
  * Callers MUST use `result.offloadedRefs` to persist structured media metadata
  * for transcripts. These refs are intentionally excluded from `result.images`
+ * because they are not passed inline to the model.
  *
  * ## Text-only model runs
  * Pass `supportsImages: false` for text-only model runs so that no media://
@@ -369,7 +376,9 @@ export async function parseMessageWithAttachments(
         const isSupportedForOffload = SUPPORTED_OFFLOAD_MIMES.has(finalMime);
 
         if (!isSupportedForOffload) {
+          // Passing this inline would reintroduce the OOM risk this PR prevents.
           throw new Error(
+            `attachment ${label}: format ${finalMime} is too large to pass inline ` +
               `(${sizeBytes} > ${OFFLOAD_THRESHOLD_BYTES} bytes) and cannot be offloaded. ` +
               `Please convert to JPEG, PNG, WEBP, GIF, HEIC, or HEIF.`,
           );
@@ -407,6 +416,7 @@ export async function parseMessageWithAttachments(
           log?.info?.(`[Gateway] Intercepted large image payload. Saved: ${mediaRef}`);
 
           // Record for transcript metadata — separate from `images` because
+          // these are not passed inline to the model.
           offloadedRefs.push({
             mediaRef,
             id: savedMedia.id,
@@ -431,6 +441,7 @@ export async function parseMessageWithAttachments(
       }
 
       images.push({ type: "image", data: b64, mimeType: finalMime });
+      imageOrder.push("inline");
     }
   } catch (err) {
     // Best-effort cleanup before rethrowing.

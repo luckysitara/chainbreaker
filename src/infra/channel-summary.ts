@@ -125,6 +125,7 @@ export async function buildChannelSummary(
   options?: ChannelSummaryOptions,
 ): Promise<string[]> {
   const effective = cfg ?? loadConfig();
+  const lines: string[] = [];
   const resolved = { ...DEFAULT_OPTIONS, ...options };
   const tint = (value: string, color?: (input: string) => string) =>
     resolved.colorize && color ? color(value) : value;
@@ -221,15 +222,19 @@ export async function buildChannelSummary(
           ? theme.error
           : theme.muted;
     const baseLabel = plugin.meta.label ?? plugin.id;
+    let line = `${baseLabel}: ${status}`;
 
     const authAgeMs =
       summaryRecord && typeof summaryRecord.authAgeMs === "number" ? summaryRecord.authAgeMs : null;
     const self = summaryRecord?.self as { e164?: string | null } | undefined;
     if (self?.e164) {
+      line += ` ${self.e164}`;
     }
     if (authAgeMs != null && authAgeMs >= 0) {
+      line += ` auth ${formatTimeAgo(authAgeMs)}`;
     }
 
+    lines.push(tint(line, statusColor));
 
     if (configuredEntries.length > 0) {
       for (const entry of configuredEntries) {
@@ -239,6 +244,7 @@ export async function buildChannelSummary(
           cfg: effective,
           includeAllowFrom: resolved.includeAllowFrom,
         });
+        lines.push(
           accountLine(
             formatAccountLabel({
               accountId: entry.accountId,
@@ -251,4 +257,5 @@ export async function buildChannelSummary(
     }
   }
 
+  return lines;
 }

@@ -70,6 +70,7 @@ describe("bundled provider auth env vars", () => {
       "github-copilot": ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"],
       perplexity: ["PERPLEXITY_API_KEY", "OPENROUTER_API_KEY"],
       tavily: ["TAVILY_API_KEY"],
+      "minimax-portal": ["MINIMAX_OAUTH_TOKEN", "MINIMAX_API_KEY"],
       openai: ["OPENAI_API_KEY"],
       fal: ["FAL_KEY"],
     });

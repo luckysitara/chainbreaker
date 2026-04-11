@@ -27,6 +27,7 @@ beforeEach(() => {
 
 function createRuntimeHooks() {
   return createProviderRuntimeTestMock({
+    handledDynamicProviders: ["anthropic", "zai", "openai-codex"],
   });
 }
 
@@ -165,6 +166,7 @@ describe("resolveModel forward-compat errors and overrides", () => {
     });
   });
 
+  it("uses codex fallback when inline model omits api (#39682)", () => {
     mockOpenAICodexTemplateModel(discoverModels);
 
     const cfg: ChainbreakerConfig = {

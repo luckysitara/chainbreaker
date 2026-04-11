@@ -364,10 +364,9 @@ describe("runGatewayUpdate", () => {
       "pnpm install": { stdout: "" },
       "pnpm build": { stdout: "" },
       "pnpm ui:build": { stdout: "" },
-      [`${doctorNodePath} ${path.join(tempDir, "chainbreaker.mjs")} doctor --non-interactive --fix`]:
-        {
-          stdout: "",
-        },
+      [`${doctorNodePath} ${path.join(tempDir, "chainbreaker.mjs")} doctor --non-interactive --fix`]: {
+        stdout: "",
+      },
     });
 
     const result = await runWithRunner(runner, { channel: "beta" });
@@ -656,8 +655,7 @@ describe("runGatewayUpdate", () => {
 
   it("fails global npm update when the installed version misses the requested correction", async () => {
     const { calls, result } = await runNpmGlobalUpdateCase({
-      expectedInstallCommand:
-        "npm i -g chainbreaker@2026.3.23-2 --no-fund --no-audit --loglevel=error",
+      expectedInstallCommand: "npm i -g chainbreaker@2026.3.23-2 --no-fund --no-audit --loglevel=error",
       tag: "2026.3.23-2",
     });
 
@@ -667,15 +665,12 @@ describe("runGatewayUpdate", () => {
     expect(result.steps.at(-1)?.stderrTail).toContain(
       "expected installed version 2026.3.23-2, found 2.0.0",
     );
-    expect(calls).toContain(
-      "npm i -g chainbreaker@2026.3.23-2 --no-fund --no-audit --loglevel=error",
-    );
+    expect(calls).toContain("npm i -g chainbreaker@2026.3.23-2 --no-fund --no-audit --loglevel=error");
   });
 
   it("fails global npm update when bundled runtime sidecars are missing after install", async () => {
     const { nodeModules, pkgRoot } = await createGlobalPackageFixture(tempDir);
-    const expectedInstallCommand =
-      "npm i -g chainbreaker@latest --no-fund --no-audit --loglevel=error";
+    const expectedInstallCommand = "npm i -g chainbreaker@latest --no-fund --no-audit --loglevel=error";
     const { runCommand } = createGlobalInstallHarness({
       pkgRoot,
       npmRootOutput: nodeModules,

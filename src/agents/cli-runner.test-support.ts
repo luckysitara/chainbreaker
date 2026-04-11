@@ -54,6 +54,7 @@ type MockRunExit = {
     | "overall-timeout"
     | "no-output-timeout"
     | "spawn-error"
+    | "signal"
     | "exit";
   exitCode: number | null;
   exitSignal: NodeJS.Signals | number | null;

@@ -141,6 +141,7 @@ export async function discoverKilocodeModels(): Promise<ModelDefinitionConfig[]>
   try {
     const response = await fetch(KILOCODE_MODELS_URL, {
       headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(DISCOVERY_TIMEOUT_MS),
     });
 
     if (!response.ok) {

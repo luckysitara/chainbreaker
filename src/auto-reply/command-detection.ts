@@ -71,11 +71,13 @@ export function isControlCommandMessage(
 }
 
 /**
+ * Coarse detection for inline directives/shortcuts (e.g. "hey /status") so channel monitors
  * can decide whether to compute CommandAuthorized for a message.
  *
  * This intentionally errs on the side of false positives; CommandAuthorized only gates
  * command/directive execution, not normal chat replies.
  */
+export function hasInlineCommandTokens(text?: string): boolean {
   const body = text ?? "";
   if (!body.trim()) {
     return false;
@@ -88,4 +90,5 @@ export function shouldComputeCommandAuthorized(
   cfg?: ChainbreakerConfig,
   options?: CommandNormalizeOptions,
 ): boolean {
+  return isControlCommandMessage(text, cfg, options) || hasInlineCommandTokens(text);
 }

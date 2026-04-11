@@ -497,6 +497,7 @@ export function classifyFailoverReasonFromHttpStatus(
     return "timeout";
   }
   if (status === 410) {
+    // HTTP 410 is only a true session-expiry signal when the payload says the
     // remote session/conversation is gone. Generic 410/no-body responses from
     // OpenAI-compatible proxies are better treated as retryable transport-path
     // failures so we do not clear session state or poison auth-profile health.
@@ -534,6 +535,7 @@ export function classifyFailoverReasonFromHttpStatus(
   }
   if (status === 400 || status === 422) {
     // Some providers return quota/balance errors under HTTP 400, so do not
+    // let the generic format fallback mask an explicit billing signal.
     if (message && isBillingErrorMessage(message)) {
       return "billing";
     }
@@ -842,6 +844,8 @@ export function sanitizeUserFacingText(text: unknown, opts?: { errorContext?: bo
     }
   }
 
+  // Strip leading blank lines (including whitespace-only lines) without clobbering indentation on
+  // the first content line (e.g. markdown/code blocks).
   const withoutLeadingEmptyLines = stripped.replace(/^(?:[ \t]*\r?\n)+/, "");
   return collapseConsecutiveDuplicateBlocks(withoutLeadingEmptyLines);
 }
@@ -877,6 +881,7 @@ export function isBillingAssistantError(msg: AssistantMessage | undefined): bool
   return isBillingErrorMessage(msg.errorMessage ?? "");
 }
 
+// Transient signal patterns for api_error payloads. Only treat an api_error as
 // retryable when the message text itself indicates a transient server issue.
 // Non-transient api_error payloads (context overflow, validation/schema errors)
 // must NOT be classified as timeout.
@@ -900,6 +905,7 @@ function isJsonApiInternalServerError(raw: string): boolean {
   if (isBillingErrorMessage(raw) || isAuthErrorMessage(raw) || isAuthPermanentErrorMessage(raw)) {
     return false;
   }
+  // Only match when the message contains a transient signal. api_error payloads
   // with non-transient messages (e.g. context overflow, schema validation) should
   // fall through to more specific classifiers or remain unclassified.
   return API_ERROR_TRANSIENT_SIGNALS_RE.test(raw);

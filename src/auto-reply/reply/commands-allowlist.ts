@@ -343,14 +343,19 @@ export const handleAllowlistCommand: CommandHandler = async (params, allowTextCo
           })
         : undefined;
 
+    const lines: string[] = ["🧾 Allowlist"];
+    lines.push(`Channel: ${channelId}${accountId ? ` (account ${accountId})` : ""}`);
     if (configState.dmPolicy) {
+      lines.push(`DM policy: ${configState.dmPolicy}`);
     }
     if (configState.groupPolicy) {
+      lines.push(`Group policy: ${configState.groupPolicy}`);
     }
 
     const showDm = parsed.scope === "dm" || parsed.scope === "all";
     const showGroup = parsed.scope === "group" || parsed.scope === "all";
     if (showDm) {
+      lines.push(`DM allowFrom (config): ${formatEntryList(dmDisplay, resolvedDm)}`);
     }
     if (supportsStore && storeAllowFrom.length > 0) {
       const storeLabel = normalizeAllowFrom({
@@ -359,11 +364,14 @@ export const handleAllowlistCommand: CommandHandler = async (params, allowTextCo
         accountId,
         values: storeAllowFrom,
       });
+      lines.push(`Paired allowFrom (store): ${formatEntryList(storeLabel)}`);
     }
     if (showGroup) {
       if (groupAllowFrom.length > 0) {
+        lines.push(`Group allowFrom (config): ${formatEntryList(groupDisplay, resolvedGroup)}`);
       }
       if (groupOverrides.length > 0) {
+        lines.push("Group overrides:");
         for (const entry of groupOverrides) {
           const normalized = normalizeAllowFrom({
             cfg: params.cfg,
@@ -371,10 +379,12 @@ export const handleAllowlistCommand: CommandHandler = async (params, allowTextCo
             accountId,
             values: entry.entries,
           });
+          lines.push(`- ${entry.label}: ${formatEntryList(normalized, resolvedGroup)}`);
         }
       }
     }
 
+    return { shouldContinue: false, reply: { text: lines.join("\n") } };
   }
 
   const missingAdminScope = requireGatewayClientScopeForInternalChannel(params, {

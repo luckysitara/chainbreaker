@@ -12,6 +12,7 @@ import type { SandboxFsBridge } from "./sandbox/fs-bridge.js";
 import { createRestrictedAgentSandboxConfig } from "./test-helpers/sandbox-agent-config-fixtures.js";
 
 type ToolWithExecute = {
+  execute: (toolCallId: string, args: unknown, signal?: AbortSignal) => Promise<unknown>;
 };
 
 describe("Agent-specific tool filtering", () => {
@@ -590,6 +591,7 @@ describe("Agent-specific tool filtering", () => {
 
     const tools = createChainbreakerCodingTools({
       config: cfg,
+      sessionKey: "agent:work:slack:dm:user123",
       workspaceDir: "/tmp/test-work",
       agentDir: "/tmp/agent-work",
     });

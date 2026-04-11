@@ -79,6 +79,7 @@ export async function generateTopicLabel(params: {
         apiKey,
         maxTokens: 100,
         temperature: 0.3,
+        signal: controller.signal,
       },
     );
 

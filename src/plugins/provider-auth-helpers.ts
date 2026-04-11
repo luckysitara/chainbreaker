@@ -64,6 +64,9 @@ function resolveApiKeySecretInput(
     return coercedRef;
   }
   const normalized = normalizeSecretInput(input);
+  const inlineEnvRef = parseEnvSecretRef(normalized);
+  if (inlineEnvRef) {
+    return inlineEnvRef;
   }
   if (options?.secretInputMode === "ref") {
     return resolveProviderDefaultEnvSecretRef(provider);

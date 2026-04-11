@@ -348,6 +348,7 @@ describe("secrets CLI", () => {
       await createProgram().parseAsync(["secrets", "apply", "--from", planPath, "--dry-run"], {
         from: "user",
       });
+      expect(runtimeLogs.some((line) => line.includes("Secrets apply dry-run note: skipped"))).toBe(
         false,
       );
     });
@@ -360,6 +361,7 @@ describe("secrets CLI", () => {
     confirm.mockResolvedValue(false);
 
     await createProgram().parseAsync(["secrets", "configure"], { from: "user" });
+    expect(runtimeLogs.some((line) => line.includes("Preflight note: skipped"))).toBe(false);
   });
 
   it("forwards --allow-exec to configure preflight and apply", async () => {

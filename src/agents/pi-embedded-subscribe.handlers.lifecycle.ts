@@ -1,4 +1,5 @@
 import { emitAgentEvent } from "../infra/agent-events.js";
+import { createInlineCodeState } from "../markdown/code-spans.js";
 import {
   buildApiErrorObservationFields,
   buildTextObservationFields,
@@ -104,6 +105,7 @@ export function handleAgentEnd(ctx: EmbeddedPiSubscribeContext) {
   if (pendingToolMediaReply && hasAssistantVisibleReply(pendingToolMediaReply)) {
     ctx.emitBlockReply(pendingToolMediaReply);
   }
+  // Flush the reply pipeline so the response reaches the channel before
   // compaction wait blocks the run.  This mirrors the pattern used by
   // handleToolExecutionStart and ensures delivery is not held hostage to
   // long-running compaction (#35074).
@@ -111,6 +113,7 @@ export function handleAgentEnd(ctx: EmbeddedPiSubscribeContext) {
 
   ctx.state.blockState.thinking = false;
   ctx.state.blockState.final = false;
+  ctx.state.blockState.inlineCode = createInlineCodeState();
 
   if (ctx.state.pendingCompactionRetry > 0) {
     ctx.resolveCompactionRetry();

@@ -1,3 +1,4 @@
+import { parseInlineDirectives } from "../../utils/directive-tags.js";
 
 export function extractReplyToTag(
   text?: string,
@@ -8,6 +9,7 @@ export function extractReplyToTag(
   replyToCurrent: boolean;
   hasTag: boolean;
 } {
+  const result = parseInlineDirectives(text, {
     currentMessageId,
     stripAudioTag: false,
   });

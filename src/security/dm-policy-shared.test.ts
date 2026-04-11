@@ -74,6 +74,7 @@ describe("security/dm-policy-shared", () => {
       accountId: "default",
       allowFrom: undefined,
       readStore: async (_provider, _accountId) => {
+        throw new Error("offline");
       },
     });
     expect(state.configAllowFrom).toEqual([]);
@@ -137,10 +138,12 @@ describe("security/dm-policy-shared", () => {
   it("infers pinned main DM owner from a single configured allowlist entry", () => {
     const pinnedOwner = resolvePinnedMainDmOwnerFromAllowlist({
       dmScope: "main",
+      allowFrom: [" line:user:U123 "],
       normalizeEntry: (entry) =>
         entry
           .trim()
           .toLowerCase()
+          .replace(/^line:(?:user:)?/, ""),
     });
     expect(pinnedOwner).toBe("u123");
   });
@@ -280,9 +283,12 @@ describe("security/dm-policy-shared", () => {
 
   const channels = [
     "bluebubbles",
+    "imessage",
+    "signal",
     "telegram",
     "whatsapp",
     "msteams",
+    "matrix",
     "zalo",
   ] as const;
 

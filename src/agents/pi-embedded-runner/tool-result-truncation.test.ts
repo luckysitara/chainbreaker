@@ -108,13 +108,21 @@ describe("truncateToolResultText", () => {
     expect(result.length).toBeGreaterThan(2000);
   });
 
+  it("tries to break at newline boundary", () => {
+    const lines = Array.from({ length: 100 }, (_, i) => `line ${i}: ${"x".repeat(50)}`).join("\n");
+    const result = truncateToolResultText(lines, 3000);
     // Should contain truncation notice
     expect(result).toContain("truncated");
     // The truncated content should be shorter than the original
+    expect(result.length).toBeLessThan(lines.length);
     // Extract the kept content (before the truncation suffix marker)
     const suffixIndex = result.indexOf("\n\n⚠️");
     if (suffixIndex > 0) {
       const keptContent = result.slice(0, suffixIndex);
+      // Should end at a newline boundary (i.e., the last char before suffix is a complete line)
+      const lastNewline = keptContent.lastIndexOf("\n");
+      // The last newline should be near the end (within the last line)
+      expect(lastNewline).toBeGreaterThan(keptContent.length - 100);
     }
   });
 
@@ -370,7 +378,9 @@ describe("truncateToolResultText head+tail strategy", () => {
   });
 
   it("uses simple head truncation when tail has no important content", () => {
+    const text = "normal line\n".repeat(1000);
     const result = truncateToolResultText(text, 5000);
+    expect(result).toContain("normal line");
     expect(result).not.toContain("middle content omitted");
     expect(result).toContain("truncated");
   });

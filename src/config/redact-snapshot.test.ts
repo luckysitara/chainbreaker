@@ -45,6 +45,10 @@ describe("redactConfigSnapshot", () => {
           botToken: "123456:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef",
           webhookSecret: "telegram-webhook-secret-value-1234",
         },
+        slack: {
+          botToken: "fake-slack-bot-token-placeholder-value",
+          signingSecret: "slack-signing-secret-value-1234",
+          token: "secret-slack-token-value-here",
         },
         feishu: {
           appSecret: "feishu-app-secret-value-here-1234",
@@ -65,6 +69,9 @@ describe("redactConfigSnapshot", () => {
     expect(cfg.gateway.auth.password).toBe(REDACTED_SENTINEL);
     expect(cfg.channels.telegram.botToken).toBe(REDACTED_SENTINEL);
     expect(cfg.channels.telegram.webhookSecret).toBe(REDACTED_SENTINEL);
+    expect(cfg.channels.slack.botToken).toBe(REDACTED_SENTINEL);
+    expect(cfg.channels.slack.signingSecret).toBe(REDACTED_SENTINEL);
+    expect(cfg.channels.slack.token).toBe(REDACTED_SENTINEL);
     expect(cfg.channels.feishu.appSecret).toBe(REDACTED_SENTINEL);
     expect(cfg.channels.feishu.encryptKey).toBe(REDACTED_SENTINEL);
     expect(cfg.models.providers.openai.apiKey).toBe(REDACTED_SENTINEL);
@@ -385,11 +392,13 @@ describe("redactConfigSnapshot", () => {
 
   it("redacts parsed and resolved objects", () => {
     const snapshot = makeSnapshot({
+      channels: { discord: { token: "MTIzNDU2Nzg5MDEyMzQ1Njc4.GaBcDe.FgH" } },
       gateway: { auth: { token: "supersecrettoken123456" } },
     });
     const result = redactConfigSnapshot(snapshot);
     const parsed = result.parsed as Record<string, Record<string, Record<string, string>>>;
     const resolved = result.resolved as Record<string, Record<string, Record<string, string>>>;
+    expect(parsed.channels.discord.token).toBe(REDACTED_SENTINEL);
     expect(resolved.gateway.auth.token).toBe(REDACTED_SENTINEL);
   });
 
@@ -439,6 +448,7 @@ describe("redactConfigSnapshot", () => {
   it("handles deeply nested tokens in accounts", () => {
     const snapshot = makeSnapshot({
       channels: {
+        slack: {
           accounts: {
             workspace1: { botToken: "fake-workspace1-token-abcdefghij" },
             workspace2: { appToken: "fake-workspace2-token-abcdefghij" },
@@ -451,6 +461,8 @@ describe("redactConfigSnapshot", () => {
       string,
       Record<string, Record<string, Record<string, string>>>
     >;
+    expect(channels.slack.accounts.workspace1.botToken).toBe(REDACTED_SENTINEL);
+    expect(channels.slack.accounts.workspace2.appToken).toBe(REDACTED_SENTINEL);
   });
 
   it("redacts env vars that look like secrets", () => {
@@ -494,9 +506,11 @@ describe("redactConfigSnapshot", () => {
     {
       name: "still redacts singular token field",
       snapshot: makeSnapshot({
+        channels: { slack: { token: "secret-slack-token-value-here" } },
       }),
       assert: (config: Record<string, unknown>) => {
         const channels = config.channels as Record<string, Record<string, string>>;
+        expect(channels.slack.token).toBe(REDACTED_SENTINEL);
       },
     },
   ] as const)("respects token-name redaction boundaries: $name", ({ snapshot, assert }) => {
@@ -944,9 +958,11 @@ describe("redactConfigSnapshot", () => {
 
   it("uses wildcard hints for array items", () => {
     const hints: ConfigUiHints = {
+      "channels.slack.accounts[].botToken": { sensitive: true },
     };
     const snapshot = makeSnapshot({
       channels: {
+        slack: {
           accounts: [
             { botToken: "first-account-token-value-here" },
             { botToken: "second-account-token-value-here" },
@@ -959,5 +975,7 @@ describe("redactConfigSnapshot", () => {
       string,
       Record<string, Array<Record<string, string>>>
     >;
+    expect(channels.slack.accounts[0].botToken).toBe(REDACTED_SENTINEL);
+    expect(channels.slack.accounts[1].botToken).toBe(REDACTED_SENTINEL);
   });
 });

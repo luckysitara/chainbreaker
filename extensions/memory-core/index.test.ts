@@ -1,5 +1,5 @@
-import type { ChainbreakerConfig } from "chainbreaker/plugin-sdk/memory-core";
 import { Command } from "commander";
+import type { ChainbreakerConfig } from "chainbreaker/plugin-sdk/memory-core";
 import { describe, expect, it, vi } from "vitest";
 import plugin, {
   buildMemoryFlushPlan,
@@ -23,6 +23,7 @@ describe("buildPromptSection", () => {
     expect(result[1]).toContain("run memory_search");
     expect(result[1]).toContain("then use memory_get");
     expect(result).toContain(
+      "Citations: include Source: <path#line> when it helps the user verify memory snippets.",
     );
     expect(result.at(-1)).toBe("");
   });
@@ -47,6 +48,7 @@ describe("buildPromptSection", () => {
       citationsMode: "off",
     });
     expect(result).toContain(
+      "Citations are disabled: do not mention file paths or line numbers in replies unless the user explicitly asks.",
     );
   });
 });
@@ -87,6 +89,7 @@ describe("buildMemoryFlushPlan", () => {
     expect(plan?.relativePath).toBe("memory/2026-02-16.md");
   });
 
+  it("does not append a duplicate current time line", () => {
     const plan = buildMemoryFlushPlan({
       cfg: {
         ...cfg,

@@ -22,6 +22,8 @@ function createStubPtyAdapter() {
     onStderr: (_listener: (chunk: string) => void) => {
       // no-op
     },
+    wait: async () => ({ code: 0, signal: null }),
+    kill: (_signal?: NodeJS.Signals) => {
       // no-op
     },
     dispose: () => {

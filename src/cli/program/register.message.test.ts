@@ -75,12 +75,16 @@ vi.mock("./message/register.emoji-sticker.js", () => ({
   registerMessageStickerCommands: mocks.registerMessageStickerCommandsMock,
 }));
 
+vi.mock("./message/register.discord-admin.js", () => ({
   registerMessageDiscordAdminCommands: mocks.registerMessageDiscordAdminCommandsMock,
 }));
 
 describe("registerMessageCommands", () => {
   const ctx: ProgramContext = {
     programVersion: "9.9.9-test",
+    channelOptions: ["telegram", "discord"],
+    messageChannelOptions: "telegram|discord",
+    agentChannelOptions: "last|telegram|discord",
   };
 
   beforeEach(() => {
@@ -94,6 +98,7 @@ describe("registerMessageCommands", () => {
 
     const message = program.commands.find((command) => command.name() === "message");
     expect(message).toBeDefined();
+    expect(createMessageCliHelpersMock).toHaveBeenCalledWith(message, "telegram|discord");
 
     const expectedRegistrars = [
       registerMessageSendCommandMock,

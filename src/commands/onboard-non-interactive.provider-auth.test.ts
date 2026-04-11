@@ -2,11 +2,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { MINIMAX_API_BASE_URL, MINIMAX_CN_API_BASE_URL } from "../plugin-sdk/minimax.js";
 import { OPENAI_DEFAULT_MODEL } from "../plugin-sdk/openai.js";
 import {
   ZAI_CODING_CN_BASE_URL,
   ZAI_CODING_GLOBAL_BASE_URL,
   ZAI_GLOBAL_BASE_URL,
+} from "../plugin-sdk/zai.js";
 import { makeTempWorkspace } from "../test-helpers/workspace.js";
 import { withEnvAsync } from "../test-utils/env.js";
 import {
@@ -42,16 +44,20 @@ vi.mock("./onboard-non-interactive/local/auth-choice.plugin-providers.js", async
     import("../plugins/provider-api-key-auth.js"),
     import("../plugins/provider-api-key-auth.runtime.js"),
     import("../plugins/provider-self-hosted-setup.js"),
+    import("./zai-endpoint-detect.js"),
     import("../plugin-sdk/openai.js"),
   ]);
 
   const ZAI_FALLBACKS = {
+    "zai-api-key": {
       baseUrl: ZAI_GLOBAL_BASE_URL,
       modelId: "glm-5",
     },
+    "zai-coding-cn": {
       baseUrl: ZAI_CODING_CN_BASE_URL,
       modelId: "glm-4.7",
     },
+    "zai-coding-global": {
       baseUrl: ZAI_CODING_GLOBAL_BASE_URL,
       modelId: "glm-5",
     },
@@ -225,35 +231,47 @@ vi.mock("./onboard-non-interactive/local/auth-choice.plugin-providers.js", async
   }
 
   function createZaiChoice(
+    choiceId: "zai-api-key" | "zai-coding-cn" | "zai-coding-global",
   ): ChoiceHandler {
     return {
+      providerId: "zai",
       label: "Z.AI",
       runNonInteractive: async (ctx) => {
         const resolved = await ctx.resolveApiKey({
+          provider: "zai",
+          flagValue: normalizeText(ctx.opts.zaiApiKey),
+          flagName: "--zai-api-key",
           envVar: "ZAI_API_KEY",
         });
         if (!resolved) {
           return null;
         }
         if (resolved.source !== "profile") {
+          const credential = ctx.toApiKeyCredential({ provider: "zai", resolved });
           if (!credential) {
             return null;
           }
           upsertAuthProfile({
+            profileId: "zai:default",
             credential: credential as never,
             agentDir: ctx.agentDir,
           });
         }
         const detected = await detectZaiEndpoint({
           apiKey: resolved.key,
+          ...(choiceId === "zai-coding-global"
             ? { endpoint: "coding-global" as const }
+            : choiceId === "zai-coding-cn"
               ? { endpoint: "coding-cn" as const }
               : {}),
         });
         const fallback = ZAI_FALLBACKS[choiceId];
         let next = providerApiKeyAuthRuntime.applyAuthProfileConfig(ctx.config as never, {
+          profileId: "zai:default",
+          provider: "zai",
           mode: "api_key",
         }) as Record<string, unknown>;
+        next = withProviderConfig(next, "zai", {
           baseUrl: detected?.baseUrl ?? fallback.baseUrl,
           api: "openai-completions",
           models: [
@@ -264,6 +282,7 @@ vi.mock("./onboard-non-interactive/local/auth-choice.plugin-providers.js", async
         });
         return providerApiKeyAuthRuntime.applyPrimaryModel(
           next as never,
+          `zai/${detected?.modelId ?? fallback.modelId}`,
         );
       },
     };
@@ -351,10 +370,18 @@ vi.mock("./onboard-non-interactive/local/auth-choice.plugin-providers.js", async
       }),
     ],
     [
+      "minimax-global-api",
       createApiKeyChoice({
+        providerId: "minimax",
         label: "MiniMax",
+        choiceId: "minimax-global-api",
+        optionKey: "minimaxApiKey",
+        flagName: "--minimax-api-key",
         envVar: "MINIMAX_API_KEY",
+        profileId: "minimax:global",
+        defaultModel: "minimax/MiniMax-M2.7",
         applyConfig: (cfg) =>
+          withProviderConfig(cfg, "minimax", {
             baseUrl: MINIMAX_API_BASE_URL,
             api: "anthropic-messages",
             models: [buildTestProviderModel("MiniMax-M2.7")],
@@ -362,16 +389,27 @@ vi.mock("./onboard-non-interactive/local/auth-choice.plugin-providers.js", async
       }),
     ],
     [
+      "minimax-cn-api",
       createApiKeyChoice({
+        providerId: "minimax",
         label: "MiniMax",
+        choiceId: "minimax-cn-api",
+        optionKey: "minimaxApiKey",
+        flagName: "--minimax-api-key",
         envVar: "MINIMAX_API_KEY",
+        profileId: "minimax:cn",
+        defaultModel: "minimax/MiniMax-M2.7",
         applyConfig: (cfg) =>
+          withProviderConfig(cfg, "minimax", {
             baseUrl: MINIMAX_CN_API_BASE_URL,
             api: "anthropic-messages",
             models: [buildTestProviderModel("MiniMax-M2.7")],
           }),
       }),
     ],
+    ["zai-api-key", createZaiChoice("zai-api-key")],
+    ["zai-coding-cn", createZaiChoice("zai-coding-cn")],
+    ["zai-coding-global", createZaiChoice("zai-coding-global")],
     [
       "xai-api-key",
       createApiKeyChoice({
@@ -853,19 +891,35 @@ describe("onboard (non-interactive): provider auth", () => {
   });
 
   it("stores MiniMax API key in the global auth profile", async () => {
+    await withOnboardEnv("chainbreaker-onboard-minimax-", async (env) => {
       const cfg = await runOnboardingAndReadConfig(env, {
+        authChoice: "minimax-global-api",
+        minimaxApiKey: "sk-minimax-test", // pragma: allowlist secret
       });
 
+      expect(cfg.auth?.profiles?.["minimax:global"]?.provider).toBe("minimax");
+      expect(cfg.auth?.profiles?.["minimax:global"]?.mode).toBe("api_key");
       await expectApiKeyProfile({
+        profileId: "minimax:global",
+        provider: "minimax",
+        key: "sk-minimax-test",
       });
     });
   });
 
   it("supports MiniMax CN API endpoint auth choice", async () => {
+    await withOnboardEnv("chainbreaker-onboard-minimax-cn-", async (env) => {
       const cfg = await runOnboardingAndReadConfig(env, {
+        authChoice: "minimax-cn-api",
+        minimaxApiKey: "sk-minimax-test", // pragma: allowlist secret
       });
 
+      expect(cfg.auth?.profiles?.["minimax:cn"]?.provider).toBe("minimax");
+      expect(cfg.auth?.profiles?.["minimax:cn"]?.mode).toBe("api_key");
       await expectApiKeyProfile({
+        profileId: "minimax:cn",
+        provider: "minimax",
+        key: "sk-minimax-test",
       });
     });
   });
@@ -876,9 +930,14 @@ describe("onboard (non-interactive): provider auth", () => {
         [`${ZAI_GLOBAL_BASE_URL}/chat/completions::glm-5`]: 200,
       },
       async (fetchMock) =>
+        await withOnboardEnv("chainbreaker-onboard-zai-", async (env) => {
           const cfg = await runOnboardingAndReadConfig(env, {
+            authChoice: "zai-api-key",
+            zaiApiKey: "zai-test-key", // pragma: allowlist secret
           });
 
+          expect(cfg.auth?.profiles?.["zai:default"]?.provider).toBe("zai");
+          expect(cfg.auth?.profiles?.["zai:default"]?.mode).toBe("api_key");
           expectZaiProbeCalls(fetchMock, [
             {
               url: `${ZAI_GLOBAL_BASE_URL}/chat/completions`,
@@ -886,6 +945,9 @@ describe("onboard (non-interactive): provider auth", () => {
             },
           ]);
           await expectApiKeyProfile({
+            profileId: "zai:default",
+            provider: "zai",
+            key: "zai-test-key",
           });
         }),
     );
@@ -898,9 +960,14 @@ describe("onboard (non-interactive): provider auth", () => {
         [`${ZAI_CODING_CN_BASE_URL}/chat/completions::glm-4.7`]: 200,
       },
       async (fetchMock) =>
+        await withOnboardEnv("chainbreaker-onboard-zai-cn-", async (env) => {
           const cfg = await runOnboardingAndReadConfig(env, {
+            authChoice: "zai-coding-cn",
+            zaiApiKey: "zai-test-key", // pragma: allowlist secret
           });
 
+          expect(cfg.auth?.profiles?.["zai:default"]?.provider).toBe("zai");
+          expect(cfg.auth?.profiles?.["zai:default"]?.mode).toBe("api_key");
           expectZaiProbeCalls(fetchMock, [
             {
               url: `${ZAI_CODING_CN_BASE_URL}/chat/completions`,
@@ -912,6 +979,9 @@ describe("onboard (non-interactive): provider auth", () => {
             },
           ]);
           await expectApiKeyProfile({
+            profileId: "zai:default",
+            provider: "zai",
+            key: "zai-test-key",
           });
         }),
     );
@@ -923,9 +993,14 @@ describe("onboard (non-interactive): provider auth", () => {
         [`${ZAI_CODING_GLOBAL_BASE_URL}/chat/completions::glm-5`]: 200,
       },
       async (fetchMock) =>
+        await withOnboardEnv("chainbreaker-onboard-zai-coding-global-", async (env) => {
           const cfg = await runOnboardingAndReadConfig(env, {
+            authChoice: "zai-coding-global",
+            zaiApiKey: "zai-test-key", // pragma: allowlist secret
           });
 
+          expect(cfg.auth?.profiles?.["zai:default"]?.provider).toBe("zai");
+          expect(cfg.auth?.profiles?.["zai:default"]?.mode).toBe("api_key");
           expectZaiProbeCalls(fetchMock, [
             {
               url: `${ZAI_CODING_GLOBAL_BASE_URL}/chat/completions`,
@@ -933,6 +1008,9 @@ describe("onboard (non-interactive): provider auth", () => {
             },
           ]);
           await expectApiKeyProfile({
+            profileId: "zai:default",
+            provider: "zai",
+            key: "zai-test-key",
           });
         }),
     );
@@ -1335,28 +1413,25 @@ describe("onboard (non-interactive): provider auth", () => {
   });
 
   it("configures a custom provider from non-interactive flags", async () => {
-    await withOnboardEnv(
-      "chainbreaker-onboard-custom-provider-",
-      async ({ configPath, runtime }) => {
-        await runNonInteractiveSetupWithDefaults(runtime, {
-          authChoice: "custom-api-key",
-          customBaseUrl: "https://llm.example.com/v1",
-          customApiKey: "custom-test-key", // pragma: allowlist secret
-          customModelId: "foo-large",
-          customCompatibility: "anthropic",
-          skipSkills: true,
-        });
+    await withOnboardEnv("chainbreaker-onboard-custom-provider-", async ({ configPath, runtime }) => {
+      await runNonInteractiveSetupWithDefaults(runtime, {
+        authChoice: "custom-api-key",
+        customBaseUrl: "https://llm.example.com/v1",
+        customApiKey: "custom-test-key", // pragma: allowlist secret
+        customModelId: "foo-large",
+        customCompatibility: "anthropic",
+        skipSkills: true,
+      });
 
-        const cfg = await readJsonFile<ProviderAuthConfigSnapshot>(configPath);
+      const cfg = await readJsonFile<ProviderAuthConfigSnapshot>(configPath);
 
-        const provider = cfg.models?.providers?.["custom-llm-example-com"];
-        expect(provider?.baseUrl).toBe("https://llm.example.com/v1");
-        expect(provider?.api).toBe("anthropic-messages");
-        expect(provider?.apiKey).toBe("custom-test-key");
-        expect(provider?.models?.some((model) => model.id === "foo-large")).toBe(true);
-        expect(cfg.agents?.defaults?.model?.primary).toBe("custom-llm-example-com/foo-large");
-      },
-    );
+      const provider = cfg.models?.providers?.["custom-llm-example-com"];
+      expect(provider?.baseUrl).toBe("https://llm.example.com/v1");
+      expect(provider?.api).toBe("anthropic-messages");
+      expect(provider?.apiKey).toBe("custom-test-key");
+      expect(provider?.models?.some((model) => model.id === "foo-large")).toBe(true);
+      expect(cfg.agents?.defaults?.model?.primary).toBe("custom-llm-example-com/foo-large");
+    });
   });
 
   it("infers custom provider auth choice from custom flags", async () => {
@@ -1413,6 +1488,7 @@ describe("onboard (non-interactive): provider auth", () => {
 
   it("fails fast for custom provider ref mode when --custom-api-key is set but CUSTOM_API_KEY env is missing", async () => {
     await withOnboardEnv("chainbreaker-onboard-custom-provider-ref-flag-", async ({ runtime }) => {
+      const providedSecret = "custom-inline-key-should-not-leak"; // pragma: allowlist secret
       await withEnvAsync({ CUSTOM_API_KEY: undefined }, async () => {
         let thrown: Error | undefined;
         try {
@@ -1472,22 +1548,19 @@ describe("onboard (non-interactive): provider auth", () => {
   });
 
   it("fails custom provider auth when explicit provider id is invalid", async () => {
-    await withOnboardEnv(
-      "chainbreaker-onboard-custom-provider-invalid-id-",
-      async ({ runtime }) => {
-        await expect(
-          runNonInteractiveSetupWithDefaults(runtime, {
-            authChoice: "custom-api-key",
-            customBaseUrl: "https://models.custom.local/v1",
-            customModelId: "local-large",
-            customProviderId: "!!!",
-            skipSkills: true,
-          }),
-        ).rejects.toThrow(
-          "Invalid custom provider config: Custom provider ID must include letters, numbers, or hyphens.",
-        );
-      },
-    );
+    await withOnboardEnv("chainbreaker-onboard-custom-provider-invalid-id-", async ({ runtime }) => {
+      await expect(
+        runNonInteractiveSetupWithDefaults(runtime, {
+          authChoice: "custom-api-key",
+          customBaseUrl: "https://models.custom.local/v1",
+          customModelId: "local-large",
+          customProviderId: "!!!",
+          skipSkills: true,
+        }),
+      ).rejects.toThrow(
+        "Invalid custom provider config: Custom provider ID must include letters, numbers, or hyphens.",
+      );
+    });
   });
 
   it("fails inferred custom auth when required flags are incomplete", async () => {

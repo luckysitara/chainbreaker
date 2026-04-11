@@ -69,15 +69,18 @@ describe("listConfiguredMessageChannels", () => {
 
   it.each([
     {
+      plugins: [makePlugin({ id: "not-a-channel" }), makePlugin({ id: "slack", accountIds: [] })],
       expected: [],
       expectedErrors: 0,
     },
     {
       plugins: [
         makePlugin({
+          id: "discord",
           resolveAccount: () => ({ enabled: true }),
         }),
       ],
+      expected: ["discord"],
       expectedErrors: 0,
     },
     {
@@ -96,6 +99,7 @@ describe("listConfiguredMessageChannels", () => {
     {
       plugins: [
         makePlugin({
+          id: "signal",
           resolveAccount: () => ({ token: "x" }),
           isEnabled: () => false,
           isConfigured: () => true,
@@ -107,6 +111,7 @@ describe("listConfiguredMessageChannels", () => {
     {
       plugins: [
         makePlugin({
+          id: "discord",
           resolveAccount: () => {
             throw new Error("boom");
           },
@@ -140,9 +145,12 @@ describe("resolveMessageChannelSelection", () => {
     {
       setup: () => {
         const isConfigured = vi.fn(async () => true);
+        mocks.listChannelPlugins.mockReturnValue([makePlugin({ id: "slack", isConfigured })]);
         return { isConfigured };
       },
+      params: { cfg: {} as never, channel: "slack" },
       expected: {
+        channel: "slack",
         configured: [],
         source: "explicit",
       },
@@ -151,13 +159,17 @@ describe("resolveMessageChannelSelection", () => {
       },
     },
     {
+      params: { cfg: {} as never, channel: "channel:C123", fallbackChannel: "slack" },
       expected: {
+        channel: "slack",
         configured: [],
         source: "tool-context-fallback",
       },
     },
     {
+      params: { cfg: {} as never, fallbackChannel: "signal" },
       expected: {
+        channel: "signal",
         configured: [],
         source: "tool-context-fallback",
       },
@@ -165,19 +177,25 @@ describe("resolveMessageChannelSelection", () => {
     {
       setup: () => {
         mocks.listChannelPlugins.mockReturnValue([
+          makePlugin({ id: "discord", isConfigured: async () => true }),
         ]);
       },
       params: { cfg: {} as never },
       expected: {
+        channel: "discord",
+        configured: ["discord"],
         source: "single-configured",
       },
     },
     {
       setup: () => {
         mocks.resolveOutboundChannelPlugin.mockImplementation(({ channel }: { channel: string }) =>
+          channel === "slack" ? { id: "slack" } : undefined,
         );
       },
+      params: { cfg: {} as never, channel: "discord", fallbackChannel: "slack" },
       expected: {
+        channel: "slack",
         configured: [],
         source: "tool-context-fallback",
       },
@@ -197,6 +215,8 @@ describe("resolveMessageChannelSelection", () => {
       setup: () => {
         mocks.resolveOutboundChannelPlugin.mockReturnValue(undefined);
       },
+      params: { cfg: {} as never, channel: "discord" },
+      expectedMessage: "Channel is unavailable: discord",
     },
     {
       params: { cfg: {} as never },
@@ -205,11 +225,13 @@ describe("resolveMessageChannelSelection", () => {
     {
       setup: () => {
         mocks.listChannelPlugins.mockReturnValue([
+          makePlugin({ id: "discord", isConfigured: async () => true }),
           makePlugin({ id: "telegram", isConfigured: async () => true }),
         ]);
       },
       params: { cfg: {} as never },
       expectedMessage:
+        "Channel is required when multiple channels are configured: discord, telegram",
     },
   ])("rejects invalid channel selection for %j", async ({ setup, params, expectedMessage }) => {
     setup?.();

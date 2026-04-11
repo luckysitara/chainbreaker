@@ -31,6 +31,7 @@ describeLive("xai x_search live", () => {
       provider?: string;
       content?: string;
       citations?: string[];
+      inlineCitations?: unknown[];
       error?: string;
       message?: string;
     };
@@ -41,6 +42,7 @@ describeLive("xai x_search live", () => {
 
     const citationCount =
       (Array.isArray(details.citations) ? details.citations.length : 0) +
+      (Array.isArray(details.inlineCitations) ? details.inlineCitations.length : 0);
     expect(citationCount).toBeGreaterThan(0);
   }, 45_000);
 });

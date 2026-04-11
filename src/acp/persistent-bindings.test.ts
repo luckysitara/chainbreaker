@@ -64,6 +64,7 @@ const baseCfg = {
 const defaultDiscordConversationId = "1478836151241412759";
 const defaultDiscordAccountId = "default";
 
+const discordBindings: ChannelConfiguredBindingProvider = {
   compileConfiguredBinding: ({ conversationId }) => {
     const normalized = conversationId.trim();
     return normalized ? { conversationId: normalized } : null;
@@ -275,6 +276,7 @@ function createDiscordBinding(params: {
     type: "acp",
     agentId: params.agentId,
     match: {
+      channel: "discord",
       accountId: params.accountId ?? defaultDiscordAccountId,
       peer: { kind: "channel", id: params.conversationId },
     },
@@ -320,12 +322,10 @@ function createFeishuBinding(params: {
   } as ConfiguredBinding;
 }
 
-function resolveBindingRecord(
-  cfg: ChainbreakerConfig,
-  overrides: Partial<BindingRecordInput> = {},
-) {
+function resolveBindingRecord(cfg: ChainbreakerConfig, overrides: Partial<BindingRecordInput> = {}) {
   return persistentBindings.resolveConfiguredAcpBindingRecord({
     cfg,
+    channel: "discord",
     accountId: defaultDiscordAccountId,
     conversationId: defaultDiscordConversationId,
     ...overrides,
@@ -345,6 +345,7 @@ function resolveDiscordBindingSpecBySession(
 
 function createDiscordPersistentSpec(overrides: Partial<BindingSpec> = {}): BindingSpec {
   return {
+    channel: "discord",
     accountId: defaultDiscordAccountId,
     conversationId: defaultDiscordConversationId,
     agentId: "codex",
@@ -380,6 +381,8 @@ beforeEach(async () => {
   setActivePluginRegistry(
     createTestRegistry([
       {
+        pluginId: "discord",
+        plugin: createConfiguredBindingTestPlugin("discord", discordBindings),
         source: "test",
       },
       {
@@ -415,6 +418,7 @@ beforeEach(async () => {
 });
 
 describe("resolveConfiguredAcpBindingRecord", () => {
+  it("resolves discord channel ACP binding from top-level typed bindings", () => {
     const cfg = createCfgWithBindings([
       createDiscordBinding({
         agentId: "codex",
@@ -424,11 +428,14 @@ describe("resolveConfiguredAcpBindingRecord", () => {
     ]);
     const resolved = resolveBindingRecord(cfg);
 
+    expect(resolved?.spec.channel).toBe("discord");
     expect(resolved?.spec.conversationId).toBe(defaultDiscordConversationId);
     expect(resolved?.spec.agentId).toBe("codex");
+    expect(resolved?.record.targetSessionKey).toContain("agent:codex:acp:binding:discord:default:");
     expect(resolved?.record.metadata?.source).toBe("config");
   });
 
+  it("falls back to parent discord channel when conversation is a thread id", () => {
     const cfg = createCfgWithBindings([
       createDiscordBinding({
         agentId: "codex",
@@ -444,6 +451,7 @@ describe("resolveConfiguredAcpBindingRecord", () => {
     expect(resolved?.record.conversation.conversationId).toBe("channel-parent-1");
   });
 
+  it("prefers direct discord thread binding over parent channel fallback", () => {
     const cfg = createCfgWithBindings([
       createDiscordBinding({
         agentId: "codex",
@@ -491,6 +499,7 @@ describe("resolveConfiguredAcpBindingRecord", () => {
     expect(resolved?.spec.agentId).toBe("claude");
   });
 
+  it("prefers exact account binding over wildcard for the same discord conversation", () => {
     const cfg = createCfgWithBindings([
       createDiscordBinding({
         agentId: "codex",
@@ -749,6 +758,7 @@ describe("resolveConfiguredAcpBindingRecord", () => {
 });
 
 describe("resolveConfiguredAcpBindingSpecBySessionKey", () => {
+  it("maps a configured discord binding session key back to its spec", () => {
     const cfg = createCfgWithBindings([
       createDiscordBinding({
         agentId: "codex",
@@ -758,6 +768,7 @@ describe("resolveConfiguredAcpBindingSpecBySessionKey", () => {
     ]);
     const spec = resolveDiscordBindingSpecBySession(cfg);
 
+    expect(spec?.channel).toBe("discord");
     expect(spec?.conversationId).toBe(defaultDiscordConversationId);
     expect(spec?.agentId).toBe("codex");
     expect(spec?.backend).toBe("acpx");
@@ -766,6 +777,7 @@ describe("resolveConfiguredAcpBindingSpecBySessionKey", () => {
   it("returns null for unknown session keys", () => {
     const spec = persistentBindings.resolveConfiguredAcpBindingSpecBySessionKey({
       cfg: baseCfg,
+      sessionKey: "agent:main:acp:binding:discord:default:notfound",
     });
     expect(spec).toBeNull();
   });
@@ -818,12 +830,14 @@ describe("resolveConfiguredAcpBindingSpecBySessionKey", () => {
 describe("buildConfiguredAcpSessionKey", () => {
   it("is deterministic for the same conversation binding", () => {
     const sessionKeyA = buildConfiguredAcpSessionKey({
+      channel: "discord",
       accountId: "default",
       conversationId: "1478836151241412759",
       agentId: "codex",
       mode: "persistent",
     });
     const sessionKeyB = buildConfiguredAcpSessionKey({
+      channel: "discord",
       accountId: "default",
       conversationId: "1478836151241412759",
       agentId: "codex",
@@ -930,6 +944,7 @@ describe("resetAcpSessionInPlace", () => {
       }),
     ]);
     const sessionKey = buildConfiguredAcpSessionKey({
+      channel: "discord",
       accountId: "default",
       conversationId: "1478844424791396446",
       agentId: "claude",
@@ -956,6 +971,7 @@ describe("resetAcpSessionInPlace", () => {
   });
 
   it("does not clear ACP metadata before reinitialize succeeds", async () => {
+    const sessionKey = "agent:claude:acp:binding:discord:default:9373ab192b2317f4";
     sessionMetaMocks.readAcpSessionEntry.mockReturnValue({
       acp: {
         agent: "claude",
@@ -988,6 +1004,7 @@ describe("resetAcpSessionInPlace", () => {
         list: [{ id: "main" }, { id: "coding" }],
       },
     } satisfies ChainbreakerConfig;
+    const sessionKey = "agent:coding:acp:binding:discord:default:9373ab192b2317f4";
     sessionMetaMocks.readAcpSessionEntry.mockReturnValue({
       acp: {
         agent: "codex",
@@ -1040,6 +1057,7 @@ describe("resetAcpSessionInPlace", () => {
       },
     );
     const sessionKey = buildConfiguredAcpSessionKey({
+      channel: "discord",
       accountId: "default",
       conversationId: "1478844424791396446",
       agentId: "coding",

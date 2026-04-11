@@ -225,9 +225,12 @@ async function transcriptHasIdempotencyKey(
 ): Promise<string | undefined> {
   try {
     const raw = await fs.promises.readFile(transcriptPath, "utf-8");
+    for (const line of raw.split(/\r?\n/)) {
+      if (!line.trim()) {
         continue;
       }
       try {
+        const parsed = JSON.parse(line) as {
           id?: unknown;
           message?: { idempotencyKey?: unknown };
         };

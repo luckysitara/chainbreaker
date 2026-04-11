@@ -15,6 +15,7 @@ export function collectOpenPolicyAllowFromWarnings(params: {
     return [];
   }
   return [
+    ...params.changes.map((line) => sanitizeForLog(line)),
     `- Run "${params.doctorFixCommand}" to add missing allowFrom wildcards.`,
   ];
 }

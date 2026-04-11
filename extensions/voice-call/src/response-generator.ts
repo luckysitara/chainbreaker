@@ -80,10 +80,13 @@ function tryParseSpokenJson(text: string): string | null {
     }
   }
 
+  const inlineSpokenMatch = trimmed.match(/"spoken"\s*:\s*"((?:[^"\\]|\\.)*)"/i);
+  if (!inlineSpokenMatch) {
     return null;
   }
 
   try {
+    const decoded = JSON.parse(`"${inlineSpokenMatch[1] ?? ""}"`) as string;
     return normalizeSpokenText(decoded) ?? "";
   } catch {
     return null;

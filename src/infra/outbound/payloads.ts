@@ -144,8 +144,12 @@ export function formatOutboundPayloadLog(
     mediaUrls: readonly string[];
   },
 ): string {
+  const lines: string[] = [];
   if (payload.text) {
+    lines.push(payload.text.trimEnd());
   }
   for (const url of payload.mediaUrls) {
+    lines.push(`MEDIA:${url}`);
   }
+  return lines.join("\n");
 }

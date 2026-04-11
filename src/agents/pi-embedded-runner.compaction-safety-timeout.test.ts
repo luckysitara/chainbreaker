@@ -59,12 +59,14 @@ describe("compactWithSafetyTimeout", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it("aborts early on external abort signal and calls onCancel once", async () => {
     vi.useFakeTimers();
     const controller = new AbortController();
     const onCancel = vi.fn();
     const reason = new Error("request timed out");
 
     const compactPromise = compactWithSafetyTimeout(() => new Promise<never>(() => {}), 100, {
+      abortSignal: controller.signal,
       onCancel,
     });
     const abortAssertion = expect(compactPromise).rejects.toBe(reason);

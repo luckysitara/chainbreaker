@@ -31,6 +31,7 @@ const QMD_EMBED_QUEUE_KEY = Symbol.for("chainbreaker.qmdEmbedQueueTail");
 type MockChild = EventEmitter & {
   stdout: EventEmitter;
   stderr: EventEmitter;
+  kill: (signal?: NodeJS.Signals) => void;
   closeWith: (code?: number | null) => void;
 };
 
@@ -194,6 +195,7 @@ describe("QmdMemoryManager", () => {
     process.env.CHAINBREAKER_STATE_DIR = stateDir;
     // Keep the default Windows path unresolved for most tests so spawn mocks can
     // match the logical package command. Tests that verify wrapper resolution
+    // install explicit shim fixtures inline.
     cfg = {
       agents: {
         defaults: {
@@ -260,15 +262,19 @@ describe("QmdMemoryManager", () => {
   it("debounces back-to-back sync calls", async () => {
     const { manager, resolved } = await createManager();
 
+    const baselineCalls = spawnMock.mock.calls.length;
 
     await manager.sync({ reason: "manual" });
+    expect(spawnMock.mock.calls.length).toBe(baselineCalls + 2);
 
     await manager.sync({ reason: "manual-again" });
+    expect(spawnMock.mock.calls.length).toBe(baselineCalls + 2);
 
     (manager as unknown as { lastUpdateAt: number | null }).lastUpdateAt =
       Date.now() - (resolved.qmd?.update.debounceMs ?? 0) - 10;
 
     await manager.sync({ reason: "after-wait" });
+    expect(spawnMock.mock.calls.length).toBe(baselineCalls + 3);
 
     await manager.close();
   });
@@ -1349,6 +1355,7 @@ describe("QmdMemoryManager", () => {
     }
 
     await expect(
+      manager.search("test", { sessionKey: "agent:main:slack:dm:u123" }),
     ).resolves.toEqual([]);
 
     const searchCall = spawnMock.mock.calls.find(
@@ -1441,6 +1448,7 @@ describe("QmdMemoryManager", () => {
     };
 
     await expect(
+      manager.search("remember", { sessionKey: "agent:main:slack:dm:u123" }),
     ).resolves.toEqual([
       {
         path: "MEMORY.md",
@@ -1532,6 +1540,7 @@ describe("QmdMemoryManager", () => {
     }
 
     await expect(
+      manager.search("記憶系統升級 QMD", { sessionKey: "agent:main:slack:dm:u123" }),
     ).resolves.toEqual([]);
 
     const searchCall = spawnMock.mock.calls.find(
@@ -1572,6 +1581,7 @@ describe("QmdMemoryManager", () => {
     });
 
     const { manager } = await createManager();
+    await expect(manager.search("記", { sessionKey: "agent:main:slack:dm:u123" })).resolves.toEqual(
       [],
     );
 
@@ -1607,6 +1617,7 @@ describe("QmdMemoryManager", () => {
     const { manager } = await createManager();
     const query = "自然 高级感 结论先行 搜索偏好";
     await expect(
+      manager.search(query, { sessionKey: "agent:main:slack:dm:u123" }),
     ).resolves.toEqual([]);
 
     const searchCall = spawnMock.mock.calls.find(
@@ -1640,6 +1651,7 @@ describe("QmdMemoryManager", () => {
 
     const { manager } = await createManager();
     await expect(
+      manager.search("記憶系統升級 QMD", { sessionKey: "agent:main:slack:dm:u123" }),
     ).resolves.toEqual([]);
 
     const queryCall = spawnMock.mock.calls.find(
@@ -1683,6 +1695,7 @@ describe("QmdMemoryManager", () => {
     }
 
     await expect(
+      manager.search("test", { sessionKey: "agent:main:slack:dm:u123" }),
     ).resolves.toEqual([]);
 
     const searchAndQueryCalls = spawnMock.mock.calls
@@ -1844,6 +1857,7 @@ describe("QmdMemoryManager", () => {
 
     const { manager, resolved } = await createManager();
 
+    await manager.search("test", { sessionKey: "agent:main:slack:dm:u123" });
     const maxResults = resolved.qmd?.limits.maxResults;
     if (!maxResults) {
       throw new Error("qmd maxResults missing");
@@ -1884,6 +1898,7 @@ describe("QmdMemoryManager", () => {
 
     const { manager, resolved } = await createManager();
 
+    await manager.search("test", { sessionKey: "agent:main:slack:dm:u123" });
     const maxResults = resolved.qmd?.limits.maxResults;
     if (!maxResults) {
       throw new Error("qmd maxResults missing");
@@ -1930,6 +1945,7 @@ describe("QmdMemoryManager", () => {
     }
 
     await expect(
+      manager.search("test", { sessionKey: "agent:main:slack:dm:u123" }),
     ).resolves.toEqual([]);
 
     const queryCalls = spawnMock.mock.calls
@@ -1980,6 +1996,7 @@ describe("QmdMemoryManager", () => {
     }
 
     await expect(
+      manager.search("test", { sessionKey: "agent:main:slack:dm:u123" }),
     ).resolves.toEqual([]);
 
     const searchAndQueryCalls = spawnMock.mock.calls
@@ -2021,6 +2038,7 @@ describe("QmdMemoryManager", () => {
 
     logWarnMock.mockClear();
     await expect(
+      manager.search("hello", { sessionKey: "agent:main:slack:dm:u123" }),
     ).resolves.toEqual([]);
 
     const mcporterCalls = spawnMock.mock.calls.filter((call: unknown[]) =>
@@ -2079,6 +2097,7 @@ describe("QmdMemoryManager", () => {
     });
 
     const { manager } = await createManager();
+    await manager.search("hello", { sessionKey: "agent:main:slack:dm:u123" });
     await manager.close();
   });
 
@@ -2132,6 +2151,7 @@ describe("QmdMemoryManager", () => {
 
     const { manager } = await createManager();
     // The first search should try v2, fail, then retry with v1
+    await manager.search("hello", { sessionKey: "agent:main:slack:dm:u123" });
 
     // Should have logged the v1 fallback warning
     expect(logWarnMock).toHaveBeenCalledWith(
@@ -2181,9 +2201,12 @@ describe("QmdMemoryManager", () => {
     });
 
     const { manager } = await createManager();
+    await manager.search("hello", { sessionKey: "agent:main:slack:dm:u123" });
     await manager.close();
   });
 
+  it("prefers mcporter start and end lines over snippet header offsets", async () => {
+    const expectedDocId = "line-123";
     cfg = {
       ...cfg,
       memory: {
@@ -2211,6 +2234,9 @@ describe("QmdMemoryManager", () => {
                 docid: expectedDocId,
                 score: 0.91,
                 collection: "workspace-main",
+                start_line: 8,
+                end_line: 10,
+                snippet: "@@ -20,3\nline one\nline two\nline three",
               },
             ],
           }),
@@ -2238,12 +2264,14 @@ describe("QmdMemoryManager", () => {
     };
 
     await expect(
+      manager.search("line one", { sessionKey: "agent:main:slack:dm:u123" }),
     ).resolves.toEqual([
       {
         path: "notes/welcome.md",
         startLine: 8,
         endLine: 10,
         score: 0.91,
+        snippet: "@@ -20,3\nline one\nline two\nline three",
         source: "memory",
       },
     ]);
@@ -2251,6 +2279,8 @@ describe("QmdMemoryManager", () => {
     await manager.close();
   });
 
+  it("uses snippet header width when mcporter only returns a start line", async () => {
+    const expectedDocId = "line-456";
     cfg = {
       ...cfg,
       memory: {
@@ -2278,6 +2308,8 @@ describe("QmdMemoryManager", () => {
                 docid: expectedDocId,
                 score: 0.73,
                 collection: "workspace-main",
+                start_line: 8,
+                snippet: "@@ -20,3\nline one\nline two\nline three",
               },
             ],
           }),
@@ -2305,12 +2337,14 @@ describe("QmdMemoryManager", () => {
     };
 
     await expect(
+      manager.search("line one", { sessionKey: "agent:main:slack:dm:u123" }),
     ).resolves.toEqual([
       {
         path: "notes/welcome.md",
         startLine: 8,
         endLine: 10,
         score: 0.73,
+        snippet: "@@ -20,3\nline one\nline two\nline three",
         source: "memory",
       },
     ]);
@@ -2352,6 +2386,7 @@ describe("QmdMemoryManager", () => {
     });
 
     const { manager } = await createManager();
+    await manager.search("hello", { sessionKey: "agent:main:slack:dm:u123" });
     await manager.close();
   });
 
@@ -2402,6 +2437,7 @@ describe("QmdMemoryManager", () => {
     });
 
     const { manager } = await createManager();
+    await manager.search("hello", { sessionKey: "agent:main:slack:dm:u123" });
 
     expect(selectors).toEqual(["qmd.query", "qmd.search", "qmd.search"]);
 
@@ -2450,6 +2486,7 @@ describe("QmdMemoryManager", () => {
     });
 
     const { manager } = await createManager();
+    await manager.search("hello", { sessionKey: "agent:main:slack:dm:u123" });
 
     expect(selectors).toEqual(["qmd.hybrid_search", "qmd.hybrid_search"]);
     expect(collections).toEqual(["workspace-a-main", "workspace-b-main"]);
@@ -2497,9 +2534,11 @@ describe("QmdMemoryManager", () => {
 
     await expect(
       manager.search("abc: Tool query not found", {
+        sessionKey: "agent:main:slack:dm:u123",
       }),
     ).resolves.toEqual([]);
 
+    await manager.search("hello again", { sessionKey: "agent:main:slack:dm:u123" });
 
     expect(selectors.length).toBeGreaterThanOrEqual(2);
     expect(selectors.every((selector) => selector === "qmd.query")).toBe(true);
@@ -2563,9 +2602,11 @@ describe("QmdMemoryManager", () => {
 
     await expect(
       manager.search("abc: Tool query not found", {
+        sessionKey: "agent:main:slack:dm:u123",
       }),
     ).rejects.toThrow("timed out after 5000ms");
 
+    await manager.search("hello again", { sessionKey: "agent:main:slack:dm:u123" });
 
     expect(runMcporterSpy).toHaveBeenCalled();
     expect(selectors.length).toBeGreaterThanOrEqual(1);
@@ -2621,6 +2662,7 @@ describe("QmdMemoryManager", () => {
       });
 
       const { manager } = await createManager();
+      await manager.search("hello", { sessionKey: "agent:main:slack:dm:u123" });
 
       const mcporterCall = spawnMock.mock.calls.find((call: unknown[]) =>
         (call[1] as string[] | undefined)?.includes("call"),
@@ -2680,6 +2722,7 @@ describe("QmdMemoryManager", () => {
 
       const { manager } = await createManager();
       await expect(
+        manager.search("hello", { sessionKey: "agent:main:slack:dm:u123" }),
       ).rejects.toThrow(/without shell execution|EINVAL/);
       const attemptedCmdShim = (firstCallCommand ?? "").toLowerCase().endsWith(".cmd");
       if (attemptedCmdShim) {
@@ -2723,6 +2766,7 @@ describe("QmdMemoryManager", () => {
     });
 
     const { manager } = await createManager();
+    await manager.search("hello", { sessionKey: "agent:main:slack:dm:u123" });
 
     const mcporterCall = spawnMock.mock.calls.find(
       (call: unknown[]) => isMcporterCommand(call[0]) && (call[1] as string[])[0] === "call",
@@ -2775,6 +2819,8 @@ describe("QmdMemoryManager", () => {
 
     const { manager } = await createManager();
 
+    await manager.search("one", { sessionKey: "agent:main:slack:dm:u123" });
+    await manager.search("two", { sessionKey: "agent:main:slack:dm:u123" });
 
     expect(daemonAttempts).toBe(2);
 
@@ -2811,6 +2857,8 @@ describe("QmdMemoryManager", () => {
 
     const { manager } = await createManager();
 
+    await manager.search("one", { sessionKey: "agent:main:slack:dm:u123" });
+    await manager.search("two", { sessionKey: "agent:main:slack:dm:u123" });
 
     const daemonStarts = spawnMock.mock.calls.filter(
       (call: unknown[]) => isMcporterCommand(call[0]) && (call[1] as string[])[0] === "daemon",
@@ -2835,6 +2883,7 @@ describe("QmdMemoryManager", () => {
 
     const { manager } = await createManager();
 
+    const results = await manager.search("test", { sessionKey: "agent:main:slack:dm:u123" });
     expect(results).toEqual([]);
     expect(
       spawnMock.mock.calls.some((call: unknown[]) => (call[1] as string[])?.[0] === "query"),
@@ -2913,6 +2962,7 @@ describe("QmdMemoryManager", () => {
 
     const results = await manager.search("fact", {
       maxResults: 4,
+      sessionKey: "agent:main:slack:dm:u123",
     });
 
     expect(results).toHaveLength(4);
@@ -3301,6 +3351,7 @@ describe("QmdMemoryManager", () => {
           paths: [{ path: workspaceDir, pattern: "**/*.md", name: "workspace" }],
           scope: {
             default: "deny",
+            rules: [{ action: "allow", match: { channel: "slack" } }],
           },
         },
       },
@@ -3309,6 +3360,11 @@ describe("QmdMemoryManager", () => {
 
     const isAllowed = (key?: string) =>
       (manager as unknown as { isScopeAllowed: (key?: string) => boolean }).isScopeAllowed(key);
+    expect(isAllowed("agent:main:slack:channel:c123")).toBe(true);
+    expect(isAllowed("agent:main:slack:direct:u123")).toBe(true);
+    expect(isAllowed("agent:main:slack:dm:u123")).toBe(true);
+    expect(isAllowed("agent:main:discord:direct:u123")).toBe(false);
+    expect(isAllowed("agent:main:discord:channel:c123")).toBe(false);
 
     await manager.close();
   });
@@ -3334,6 +3390,7 @@ describe("QmdMemoryManager", () => {
     logWarnMock.mockClear();
     const beforeCalls = spawnMock.mock.calls.length;
     await expect(
+      manager.search("blocked", { sessionKey: "agent:main:discord:channel:c123" }),
     ).resolves.toEqual([]);
 
     expect(spawnMock.mock.calls.length).toBe(beforeCalls);
@@ -3363,11 +3420,15 @@ describe("QmdMemoryManager", () => {
     await manager.close();
   });
 
+  it("reads only requested line ranges without loading the whole file", async () => {
     const readFileSpy = vi.spyOn(fs, "readFile");
+    const text = Array.from({ length: 50 }, (_, index) => `line-${index + 1}`).join("\n");
     await fs.writeFile(path.join(workspaceDir, "window.md"), text, "utf-8");
 
     const { manager } = await createManager();
 
+    const result = await manager.readFile({ relPath: "window.md", from: 10, lines: 3 });
+    expect(result.text).toBe("line-10\nline-11\nline-12");
     expect(readFileSpy).not.toHaveBeenCalled();
 
     await manager.close();
@@ -3387,6 +3448,7 @@ describe("QmdMemoryManager", () => {
       },
       {
         name: "disappears before partial read",
+        request: { relPath, from: 2, lines: 1 },
         expectedPath: relPath,
         installOpenSpy: () => {
           const realOpen = fs.open;
@@ -3520,6 +3582,7 @@ describe("QmdMemoryManager", () => {
             close: () => {},
           };
           await expect(
+            manager.search("busy lookup", { sessionKey: "agent:main:slack:dm:u123" }),
           ).rejects.toThrow("qmd index busy while reading results");
         },
       },
@@ -3552,6 +3615,7 @@ describe("QmdMemoryManager", () => {
           child,
           "stdout",
           JSON.stringify([
+            { docid: exactDocid, score: 1, snippet: "@@ -5,2\nremember this\nnext line" },
           ]),
         );
         return child;
@@ -3583,12 +3647,14 @@ describe("QmdMemoryManager", () => {
       close: () => {},
     };
 
+    const results = await manager.search("test", { sessionKey: "agent:main:slack:dm:u123" });
     expect(results).toEqual([
       {
         path: "notes/welcome.md",
         startLine: 5,
         endLine: 6,
         score: 1,
+        snippet: "@@ -5,2\nremember this\nnext line",
         source: "memory",
       },
     ]);
@@ -3655,6 +3721,7 @@ describe("QmdMemoryManager", () => {
       close: () => {},
     };
 
+    const results = await manager.search("workspace", { sessionKey: "agent:main:slack:dm:u123" });
     expect(results).toEqual([
       {
         path: "notes/welcome.md",
@@ -3703,6 +3770,7 @@ describe("QmdMemoryManager", () => {
     const { manager } = await createManager();
 
     const results = await manager.search("token unlock", {
+      sessionKey: "agent:main:slack:dm:u123",
     });
     expect(results).toEqual([
       {
@@ -3764,6 +3832,7 @@ describe("QmdMemoryManager", () => {
     const exportedSessionPath = path.join(sessionRoot!.path, "session-1.md");
 
     const results = await manager.search("session canary", {
+      sessionKey: "agent:main:slack:dm:u123",
     });
     expect(results).toEqual([
       {
@@ -3862,6 +3931,7 @@ describe("QmdMemoryManager", () => {
     const { manager } = await createManager();
 
     const results = await manager.search("fact", {
+      sessionKey: "agent:main:slack:dm:u123",
     });
     expect(results).toEqual([
       {
@@ -3898,6 +3968,7 @@ describe("QmdMemoryManager", () => {
     const { manager } = await createManager();
 
     await expect(
+      manager.search("noise", { sessionKey: "agent:main:slack:dm:u123" }),
     ).rejects.toThrow(/too much output/);
     await manager.close();
   });
@@ -3921,6 +3992,7 @@ describe("QmdMemoryManager", () => {
 
       const { manager } = await createManager();
       await expect(
+        manager.search("missing", { sessionKey: "agent:main:slack:dm:u123" }),
         testCase.name,
       ).resolves.toEqual([]);
       await manager.close();
@@ -3944,6 +4016,7 @@ describe("QmdMemoryManager", () => {
     const { manager } = await createManager();
 
     await expect(
+      manager.search("missing", { sessionKey: "agent:main:slack:dm:u123" }),
     ).rejects.toThrow(/qmd query returned invalid JSON/);
     await manager.close();
   });

@@ -123,12 +123,8 @@ describe("shell env fallback", () => {
 
   it("uses the same truthy env parsing for deferred fallback", () => {
     expect(shouldDeferShellEnvFallback({} as NodeJS.ProcessEnv)).toBe(false);
-    expect(shouldDeferShellEnvFallback({ CHAINBREAKER_DEFER_SHELL_ENV_FALLBACK: "false" })).toBe(
-      false,
-    );
-    expect(shouldDeferShellEnvFallback({ CHAINBREAKER_DEFER_SHELL_ENV_FALLBACK: "yes" })).toBe(
-      true,
-    );
+    expect(shouldDeferShellEnvFallback({ CHAINBREAKER_DEFER_SHELL_ENV_FALLBACK: "false" })).toBe(false);
+    expect(shouldDeferShellEnvFallback({ CHAINBREAKER_DEFER_SHELL_ENV_FALLBACK: "yes" })).toBe(true);
   });
 
   it("resolves timeout from env with default fallback", () => {
@@ -160,6 +156,7 @@ describe("shell env fallback", () => {
 
   it("imports expected keys without overriding existing env", () => {
     const env: NodeJS.ProcessEnv = {};
+    const exec = vi.fn(() => Buffer.from("OPENAI_API_KEY=from-shell\0DISCORD_BOT_TOKEN=discord\0"));
 
     const res1 = runShellEnvFallback({
       enabled: true,
@@ -170,10 +167,12 @@ describe("shell env fallback", () => {
 
     expect(res1.ok).toBe(true);
     expect(env.OPENAI_API_KEY).toBe("from-shell");
+    expect(env.DISCORD_BOT_TOKEN).toBe("discord");
     expect(exec).toHaveBeenCalledTimes(1);
 
     env.OPENAI_API_KEY = "from-parent";
     const exec2 = vi.fn(() =>
+      Buffer.from("OPENAI_API_KEY=from-shell\0DISCORD_BOT_TOKEN=discord2\0"),
     );
     const res2 = runShellEnvFallback({
       enabled: true,
@@ -184,6 +183,7 @@ describe("shell env fallback", () => {
 
     expect(res2.ok).toBe(true);
     expect(env.OPENAI_API_KEY).toBe("from-parent");
+    expect(env.DISCORD_BOT_TOKEN).toBe("discord");
     expect(exec2).not.toHaveBeenCalled();
   });
 

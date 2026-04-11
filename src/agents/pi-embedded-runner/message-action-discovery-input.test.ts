@@ -32,6 +32,7 @@ describe("buildEmbeddedMessageActionDiscoveryInput", () => {
   it("normalizes nullable routing fields to undefined", () => {
     expect(
       buildEmbeddedMessageActionDiscoveryInput({
+        channel: "slack",
         currentChannelId: null,
         currentThreadTs: null,
         currentMessageId: null,
@@ -43,6 +44,7 @@ describe("buildEmbeddedMessageActionDiscoveryInput", () => {
       }),
     ).toEqual({
       cfg: undefined,
+      channel: "slack",
       currentChannelId: undefined,
       currentThreadTs: undefined,
       currentMessageId: undefined,

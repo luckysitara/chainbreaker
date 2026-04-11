@@ -38,6 +38,7 @@ function createConfig(options?: { bindingAgentId?: string; accountId?: string })
         type: "acp",
         agentId: options?.bindingAgentId ?? "codex",
         match: {
+          channel: "discord",
           accountId: options?.accountId ?? "default",
           peer: {
             kind: "channel",
@@ -83,6 +84,7 @@ function createDiscordAcpPlugin(overrides?: {
       },
     );
   return {
+    id: "discord",
     bindings: {
       compileConfiguredBinding,
       matchInboundConversation,
@@ -107,10 +109,12 @@ describe("configured binding registry", () => {
 
     const resolved = bindingRegistry.resolveConfiguredBindingRecord({
       cfg: createConfig() as never,
+      channel: "discord",
       accountId: "default",
       conversationId: "1479098716916023408",
     });
 
+    expect(resolved?.record.conversation.channel).toBe("discord");
     expect(resolved?.record.metadata?.backend).toBe("acpx");
     expect(plugin.bindings?.compileConfiguredBinding).toHaveBeenCalledTimes(1);
   });
@@ -123,15 +127,18 @@ describe("configured binding registry", () => {
     const resolved = bindingRegistry.resolveConfiguredBinding({
       cfg: createConfig() as never,
       conversation: {
+        channel: "discord",
         accountId: "default",
         conversationId: "1479098716916023408",
       },
     });
 
     expect(resolved?.conversation).toEqual({
+      channel: "discord",
       accountId: "default",
       conversationId: "1479098716916023408",
     });
+    expect(resolved?.record.conversation.channel).toBe("discord");
     expect(resolved?.statefulTarget).toEqual({
       kind: "stateful",
       driverId: "acp",
@@ -152,6 +159,7 @@ describe("configured binding registry", () => {
     });
     const resolved = bindingRegistry.resolveConfiguredBindingRecord({
       cfg: cfg as never,
+      channel: "discord",
       accountId: "default",
       conversationId: "1479098716916023408",
     });
@@ -162,6 +170,7 @@ describe("configured binding registry", () => {
 
     const second = bindingRegistry.resolveConfiguredBindingRecord({
       cfg: cfg as never,
+      channel: "discord",
       accountId: "default",
       conversationId: "1479098716916023408",
     });
@@ -177,6 +186,7 @@ describe("configured binding registry", () => {
     const resolved = bindingRegistry.resolveConfiguredBindingRecordBySessionKey({
       cfg: createConfig({ accountId: "*" }) as never,
       sessionKey: buildConfiguredAcpSessionKey({
+        channel: "discord",
         accountId: "work",
         conversationId: "1479098716916023408",
         agentId: "codex",
@@ -185,6 +195,7 @@ describe("configured binding registry", () => {
       }),
     });
 
+    expect(resolved?.record.conversation.channel).toBe("discord");
     expect(resolved?.record.conversation.accountId).toBe("work");
     expect(resolved?.record.metadata?.backend).toBe("acpx");
   });
@@ -194,6 +205,7 @@ describe("configured binding registry", () => {
 
     const resolved = bindingRegistry.resolveConfiguredBindingRecord({
       cfg: createConfig() as never,
+      channel: "discord",
       accountId: "default",
       conversationId: "1479098716916023408",
     });
@@ -210,11 +222,13 @@ describe("configured binding registry", () => {
 
     bindingRegistry.resolveConfiguredBindingRecord({
       cfg: cfg as never,
+      channel: "discord",
       accountId: "default",
       conversationId: "1479098716916023408",
     });
     bindingRegistry.resolveConfiguredBindingRecord({
       cfg: cfg as never,
+      channel: "discord",
       accountId: "default",
       conversationId: "1479098716916023408",
     });
@@ -222,6 +236,7 @@ describe("configured binding registry", () => {
     getActivePluginChannelRegistryVersionMock.mockReturnValue(11);
     bindingRegistry.resolveConfiguredBindingRecord({
       cfg: cfg as never,
+      channel: "discord",
       accountId: "default",
       conversationId: "1479098716916023408",
     });

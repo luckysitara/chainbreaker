@@ -29,8 +29,13 @@ export function buildFishOptionCompletionLine(params: {
 }): string {
   const { short, long } = parseOptionFlags(params.flags);
   const desc = escapeFishDescription(params.description);
+  let line = `complete -c ${params.rootCmd} -n "${params.condition}"`;
   if (short) {
+    line += ` -s ${short}`;
   }
   if (long) {
+    line += ` -l ${long}`;
   }
+  line += ` -d '${desc}'\n`;
+  return line;
 }

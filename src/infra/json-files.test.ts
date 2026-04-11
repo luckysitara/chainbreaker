@@ -41,12 +41,14 @@ describe("json file helpers", () => {
     });
   });
 
+  it("writes json atomically with pretty formatting and optional trailing newline", async () => {
     await withTempBase(async (base) => {
       const filePath = path.join(base, "nested", "config.json");
 
       await writeJsonAtomic(
         filePath,
         { ok: true, nested: { value: 1 } },
+        { trailingNewline: true, ensureDirMode: 0o755 },
       );
 
       await expect(fs.readFile(filePath, "utf8")).resolves.toBe(
@@ -61,6 +63,7 @@ describe("json file helpers", () => {
   ])("writes text atomically for %j", async ({ input, expected }) => {
     await withTempBase(async (base) => {
       const filePath = path.join(base, "nested", "note.txt");
+      await writeTextAtomic(filePath, input, { appendTrailingNewline: true });
       await expect(fs.readFile(filePath, "utf8")).resolves.toBe(expected);
     });
   });

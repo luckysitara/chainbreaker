@@ -113,6 +113,7 @@ describe("resolveFailureDestination", () => {
           mode: "announce",
           channel: "telegram",
           to: "111",
+          failureDestination: { channel: "signal", mode: "announce" },
         },
       }),
       {
@@ -124,6 +125,7 @@ describe("resolveFailureDestination", () => {
     );
     expect(plan).toEqual({
       mode: "announce",
+      channel: "signal",
       to: "222",
       accountId: "global-account",
     });
@@ -197,6 +199,7 @@ describe("resolveFailureDestination", () => {
         },
       }),
       {
+        channel: "signal",
         to: "group-abc",
         mode: "announce",
       },
@@ -220,6 +223,7 @@ describe("resolveFailureDestination", () => {
         },
       }),
       {
+        channel: "signal",
         to: "group-abc",
         accountId: "global-account",
         mode: "announce",

@@ -2,6 +2,7 @@ import { vi } from "vitest";
 import "./test-runtime-mocks.js";
 
 // Avoid exporting vitest mock types (TS2742 under pnpm + d.ts emit).
+// oxlint-disable-next-line typescript/no-explicit-any
 type AnyMock = any;
 
 const hoisted = vi.hoisted(() => ({

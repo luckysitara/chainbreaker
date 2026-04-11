@@ -40,6 +40,7 @@ type RunCommand = (
     args?: string[];
     stdin?: Buffer | string;
     allowFailure?: boolean;
+    signal?: AbortSignal;
   },
 ) => Promise<{ stdout: Buffer }>;
 

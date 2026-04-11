@@ -6,9 +6,12 @@ import { buildChannelSummary } from "./channel-summary.js";
 
 function makeSlackHttpSummaryPlugin(): ChannelPlugin {
   return {
+    id: "slack",
     meta: {
+      id: "slack",
       label: "Slack",
       selectionLabel: "Slack",
+      docsPath: "/channels/slack",
       blurb: "test",
     },
     capabilities: { chatTypes: ["direct"] },
@@ -119,9 +122,12 @@ function makeTelegramSummaryPlugin(params: {
 
 function makeSignalSummaryPlugin(params: { enabled: boolean; configured: boolean }): ChannelPlugin {
   return {
+    id: "signal",
     meta: {
+      id: "signal",
       label: "Signal",
       selectionLabel: "Signal",
+      docsPath: "/channels/signal",
       blurb: "test",
     },
     capabilities: { chatTypes: ["direct"] },
@@ -134,7 +140,10 @@ function makeSignalSummaryPlugin(params: { enabled: boolean; configured: boolean
         enabled: params.enabled,
         configured: params.configured,
         appTokenSource: "env",
+        baseUrl: "https://signal.example.test",
         port: 31337,
+        cliPath: "/usr/local/bin/signal-cli",
+        dbPath: "/tmp/signal.db",
       }),
       resolveAccount: () => ({
         accountId: "desktop",
@@ -142,7 +151,10 @@ function makeSignalSummaryPlugin(params: { enabled: boolean; configured: boolean
         enabled: params.enabled,
         configured: params.configured,
         appTokenSource: "env",
+        baseUrl: "https://signal.example.test",
         port: 31337,
+        cliPath: "/usr/local/bin/signal-cli",
+        dbPath: "/tmp/signal.db",
       }),
       isConfigured: (account) => Boolean((account as { configured?: boolean }).configured),
       isEnabled: (account) => Boolean((account as { enabled?: boolean }).enabled),
@@ -199,18 +211,23 @@ describe("buildChannelSummary", () => {
   it("preserves Slack HTTP signing-secret unavailable state from source config", async () => {
     setActivePluginRegistry(
       createTestRegistry([
+        { pluginId: "slack", plugin: makeSlackHttpSummaryPlugin(), source: "test" },
       ]),
     );
 
+    const lines = await buildChannelSummary({ marker: "resolved", channels: {} } as never, {
       colorize: false,
       includeAllowFrom: false,
       sourceConfig: { marker: "source", channels: {} } as never,
     });
 
+    expect(lines).toContain("Slack: configured");
+    expect(lines).toContain(
       "  - primary (Primary) (bot:config, signing:config, secret unavailable in this command path)",
     );
   });
 
+  it("shows disabled status without configured account detail lines", async () => {
     setActivePluginRegistry(
       createTestRegistry([
         {
@@ -221,10 +238,12 @@ describe("buildChannelSummary", () => {
       ]),
     );
 
+    const lines = await buildChannelSummary({ channels: {} } as never, {
       colorize: false,
       includeAllowFrom: true,
     });
 
+    expect(lines).toEqual(["Telegram: disabled +15551234567"]);
   });
 
   it("includes linked summary metadata and truncates allow-from details", async () => {
@@ -244,10 +263,13 @@ describe("buildChannelSummary", () => {
       ]),
     );
 
+    const lines = await buildChannelSummary({ channels: {} } as never, {
       colorize: false,
       includeAllowFrom: true,
     });
 
+    expect(lines).toContain("Telegram: linked +15551234567 auth 5m ago");
+    expect(lines).toContain("  - primary (Main Bot) (dm:mutuals, token:env, allow:alice,bob)");
   });
 
   it("shows not-linked status when linked metadata is explicitly false", async () => {
@@ -265,26 +287,34 @@ describe("buildChannelSummary", () => {
       ]),
     );
 
+    const lines = await buildChannelSummary({ channels: {} } as never, {
       colorize: false,
       includeAllowFrom: false,
     });
 
+    expect(lines).toContain("Telegram: not linked +15551234567");
+    expect(lines).toContain("  - primary (Main Bot) (dm:mutuals, token:env)");
   });
 
+  it("renders non-slack account detail fields for configured accounts", async () => {
     setActivePluginRegistry(
       createTestRegistry([
         {
+          pluginId: "signal",
           plugin: makeSignalSummaryPlugin({ enabled: false, configured: true }),
           source: "test",
         },
       ]),
     );
 
+    const lines = await buildChannelSummary({ channels: {} } as never, {
       colorize: false,
       includeAllowFrom: false,
     });
 
+    expect(lines).toEqual([
       "Signal: disabled",
+      "  - desktop (Desktop) (disabled, app:env, https://signal.example.test, port:31337, cli:/usr/local/bin/signal-cli, db:/tmp/signal.db)",
     ]);
   });
 
@@ -304,10 +334,12 @@ describe("buildChannelSummary", () => {
       ]),
     );
 
+    const lines = await buildChannelSummary({ channels: {} } as never, {
       colorize: false,
       includeAllowFrom: false,
     });
 
+    expect(lines).toEqual(["Fallback: configured", "  - fallback-account"]);
   });
 
   it("shows not-configured status when enabled accounts exist without configured ones", async () => {
@@ -325,9 +357,11 @@ describe("buildChannelSummary", () => {
       ]),
     );
 
+    const lines = await buildChannelSummary({ channels: {} } as never, {
       colorize: false,
       includeAllowFrom: false,
     });
 
+    expect(lines).toEqual(["Fallback: not configured"]);
   });
 });

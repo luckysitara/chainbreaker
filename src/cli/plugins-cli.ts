@@ -145,8 +145,11 @@ function formatPluginLine(plugin: PluginRecord, verbose = false): string {
   return parts.join("\n");
 }
 
+function formatInspectSection(title: string, lines: string[]): string[] {
+  if (lines.length === 0) {
     return [];
   }
+  return ["", theme.muted(`${title}:`), ...lines];
 }
 
 function formatCapabilityKinds(
@@ -184,16 +187,23 @@ function formatInstallLines(install: PluginInstallRecord | undefined): string[] 
   if (!install) {
     return [];
   }
+  const lines = [`Source: ${install.source}`];
   if (install.spec) {
+    lines.push(`Spec: ${install.spec}`);
   }
   if (install.sourcePath) {
+    lines.push(`Source path: ${shortenHomePath(install.sourcePath)}`);
   }
   if (install.installPath) {
+    lines.push(`Install path: ${shortenHomePath(install.installPath)}`);
   }
   if (install.version) {
+    lines.push(`Recorded version: ${install.version}`);
   }
   if (install.installedAt) {
+    lines.push(`Installed at: ${install.installedAt}`);
   }
+  return lines;
 }
 
 export function registerPluginsCli(program: Command) {
@@ -298,8 +308,12 @@ export function registerPluginsCli(program: Command) {
         return;
       }
 
+      const lines: string[] = [];
       for (const plugin of list) {
+        lines.push(formatPluginLine(plugin, true));
+        lines.push("");
       }
+      defaultRuntime.log(lines.join("\n").trim());
     });
 
   plugins
@@ -403,20 +417,36 @@ export function registerPluginsCli(program: Command) {
         return;
       }
 
+      const lines: string[] = [];
+      lines.push(theme.heading(inspect.plugin.name || inspect.plugin.id));
       if (inspect.plugin.name && inspect.plugin.name !== inspect.plugin.id) {
+        lines.push(theme.muted(`id: ${inspect.plugin.id}`));
       }
       if (inspect.plugin.description) {
+        lines.push(inspect.plugin.description);
       }
+      lines.push("");
+      lines.push(`${theme.muted("Status:")} ${inspect.plugin.status}`);
+      lines.push(`${theme.muted("Format:")} ${inspect.plugin.format ?? "chainbreaker"}`);
       if (inspect.plugin.bundleFormat) {
+        lines.push(`${theme.muted("Bundle format:")} ${inspect.plugin.bundleFormat}`);
       }
+      lines.push(`${theme.muted("Source:")} ${shortenHomeInString(inspect.plugin.source)}`);
+      lines.push(`${theme.muted("Origin:")} ${inspect.plugin.origin}`);
       if (inspect.plugin.version) {
+        lines.push(`${theme.muted("Version:")} ${inspect.plugin.version}`);
       }
+      lines.push(`${theme.muted("Shape:")} ${inspect.shape}`);
+      lines.push(`${theme.muted("Capability mode:")} ${inspect.capabilityMode}`);
+      lines.push(
         `${theme.muted("Legacy before_agent_start:")} ${inspect.usesLegacyBeforeAgentStart ? "yes" : "no"}`,
       );
       if (inspect.bundleCapabilities.length > 0) {
+        lines.push(
           `${theme.muted("Bundle capabilities:")} ${inspect.bundleCapabilities.join(", ")}`,
         );
       }
+      lines.push(
         ...formatInspectSection(
           "Capabilities",
           inspect.capabilities.map(
@@ -425,6 +455,7 @@ export function registerPluginsCli(program: Command) {
           ),
         ),
       );
+      lines.push(
         ...formatInspectSection(
           "Typed hooks",
           inspect.typedHooks.map((entry) =>
@@ -432,16 +463,19 @@ export function registerPluginsCli(program: Command) {
           ),
         ),
       );
+      lines.push(
         ...formatInspectSection(
           "Compatibility warnings",
           inspect.compatibility.map(formatPluginCompatibilityNotice),
         ),
       );
+      lines.push(
         ...formatInspectSection(
           "Custom hooks",
           inspect.customHooks.map((entry) => `${entry.name}: ${entry.events.join(", ")}`),
         ),
       );
+      lines.push(
         ...formatInspectSection(
           "Tools",
           inspect.tools.map((entry) => {
@@ -450,6 +484,11 @@ export function registerPluginsCli(program: Command) {
           }),
         ),
       );
+      lines.push(...formatInspectSection("Commands", inspect.commands));
+      lines.push(...formatInspectSection("CLI commands", inspect.cliCommands));
+      lines.push(...formatInspectSection("Services", inspect.services));
+      lines.push(...formatInspectSection("Gateway methods", inspect.gatewayMethods));
+      lines.push(
         ...formatInspectSection(
           "MCP servers",
           inspect.mcpServers.map((entry) =>
@@ -457,6 +496,7 @@ export function registerPluginsCli(program: Command) {
           ),
         ),
       );
+      lines.push(
         ...formatInspectSection(
           "LSP servers",
           inspect.lspServers.map((entry) =>
@@ -465,6 +505,7 @@ export function registerPluginsCli(program: Command) {
         ),
       );
       if (inspect.httpRouteCount > 0) {
+        lines.push(...formatInspectSection("HTTP routes", [String(inspect.httpRouteCount)]));
       }
       const policyLines: string[] = [];
       if (typeof inspect.policy.allowPromptInjection === "boolean") {
@@ -482,13 +523,18 @@ export function registerPluginsCli(program: Command) {
           }`,
         );
       }
+      lines.push(...formatInspectSection("Policy", policyLines));
+      lines.push(
         ...formatInspectSection(
           "Diagnostics",
           inspect.diagnostics.map((entry) => `${entry.level.toUpperCase()}: ${entry.message}`),
         ),
       );
+      lines.push(...formatInspectSection("Install", formatInstallLines(install)));
       if (inspect.plugin.error) {
+        lines.push("", `${theme.error("Error:")} ${inspect.plugin.error}`);
       }
+      defaultRuntime.log(lines.join("\n"));
     });
 
   plugins
@@ -741,23 +787,37 @@ export function registerPluginsCli(program: Command) {
         return;
       }
 
+      const lines: string[] = [];
       if (errors.length > 0) {
+        lines.push(theme.error("Plugin errors:"));
         for (const entry of errors) {
+          lines.push(`- ${entry.id}: ${entry.error ?? "failed to load"} (${entry.source})`);
         }
       }
       if (diags.length > 0) {
+        if (lines.length > 0) {
+          lines.push("");
         }
+        lines.push(theme.warn("Diagnostics:"));
         for (const diag of diags) {
           const target = diag.pluginId ? `${diag.pluginId}: ` : "";
+          lines.push(`- ${target}${diag.message}`);
         }
       }
       if (compatibility.length > 0) {
+        if (lines.length > 0) {
+          lines.push("");
         }
+        lines.push(theme.warn("Compatibility:"));
         for (const notice of compatibility) {
           const marker = notice.severity === "warn" ? theme.warn("warn") : theme.muted("info");
+          lines.push(`- ${formatPluginCompatibilityNotice(notice)} [${marker}]`);
         }
       }
       const docs = formatDocsLink("/plugin", "docs.chainbreaker.ai/plugin");
+      lines.push("");
+      lines.push(`${theme.muted("Docs:")} ${docs}`);
+      defaultRuntime.log(lines.join("\n"));
     });
 
   const marketplace = plugins

@@ -149,6 +149,7 @@ function createDefaultSecurityAuditResult() {
         checkId: "test.critical",
         severity: "critical",
         title: "Test critical finding",
+        detail: "Something is very wrong\nbut on two lines",
         remediation: "Do the thing",
       },
       {
@@ -368,11 +369,14 @@ vi.mock("../channels/plugins/index.js", () => ({
       },
       {
         ...createErrorChannelPlugin({
+          id: "signal",
           label: "Signal",
+          docsPath: "/platforms/signal",
         }),
       },
       {
         ...createErrorChannelPlugin({
+          id: "imessage",
           label: "iMessage",
           docsPath: "/platforms/mac",
         }),
@@ -656,9 +660,11 @@ describe("statusCommand", () => {
   it("prints unknown usage in formatted output when totalTokens is missing", async () => {
     await withUnknownUsageStore(async () => {
       const logs = await runStatusAndGetLogs();
+      expect(logs.some((line) => line.includes("unknown/") && line.includes("(?%)"))).toBe(true);
     });
   });
 
+  it("prints formatted lines otherwise", async () => {
     mocks.buildPluginCompatibilityNotices.mockReturnValue([
       createCompatibilityNotice({ pluginId: "legacy-plugin", code: "legacy-before-agent-start" }),
     ]);
@@ -686,11 +692,16 @@ describe("statusCommand", () => {
       "Troubleshooting:",
       "Next steps:",
     ]) {
+      expect(logs.some((line) => line.includes(token))).toBe(true);
     }
     expect(
+      logs.some((line) => line.includes("legacy-plugin still uses legacy before_agent_start")),
     ).toBe(true);
     expect(
       logs.some(
+        (line) =>
+          line.includes("chainbreaker status --all") ||
+          line.includes("chainbreaker --profile isolated status --all"),
       ),
     ).toBe(true);
   });
@@ -749,6 +760,8 @@ describe("statusCommand", () => {
     });
     try {
       const logs = await runStatusAndGetLogs();
+      expect(logs.some((line) => line.includes("100% cached"))).toBe(true);
+      expect(logs.some((line) => line.includes("120% cached"))).toBe(false);
     } finally {
       if (originalLoadSessionStore) {
         mocks.loadSessionStore.mockImplementation(originalLoadSessionStore);
@@ -769,6 +782,8 @@ describe("statusCommand", () => {
     });
     try {
       const logs = await runStatusAndGetLogs();
+      expect(logs.some((line) => line.includes("67% cached"))).toBe(true);
+      expect(logs.some((line) => line.includes("40% cached"))).toBe(false);
     } finally {
       if (originalLoadSessionStore) {
         mocks.loadSessionStore.mockImplementation(originalLoadSessionStore);
@@ -865,18 +880,22 @@ describe("statusCommand", () => {
     });
     mocks.callGateway.mockResolvedValueOnce({
       channelAccounts: {
+        signal: [
           {
             accountId: "default",
             enabled: true,
             configured: true,
             running: false,
+            lastError: "signal-cli unreachable",
           },
         ],
+        imessage: [
           {
             accountId: "default",
             enabled: true,
             configured: true,
             running: false,
+            lastError: "imessage permission denied",
           },
         ],
       },

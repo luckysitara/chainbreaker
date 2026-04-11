@@ -13,6 +13,7 @@ export function resolveTelegramDraftStreamingChunking(
 ): {
   minChars: number;
   maxChars: number;
+  breakPreference: "paragraph" | "newline" | "sentence";
 } {
   const textLimit = resolveTextChunkLimit(cfg, "telegram", accountId, {
     fallbackLimit: TELEGRAM_TEXT_CHUNK_LIMIT,
@@ -32,6 +33,7 @@ export function resolveTelegramDraftStreamingChunking(
   );
   const minChars = Math.min(minRequested, maxChars);
   const breakPreference =
+    draftCfg?.breakPreference === "newline" || draftCfg?.breakPreference === "sentence"
       ? draftCfg.breakPreference
       : "paragraph";
   return { minChars, maxChars, breakPreference };

@@ -250,6 +250,7 @@ describe("createChainbreakerCodingTools safeBins", () => {
       {
         tmpPrefix: "chainbreaker-safe-bins-redirect-",
         safeBins: ["head"],
+        files: [{ name: "source.txt", contents: "line1\nline2\n" }],
       },
       async ({ tmpDir, execTool }) => {
         await expect(

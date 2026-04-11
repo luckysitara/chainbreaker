@@ -81,6 +81,7 @@ export async function emitSessionUnboundLifecycleEvent(params: {
 }) {
   const targetKind = isSubagentSessionKey(params.targetSessionKey) ? "subagent" : "acp";
   const channelRuntime = getChannelRuntime();
+  channelRuntime.discord.threadBindings.unbindBySessionKey({
     targetSessionKey: params.targetSessionKey,
     targetKind,
     reason: params.reason,

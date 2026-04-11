@@ -34,9 +34,11 @@ describe("extractAssistantText", () => {
       `<invoke name="Bash">
 <parameter name="command">netstat -tlnp | grep 18789</parameter>
 </invoke>
+</minimax:tool_call>`,
       `<invoke name="Bash">
 <parameter name="command">test</parameter>
 </invoke>
+</minimax:tool_call>`,
     ];
     for (const text of cases) {
       const msg = makeAssistantMessage({
@@ -57,6 +59,7 @@ describe("extractAssistantText", () => {
           text: `Let me check that.<invoke name="Read">
 <parameter name="path">/home/admin/test.txt</parameter>
 </invoke>
+</minimax:tool_call>`,
         },
       ],
       timestamp: Date.now(),
@@ -151,6 +154,7 @@ describe("extractAssistantText", () => {
       content: [
         {
           type: "text",
+          text: `Before<invoke name='Bash' data-foo="bar">\n<parameter name="command">ls</parameter>\n</invoke>\n</minimax:tool_call>After`,
         },
       ],
       timestamp: Date.now(),
@@ -160,11 +164,13 @@ describe("extractAssistantText", () => {
     expect(result).toBe("Before\nAfter");
   });
 
+  it("strips minimax tool_call open and close tags", () => {
     const msg = makeAssistantMessage({
       role: "assistant",
       content: [
         {
           type: "text",
+          text: "Start<minimax:tool_call>Inner</minimax:tool_call>End",
         },
       ],
       timestamp: Date.now(),
@@ -174,6 +180,7 @@ describe("extractAssistantText", () => {
     expect(result).toBe("StartInnerEnd");
   });
 
+  it("ignores invoke blocks without minimax markers", () => {
     const msg = makeAssistantMessage({
       role: "assistant",
       content: [
@@ -189,11 +196,13 @@ describe("extractAssistantText", () => {
     expect(result).toBe("Before<invoke>Keep</invoke>After");
   });
 
+  it("strips invoke blocks when minimax markers are present elsewhere", () => {
     const msg = makeAssistantMessage({
       role: "assistant",
       content: [
         {
           type: "text",
+          text: "Before<invoke>Drop</invoke><minimax:tool_call>After",
         },
       ],
       timestamp: Date.now(),
@@ -209,6 +218,7 @@ describe("extractAssistantText", () => {
       content: [
         {
           type: "text",
+          text: `A<invoke name="Bash"><param><deep>1</deep></param></invoke></minimax:tool_call>B`,
         },
       ],
       timestamp: Date.now(),
@@ -227,6 +237,7 @@ describe("extractAssistantText", () => {
           text: `I'll help you with that.<invoke name="Bash">
 <parameter name="command">ls -la</parameter>
 </invoke>
+</minimax:tool_call>Here are the results.`,
         },
       ],
       timestamp: Date.now(),
@@ -245,8 +256,10 @@ describe("extractAssistantText", () => {
           text: `First check.<invoke name="Read">
 <parameter name="path">file1.txt</parameter>
 </invoke>
+</minimax:tool_call>Second check.<invoke name="Bash">
 <parameter name="command">pwd</parameter>
 </invoke>
+</minimax:tool_call>Done.`,
         },
       ],
       timestamp: Date.now(),
@@ -262,6 +275,7 @@ describe("extractAssistantText", () => {
       content: [
         {
           type: "text",
+          text: "Some text here.</minimax:tool_call>More text.",
         },
       ],
       timestamp: Date.now(),
@@ -284,6 +298,7 @@ describe("extractAssistantText", () => {
           text: `<invoke name="Bash">
 <parameter name="command">ls</parameter>
 </invoke>
+</minimax:tool_call>`,
         },
         {
           type: "text",
@@ -479,19 +494,25 @@ describe("formatReasoningMessage", () => {
     expect(formatReasoningMessage("   \n  \t  ")).toBe("");
   });
 
+  it("wraps single line in italics", () => {
+    expect(formatReasoningMessage("Single line of reasoning")).toBe(
+      "Reasoning:\n_Single line of reasoning_",
     );
   });
 
+  it("wraps each line separately for multiline text (Telegram fix)", () => {
     expect(formatReasoningMessage("Line one\nLine two\nLine three")).toBe(
       "Reasoning:\n_Line one_\n_Line two_\n_Line three_",
     );
   });
 
+  it("preserves empty lines between reasoning text", () => {
     expect(formatReasoningMessage("First block\n\nSecond block")).toBe(
       "Reasoning:\n_First block_\n\n_Second block_",
     );
   });
 
+  it("handles mixed empty and non-empty lines", () => {
     expect(formatReasoningMessage("A\n\nB\nC")).toBe("Reasoning:\n_A_\n\n_B_\n_C_");
   });
 

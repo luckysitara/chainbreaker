@@ -10,6 +10,7 @@ import {
   resolveAcpProjectionSettings,
   resolveAcpStreamingConfig,
 } from "./acp-stream-settings.js";
+import { createBlockReplyPipeline } from "./block-reply-pipeline.js";
 import type { ReplyDispatchKind } from "./reply-dispatcher.js";
 
 const ACP_BLOCK_REPLY_TIMEOUT_MS = 15_000;
@@ -65,6 +66,7 @@ function resolveHiddenBoundarySeparatorText(mode: AcpHiddenBoundarySeparator): s
   if (mode === "space") {
     return " ";
   }
+  if (mode === "newline") {
     return "\n";
   }
   if (mode === "paragraph") {
@@ -180,12 +182,15 @@ export function createAcpReplyProjector(params: {
     accountId: params.accountId,
     deliveryMode: settings.deliveryMode,
   });
+  const createTurnBlockReplyPipeline = () =>
+    createBlockReplyPipeline({
       onBlockReply: async (payload) => {
         await params.deliver("block", payload);
       },
       timeoutMs: ACP_BLOCK_REPLY_TIMEOUT_MS,
       coalescing: settings.deliveryMode === "live" ? undefined : streaming.coalescing,
     });
+  let blockReplyPipeline = createTurnBlockReplyPipeline();
   const chunker = new EmbeddedBlockChunker(streaming.chunking);
   const liveIdleFlushMs = Math.max(streaming.coalescing.idleMs, ACP_LIVE_IDLE_FLUSH_FLOOR_MS);
 
@@ -216,6 +221,7 @@ export function createAcpReplyProjector(params: {
     chunker.drain({
       force,
       emit: (chunk) => {
+        blockReplyPipeline.enqueue({ text: chunk });
       },
     });
   };
@@ -254,6 +260,8 @@ export function createAcpReplyProjector(params: {
 
   const resetTurnState = () => {
     clearLiveIdleTimer();
+    blockReplyPipeline.stop();
+    blockReplyPipeline = createTurnBlockReplyPipeline();
     emittedOutputChars = 0;
     truncationNoticeEmitted = false;
     lastStatusHash = undefined;
@@ -282,6 +290,7 @@ export function createAcpReplyProjector(params: {
     }
     await flushBufferedToolDeliveries(force);
     drainChunker(force);
+    await blockReplyPipeline.flush({ force });
   };
 
   const emitSystemStatus = async (

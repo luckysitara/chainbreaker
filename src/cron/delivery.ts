@@ -300,6 +300,7 @@ export async function sendFailureNotificationAnnounce(
       identity,
       bestEffort: false,
       deps: createOutboundSendDeps(deps),
+      abortSignal: abortController.signal,
     });
   } catch (err) {
     cronDeliveryLogger.warn(

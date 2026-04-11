@@ -88,6 +88,7 @@ export async function searchVector(params: {
   if (await params.ensureVectorReady(params.queryVec.length)) {
     const rows = params.db
       .prepare(
+        `SELECT c.id, c.path, c.start_line, c.end_line, c.text,\n` +
           `       c.source,\n` +
           `       vec_distance_cosine(v.embedding, ?) AS dist\n` +
           `  FROM ${params.vectorTable} v\n` +
@@ -104,6 +105,8 @@ export async function searchVector(params: {
       ) as Array<{
       id: string;
       path: string;
+      start_line: number;
+      end_line: number;
       text: string;
       source: SearchSource;
       dist: number;
@@ -111,6 +114,8 @@ export async function searchVector(params: {
     return rows.map((row) => ({
       id: row.id,
       path: row.path,
+      startLine: row.start_line,
+      endLine: row.end_line,
       score: 1 - row.dist,
       snippet: truncateUtf16Safe(row.text, params.snippetMaxChars),
       source: row.source,
@@ -157,12 +162,15 @@ export function listChunks(params: {
 }> {
   const rows = params.db
     .prepare(
+      `SELECT id, path, start_line, end_line, text, embedding, source\n` +
         `  FROM chunks\n` +
         ` WHERE model = ?${params.sourceFilter.sql}`,
     )
     .all(params.providerModel, ...params.sourceFilter.params) as Array<{
     id: string;
     path: string;
+    start_line: number;
+    end_line: number;
     text: string;
     embedding: string;
     source: SearchSource;
@@ -171,6 +179,8 @@ export function listChunks(params: {
   return rows.map((row) => ({
     id: row.id,
     path: row.path,
+    startLine: row.start_line,
+    endLine: row.end_line,
     text: row.text,
     embedding: parseEmbedding(row.embedding),
     source: row.source,
@@ -220,6 +230,7 @@ export async function searchKeyword(params: {
 
   const rows = params.db
     .prepare(
+      `SELECT id, path, source, start_line, end_line, text,\n` +
         `       ${rankExpression} AS rank\n` +
         `  FROM ${params.ftsTable}\n` +
         ` WHERE ${whereClause}\n` +
@@ -230,6 +241,8 @@ export async function searchKeyword(params: {
     id: string;
     path: string;
     source: SearchSource;
+    start_line: number;
+    end_line: number;
     text: string;
     rank: number;
   }>;
@@ -239,6 +252,8 @@ export async function searchKeyword(params: {
     return {
       id: row.id,
       path: row.path,
+      startLine: row.start_line,
+      endLine: row.end_line,
       score: textScore,
       textScore,
       snippet: truncateUtf16Safe(row.text, params.snippetMaxChars),

@@ -157,9 +157,6 @@ export function setDetachedTaskDeliveryStatusByRunId(params: {
   return setTaskRunDeliveryStatusByRunId(params);
 }
 
-export async function cancelDetachedTaskRunById(params: {
-  cfg: ChainbreakerConfig;
-  taskId: string;
-}) {
+export async function cancelDetachedTaskRunById(params: { cfg: ChainbreakerConfig; taskId: string }) {
   return cancelTaskById(params);
 }

@@ -54,6 +54,7 @@ export type TelegramNetworkConfig = {
   dnsResultOrder?: "ipv4first" | "verbatim";
 };
 
+export type TelegramInlineButtonsScope = "off" | "dm" | "group" | "all" | "allowlist";
 export type TelegramStreamingMode = "off" | "partial" | "block" | "progress";
 export type TelegramExecApprovalTarget = "dm" | "channel" | "both";
 
@@ -73,6 +74,7 @@ export type TelegramExecApprovalConfig = {
 export type TelegramCapabilitiesConfig =
   | string[]
   | {
+      inlineButtons?: TelegramInlineButtonsScope;
     };
 
 /** Custom command definition for Telegram bot menu. */
@@ -137,6 +139,8 @@ export type TelegramAccountConfig = {
   dms?: Record<string, DmConfig>;
   /** Outbound text chunk size (chars). Default: 4000. */
   textChunkLimit?: number;
+  /** Chunking mode: "length" (default) splits by size; "newline" splits on every newline. */
+  chunkMode?: "length" | "newline";
   /**
    * Stream preview mode:
    * - "off": disable preview updates
@@ -187,6 +191,7 @@ export type TelegramAccountConfig = {
    * Controls agent's reaction capability:
    * - "off": agent cannot react
    * - "ack" (default): bot sends acknowledgment reactions (👀 while processing)
+   * - "minimal": agent can react sparingly (guideline: 1 per 5-10 exchanges)
    * - "extensive": agent can react liberally when appropriate
    */
   reactionLevel?: "off" | "ack" | "minimal" | "extensive";

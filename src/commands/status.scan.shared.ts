@@ -119,10 +119,7 @@ export async function resolveSharedMemoryStatusSnapshot(params: {
   cfg: ChainbreakerConfig;
   agentStatus: { defaultId?: string | null };
   memoryPlugin: MemoryPluginStatus;
-  resolveMemoryConfig: (
-    cfg: ChainbreakerConfig,
-    agentId: string,
-  ) => { store: { path: string } } | null;
+  resolveMemoryConfig: (cfg: ChainbreakerConfig, agentId: string) => { store: { path: string } } | null;
   getMemorySearchManager: (params: {
     cfg: ChainbreakerConfig;
     agentId: string;

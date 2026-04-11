@@ -7,11 +7,13 @@ import {
 
 export type TelegramButtonStyle = "danger" | "success" | "primary";
 
+export type TelegramInlineButton = {
   text: string;
   callback_data: string;
   style?: TelegramButtonStyle;
 };
 
+export type TelegramInlineButtons = ReadonlyArray<ReadonlyArray<TelegramInlineButton>>;
 
 const TELEGRAM_INTERACTIVE_ROW_SIZE = 3;
 const MAX_CALLBACK_DATA_BYTES = 64;
@@ -22,11 +24,13 @@ function fitsTelegramCallbackData(value: string): boolean {
 
 function toTelegramButtonStyle(
   style?: InteractiveReplyButton["style"],
+): TelegramInlineButton["style"] {
   return style === "danger" || style === "success" || style === "primary" ? style : undefined;
 }
 
 function chunkInteractiveButtons(
   buttons: readonly InteractiveReplyButton[],
+  rows: TelegramInlineButton[][],
 ) {
   for (let i = 0; i < buttons.length; i += TELEGRAM_INTERACTIVE_ROW_SIZE) {
     const row = buttons
@@ -45,8 +49,10 @@ function chunkInteractiveButtons(
 
 export function buildTelegramInteractiveButtons(
   interactive?: InteractiveReply,
+): TelegramInlineButtons | undefined {
   const rows = reduceInteractiveReply(
     interactive,
+    [] as TelegramInlineButton[][],
     (state, block) => {
       if (block.type === "buttons") {
         chunkInteractiveButtons(block.buttons, state);
@@ -67,7 +73,10 @@ export function buildTelegramInteractiveButtons(
   return rows.length > 0 ? rows : undefined;
 }
 
+export function resolveTelegramInlineButtons(params: {
+  buttons?: TelegramInlineButtons;
   interactive?: unknown;
+}): TelegramInlineButtons | undefined {
   return (
     params.buttons ?? buildTelegramInteractiveButtons(normalizeInteractiveReply(params.interactive))
   );

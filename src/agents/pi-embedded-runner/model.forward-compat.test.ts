@@ -39,8 +39,10 @@ const ANTHROPIC_SONNET_EXPECTED = {
 };
 
 const ZAI_GLM5_CASE = {
+  provider: "zai",
   id: "glm-5",
   expectedModel: {
+    provider: "zai",
     id: "glm-5",
     api: "openai-completions",
     baseUrl: "https://api.z.ai/api/paas/v4",
@@ -48,10 +50,12 @@ const ZAI_GLM5_CASE = {
   },
   registryEntries: [
     {
+      provider: "zai",
       modelId: "glm-4.7",
       model: buildForwardCompatTemplate({
         id: "glm-4.7",
         name: "GLM-4.7",
+        provider: "zai",
         api: "openai-completions",
         baseUrl: "https://api.z.ai/api/paas/v4",
         input: ["text"],
@@ -64,6 +68,7 @@ const ZAI_GLM5_CASE = {
 
 function createRuntimeHooks() {
   return createProviderRuntimeTestMock({
+    handledDynamicProviders: ["anthropic", "zai", "openai-codex"],
   });
 }
 
@@ -149,4 +154,5 @@ describe("resolveModel forward-compat tail", () => {
     runAnthropicSonnetForwardCompatFallback,
   );
 
+  it("builds a zai forward-compat fallback for glm-5", runZaiForwardCompatFallback);
 });

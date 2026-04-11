@@ -15,6 +15,7 @@ describe("createCacheTrace", () => {
   });
 
   it("honors diagnostics cache trace config and expands file paths", () => {
+    const lines: string[] = [];
     const trace = createCacheTrace({
       cfg: {
         diagnostics: {
@@ -27,6 +28,7 @@ describe("createCacheTrace", () => {
       env: {},
       writer: {
         filePath: "memory",
+        write: (line) => lines.push(line),
       },
     });
 
@@ -38,9 +40,11 @@ describe("createCacheTrace", () => {
       system: "sys",
     });
 
+    expect(lines.length).toBe(1);
   });
 
   it("records empty prompt/system values when enabled", () => {
+    const lines: string[] = [];
     const trace = createCacheTrace({
       cfg: {
         diagnostics: {
@@ -54,16 +58,19 @@ describe("createCacheTrace", () => {
       env: {},
       writer: {
         filePath: "memory",
+        write: (line) => lines.push(line),
       },
     });
 
     trace?.recordStage("prompt:before", { prompt: "", system: "" });
 
+    const event = JSON.parse(lines[0]?.trim() ?? "{}") as Record<string, unknown>;
     expect(event.prompt).toBe("");
     expect(event.system).toBe("");
   });
 
   it("respects env overrides for enablement", () => {
+    const lines: string[] = [];
     const trace = createCacheTrace({
       cfg: {
         diagnostics: {
@@ -77,6 +84,7 @@ describe("createCacheTrace", () => {
       },
       writer: {
         filePath: "memory",
+        write: (line) => lines.push(line),
       },
     });
 
@@ -84,6 +92,7 @@ describe("createCacheTrace", () => {
   });
 
   it("sanitizes cache-trace payloads before writing", () => {
+    const lines: string[] = [];
     const trace = createCacheTrace({
       cfg: {
         diagnostics: {
@@ -95,6 +104,7 @@ describe("createCacheTrace", () => {
       env: {},
       writer: {
         filePath: "memory",
+        write: (line) => lines.push(line),
       },
     });
 
@@ -134,6 +144,7 @@ describe("createCacheTrace", () => {
       ] as unknown as [],
     });
 
+    const event = JSON.parse(lines[0]?.trim() ?? "{}") as Record<string, unknown>;
     expect(event.system).toEqual({
       provider: {
         baseUrl: "https://api.example.com",
@@ -187,6 +198,7 @@ describe("createCacheTrace", () => {
   });
 
   it("handles circular references in messages without stack overflow", () => {
+    const lines: string[] = [];
     const trace = createCacheTrace({
       cfg: {
         diagnostics: {
@@ -198,6 +210,7 @@ describe("createCacheTrace", () => {
       env: {},
       writer: {
         filePath: "memory",
+        write: (line) => lines.push(line),
       },
     });
 
@@ -209,6 +222,8 @@ describe("createCacheTrace", () => {
       messages: [parent] as unknown as [],
     });
 
+    expect(lines.length).toBe(1);
+    const event = JSON.parse(lines[0]?.trim() ?? "{}") as Record<string, unknown>;
     expect(event.messageCount).toBe(1);
     expect(event.messageFingerprints).toHaveLength(1);
   });

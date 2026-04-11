@@ -634,6 +634,7 @@ describe("plugin sdk alias helpers", () => {
   it("uses transpiled Jiti loads for source TypeScript plugin entries", () => {
     expect(shouldPreferNativeJiti("/repo/dist/plugins/runtime/index.js")).toBe(true);
     expect(
+      shouldPreferNativeJiti(`/repo/${bundledPluginFile("discord", "src/channel.runtime.ts")}`),
     ).toBe(false);
   });
 
@@ -661,6 +662,7 @@ describe("plugin sdk alias helpers", () => {
   });
 
   it("loads source runtime shims through the non-native Jiti boundary", async () => {
+    const copiedExtensionRoot = path.join(makeTempDir(), bundledPluginRoot("discord"));
     const copiedSourceDir = path.join(copiedExtensionRoot, "src");
     const copiedPluginSdkDir = path.join(copiedExtensionRoot, "plugin-sdk");
     mkdirSafeDir(copiedSourceDir);

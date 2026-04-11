@@ -101,6 +101,10 @@ export function createUpdateProgress(enabled: boolean): ProgressController {
       currentSpinner = null;
 
       if (step.exitCode !== 0 && step.stderrTail) {
+        const lines = step.stderrTail.split("\n").slice(-10);
+        for (const line of lines) {
+          if (line.trim()) {
+            defaultRuntime.log(`    ${theme.error(line)}`);
           }
         }
       }
@@ -170,6 +174,10 @@ export function printResult(result: UpdateRunResult, opts: PrintResultOptions): 
       defaultRuntime.log(`  ${status} ${step.name} ${duration}`);
 
       if (step.exitCode !== 0 && step.stderrTail) {
+        const lines = step.stderrTail.split("\n").slice(0, 5);
+        for (const line of lines) {
+          if (line.trim()) {
+            defaultRuntime.log(`      ${theme.error(line)}`);
           }
         }
       }

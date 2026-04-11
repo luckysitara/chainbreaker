@@ -273,6 +273,7 @@ export async function isLaunchAgentListed(args: GatewayServiceEnvArgs): Promise<
   if (res.code !== 0) {
     return false;
   }
+  return res.stdout.split(/\r?\n/).some((line) => line.trim().split(/\s+/).at(-1) === label);
 }
 
 export async function launchAgentPlistExists(env: GatewayServiceEnv): Promise<boolean> {
@@ -540,6 +541,7 @@ export async function installLaunchAgent(
   await activateLaunchAgent({ env: args.env, plistPath });
   // `bootstrap` already loads RunAtLoad agents. Avoid `kickstart -k` here:
   // on slow macOS guests it SIGTERMs the freshly booted gateway and pushes the
+  // real listener startup past setup's health deadline.
   writeFormattedLines(
     args.stdout,
     [

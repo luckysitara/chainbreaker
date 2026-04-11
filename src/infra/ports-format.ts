@@ -130,8 +130,12 @@ export function formatPortDiagnostics(diagnostics: PortUsage): string[] {
   if (diagnostics.status !== "busy") {
     return [`Port ${diagnostics.port} is free.`];
   }
+  const lines = [`Port ${diagnostics.port} is already in use.`];
   for (const listener of diagnostics.listeners) {
+    lines.push(`- ${formatPortListener(listener)}`);
   }
   for (const hint of diagnostics.hints) {
+    lines.push(`- ${hint}`);
   }
+  return lines;
 }

@@ -227,8 +227,12 @@ export function registerBrowserAgentStorageRoutes(
     });
   });
 
+  app.post("/set/offline", async (req, res) => {
     const body = readBody(req);
     const targetId = resolveTargetIdFromBody(body);
+    const offline = toBoolean(body.offline);
+    if (offline === undefined) {
+      return jsonError(res, 400, "offline is required");
     }
 
     await withPlaywrightRouteContext({
@@ -236,9 +240,12 @@ export function registerBrowserAgentStorageRoutes(
       res,
       ctx,
       targetId,
+      feature: "offline",
       run: async ({ cdpUrl, tab, pw }) => {
+        await pw.setOfflineViaPlaywright({
           cdpUrl,
           targetId: tab.targetId,
+          offline,
         });
         res.json({ ok: true, targetId: tab.targetId });
       },

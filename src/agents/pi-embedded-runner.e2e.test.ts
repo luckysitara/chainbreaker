@@ -225,6 +225,7 @@ const readSessionEntries = async (sessionFile: string) => {
   return raw
     .split(/\r?\n/)
     .filter(Boolean)
+    .map((line) => JSON.parse(line) as { type?: string; customType?: string; data?: unknown });
 };
 
 const readSessionMessages = async (sessionFile: string) => {

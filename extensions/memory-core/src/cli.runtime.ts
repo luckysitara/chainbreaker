@@ -390,6 +390,7 @@ export async function runMemoryStatus(opts: MemoryCommandOptions) {
               {
                 label: "Indexing memory…",
                 total: 0,
+                fallback: opts.verbose ? "line" : undefined,
               },
               async (update, progress) => {
                 try {
@@ -462,6 +463,8 @@ export async function runMemoryStatus(opts: MemoryCommandOptions) {
         ? `${filesIndexed}/? files · ${chunksIndexed} chunks`
         : `${filesIndexed}/${totalFiles} files · ${chunksIndexed} chunks`;
     if (opts.index) {
+      const line = indexError ? `Memory index failed: ${indexError}` : "Memory index complete.";
+      defaultRuntime.log(line);
     }
     const requestedProvider = status.requestedProvider ?? status.provider;
     const modelLabel = status.model ?? status.provider;
@@ -471,6 +474,7 @@ export async function runMemoryStatus(opts: MemoryCommandOptions) {
     const extraPaths = status.workspaceDir
       ? formatExtraPaths(status.workspaceDir, status.extraPaths ?? [])
       : [];
+    const lines = [
       `${heading("Memory Search")} ${muted(`(${agentId})`)}`,
       `${label("Provider")} ${info(status.provider)} ${muted(`(requested: ${requestedProvider})`)}`,
       `${label("Model")} ${info(modelLabel)}`,
@@ -484,10 +488,13 @@ export async function runMemoryStatus(opts: MemoryCommandOptions) {
     if (embeddingProbe) {
       const state = embeddingProbe.ok ? "ready" : "unavailable";
       const stateColor = embeddingProbe.ok ? theme.success : theme.warn;
+      lines.push(`${label("Embeddings")} ${colorize(rich, stateColor, state)}`);
       if (embeddingProbe.error) {
+        lines.push(`${label("Embeddings error")} ${warn(embeddingProbe.error)}`);
       }
     }
     if (status.sourceCounts?.length) {
+      lines.push(label("By source"));
       for (const entry of status.sourceCounts) {
         const total = scan?.sources?.find(
           (scanEntry) => scanEntry.source === entry.source,
@@ -496,9 +503,11 @@ export async function runMemoryStatus(opts: MemoryCommandOptions) {
           total === null
             ? `${entry.files}/? files · ${entry.chunks} chunks`
             : `${entry.files}/${total} files · ${entry.chunks} chunks`;
+        lines.push(`  ${accent(entry.source)} ${muted("·")} ${muted(counts)}`);
       }
     }
     if (status.fallback) {
+      lines.push(`${label("Fallback")} ${warn(status.fallback.from)}`);
     }
     if (status.vector) {
       const vectorState = status.vector.enabled
@@ -514,11 +523,15 @@ export async function runMemoryStatus(opts: MemoryCommandOptions) {
           : vectorState === "unavailable"
             ? theme.warn
             : theme.muted;
+      lines.push(`${label("Vector")} ${colorize(rich, vectorColor, vectorState)}`);
       if (status.vector.dims) {
+        lines.push(`${label("Vector dims")} ${info(String(status.vector.dims))}`);
       }
       if (status.vector.extensionPath) {
+        lines.push(`${label("Vector path")} ${info(shortenHomePath(status.vector.extensionPath))}`);
       }
       if (status.vector.loadError) {
+        lines.push(`${label("Vector error")} ${warn(status.vector.loadError)}`);
       }
     }
     if (status.fts) {
@@ -533,7 +546,9 @@ export async function runMemoryStatus(opts: MemoryCommandOptions) {
           : ftsState === "unavailable"
             ? theme.warn
             : theme.muted;
+      lines.push(`${label("FTS")} ${colorize(rich, ftsColor, ftsState)}`);
       if (status.fts.error) {
+        lines.push(`${label("FTS error")} ${warn(status.fts.error)}`);
       }
     }
     if (status.cache) {
@@ -543,26 +558,35 @@ export async function runMemoryStatus(opts: MemoryCommandOptions) {
         status.cache.enabled && typeof status.cache.entries === "number"
           ? ` (${status.cache.entries} entries)`
           : "";
+      lines.push(`${label("Embedding cache")} ${colorize(rich, cacheColor, cacheState)}${suffix}`);
       if (status.cache.enabled && typeof status.cache.maxEntries === "number") {
+        lines.push(`${label("Cache cap")} ${info(String(status.cache.maxEntries))}`);
       }
     }
     if (status.batch) {
       const batchState = status.batch.enabled ? "enabled" : "disabled";
       const batchColor = status.batch.enabled ? theme.success : theme.warn;
       const batchSuffix = ` (failures ${status.batch.failures}/${status.batch.limit})`;
+      lines.push(
         `${label("Batch")} ${colorize(rich, batchColor, batchState)}${muted(batchSuffix)}`,
       );
       if (status.batch.lastError) {
+        lines.push(`${label("Batch error")} ${warn(status.batch.lastError)}`);
       }
     }
     if (status.fallback?.reason) {
+      lines.push(muted(status.fallback.reason));
     }
     if (indexError) {
+      lines.push(`${label("Index error")} ${warn(indexError)}`);
     }
     if (scan?.issues.length) {
+      lines.push(label("Issues"));
       for (const issue of scan.issues) {
+        lines.push(`  ${warn(issue)}`);
       }
     }
+    defaultRuntime.log(lines.join("\n"));
     defaultRuntime.log("");
   }
 }
@@ -595,6 +619,7 @@ export async function runMemoryIndex(opts: MemoryCommandOptions) {
               : [];
             const requestedProvider = status.requestedProvider ?? status.provider;
             const modelLabel = status.model ?? status.provider;
+            const lines = [
               `${heading("Memory Index")} ${muted(`(${agentId})`)}`,
               `${label("Provider")} ${info(status.provider)} ${muted(
                 `(requested: ${requestedProvider})`,
@@ -604,7 +629,9 @@ export async function runMemoryIndex(opts: MemoryCommandOptions) {
               extraPaths.length ? `${label("Extra paths")} ${info(extraPaths.join(", "))}` : null,
             ].filter(Boolean) as string[];
             if (status.fallback) {
+              lines.push(`${label("Fallback")} ${warn(status.fallback.from)}`);
             }
+            defaultRuntime.log(lines.join("\n"));
             defaultRuntime.log("");
           }
           const startedAt = Date.now();
@@ -648,6 +675,7 @@ export async function runMemoryIndex(opts: MemoryCommandOptions) {
             {
               label: "Indexing memory…",
               total: 0,
+              fallback: opts.verbose ? "line" : undefined,
             },
             async (update, progress) => {
               const interval = setInterval(() => {
@@ -731,14 +759,19 @@ export async function runMemorySearch(
         return;
       }
       const rich = isRich();
+      const lines: string[] = [];
       for (const result of results) {
+        lines.push(
           `${colorize(rich, theme.success, result.score.toFixed(3))} ${colorize(
             rich,
             theme.accent,
             `${shortenHomePath(result.path)}:${result.startLine}-${result.endLine}`,
           )}`,
         );
+        lines.push(colorize(rich, theme.muted, result.snippet));
+        lines.push("");
       }
+      defaultRuntime.log(lines.join("\n").trim());
     },
   });
 }

@@ -189,8 +189,11 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean })
       if (rpc.url) {
         defaultRuntime.error(`${label("RPC target:")} ${rpc.url}`);
       }
+      const lines = String(rpc.error ?? "unknown")
         .split(/\r?\n/)
         .filter(Boolean);
+      for (const line of lines.slice(0, 12)) {
+        defaultRuntime.error(`  ${errorText(line)}`);
       }
     }
     spacer();
@@ -264,6 +267,8 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean })
     spacer();
   }
 
+  for (const line of renderPortDiagnosticsForCli(status, rpc?.ok)) {
+    defaultRuntime.error(errorText(line));
   }
 
   if (status.port) {

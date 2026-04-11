@@ -4,6 +4,7 @@ import { evaluateChannelHealth, resolveChannelRestartReason } from "./channel-he
 function evaluateDiscordHealth(
   account: Record<string, unknown>,
   now = 100_000,
+  channelId = "discord",
 ) {
   return evaluateChannelHealth(account, {
     channelId,
@@ -22,6 +23,7 @@ describe("evaluateChannelHealth", () => {
         configured: true,
       },
       {
+        channelId: "discord",
         now: 100_000,
         channelConnectGraceMs: 10_000,
         staleEventThresholdMs: 30_000,
@@ -40,6 +42,7 @@ describe("evaluateChannelHealth", () => {
         lastStartAt: 95_000,
       },
       {
+        channelId: "discord",
         now: 100_000,
         channelConnectGraceMs: 10_000,
         staleEventThresholdMs: 30_000,
@@ -60,6 +63,7 @@ describe("evaluateChannelHealth", () => {
         lastRunActivityAt: now - 30_000,
       },
       {
+        channelId: "discord",
         now,
         channelConnectGraceMs: 10_000,
         staleEventThresholdMs: 30_000,
@@ -80,6 +84,7 @@ describe("evaluateChannelHealth", () => {
         lastRunActivityAt: now - 26 * 60_000,
       },
       {
+        channelId: "discord",
         now,
         channelConnectGraceMs: 10_000,
         staleEventThresholdMs: 30_000,
@@ -102,6 +107,7 @@ describe("evaluateChannelHealth", () => {
         lastRunActivityAt: now - 31_000,
       },
       {
+        channelId: "discord",
         now,
         channelConnectGraceMs: 10_000,
         staleEventThresholdMs: 30_000,
@@ -121,6 +127,7 @@ describe("evaluateChannelHealth", () => {
         lastEventAt: 0,
       },
       {
+        channelId: "discord",
         now: 100_000,
         channelConnectGraceMs: 10_000,
         staleEventThresholdMs: 30_000,
@@ -184,6 +191,7 @@ describe("evaluateChannelHealth", () => {
         lastEventAt: 0,
       },
       75_000,
+      "slack",
     );
     expect(evaluation).toEqual({ healthy: true, reason: "healthy" });
   });
@@ -199,6 +207,7 @@ describe("evaluateChannelHealth", () => {
         lastEventAt: 10_000,
       },
       75_000,
+      "slack",
     );
     expect(evaluation).toEqual({ healthy: true, reason: "healthy" });
   });
@@ -214,6 +223,7 @@ describe("evaluateChannelHealth", () => {
         lastEventAt: 10_000,
       },
       {
+        channelId: "slack",
         now: 140_000,
         channelConnectGraceMs: 10_000,
         staleEventThresholdMs: 30_000,

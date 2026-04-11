@@ -231,20 +231,30 @@ function buildManifest(params: {
 }
 
 export function formatBackupCreateSummary(result: BackupCreateResult): string[] {
+  const lines = [`Backup archive: ${result.archivePath}`];
+  lines.push(`Included ${result.assets.length} path${result.assets.length === 1 ? "" : "s"}:`);
   for (const asset of result.assets) {
+    lines.push(`- ${asset.kind}: ${asset.displayPath}`);
   }
   if (result.skipped.length > 0) {
+    lines.push(`Skipped ${result.skipped.length} path${result.skipped.length === 1 ? "" : "s"}:`);
     for (const entry of result.skipped) {
       if (entry.reason === "covered" && entry.coveredBy) {
+        lines.push(`- ${entry.kind}: ${entry.displayPath} (${entry.reason} by ${entry.coveredBy})`);
       } else {
+        lines.push(`- ${entry.kind}: ${entry.displayPath} (${entry.reason})`);
       }
     }
   }
   if (result.dryRun) {
+    lines.push("Dry run only; archive was not written.");
   } else {
+    lines.push(`Created ${result.archivePath}`);
     if (result.verified) {
+      lines.push("Archive verification: passed");
     }
   }
+  return lines;
 }
 
 function remapArchiveEntryPath(params: {

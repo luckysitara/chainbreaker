@@ -2,16 +2,19 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { ChainbreakerConfig } from "../config/config.js";
+import { buildSecretRefCredentialMatrix } from "./credential-matrix.js";
 import {
   discoverConfigSecretTargetsByIds,
   resolveConfigSecretTargetByPath,
 } from "./target-registry.js";
 
 describe("secret target registry", () => {
+  it("stays in sync with docs/reference/secretref-user-supplied-credentials-matrix.json", () => {
     const pathname = path.join(
       process.cwd(),
       "docs",
       "reference",
+      "secretref-user-supplied-credentials-matrix.json",
     );
     const raw = fs.readFileSync(pathname, "utf8");
     const parsed = JSON.parse(raw) as unknown;
@@ -20,10 +23,14 @@ describe("secret target registry", () => {
   });
 
   it("stays in sync with docs/reference/secretref-credential-surface.md", () => {
+    const matrixPath = path.join(
       process.cwd(),
       "docs",
       "reference",
+      "secretref-user-supplied-credentials-matrix.json",
     );
+    const matrixRaw = fs.readFileSync(matrixPath, "utf8");
+    const matrix = JSON.parse(matrixRaw) as ReturnType<typeof buildSecretRefCredentialMatrix>;
 
     const surfacePath = path.join(
       process.cwd(),
@@ -39,6 +46,8 @@ describe("secret target registry", () => {
       expect(endIndex).toBeGreaterThan(startIndex);
       const block = surface.slice(startIndex + params.start.length, endIndex);
       const credentials = new Set<string>();
+      for (const line of block.split(/\r?\n/)) {
+        const match = line.match(/^- `([^`]+)`/);
         if (!match) {
           continue;
         }
@@ -61,9 +70,11 @@ describe("secret target registry", () => {
     });
 
     const supportedFromMatrix = new Set(
+      matrix.entries.map((entry) =>
         entry.configFile === "auth-profiles.json" && entry.refPath ? entry.refPath : entry.path,
       ),
     );
+    const unsupportedFromMatrix = new Set(matrix.excludedMutableOrRuntimeManaged);
 
     expect([...supportedFromDocs].toSorted()).toEqual([...supportedFromMatrix].toSorted());
     expect([...unsupportedFromDocs].toSorted()).toEqual([...unsupportedFromMatrix].toSorted());

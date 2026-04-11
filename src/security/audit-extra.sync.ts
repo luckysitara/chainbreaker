@@ -522,9 +522,7 @@ function collectRiskyToolExposureContexts(cfg: ChainbreakerConfig): {
 // Exported collectors
 // --------------------------------------------------------------------------
 
-export function collectAttackSurfaceSummaryFindings(
-  cfg: ChainbreakerConfig,
-): SecurityAuditFinding[] {
+export function collectAttackSurfaceSummaryFindings(cfg: ChainbreakerConfig): SecurityAuditFinding[] {
   const group = summarizeGroupPolicy(cfg);
   const elevated = cfg.tools?.elevated?.enabled !== false;
   const webhooksEnabled = cfg.hooks?.enabled === true;
@@ -831,9 +829,7 @@ export function collectSandboxDockerNoopFindings(cfg: ChainbreakerConfig): Secur
   return findings;
 }
 
-export function collectSandboxDangerousConfigFindings(
-  cfg: ChainbreakerConfig,
-): SecurityAuditFinding[] {
+export function collectSandboxDangerousConfigFindings(cfg: ChainbreakerConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
   const agents = Array.isArray(cfg.agents?.list) ? cfg.agents.list : [];
 
@@ -981,9 +977,7 @@ export function collectSandboxDangerousConfigFindings(
   return findings;
 }
 
-export function collectNodeDenyCommandPatternFindings(
-  cfg: ChainbreakerConfig,
-): SecurityAuditFinding[] {
+export function collectNodeDenyCommandPatternFindings(cfg: ChainbreakerConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
   const denyListRaw = cfg.gateway?.nodes?.denyCommands;
   if (!Array.isArray(denyListRaw) || denyListRaw.length === 0) {
@@ -1077,9 +1071,7 @@ export function collectNodeDangerousAllowCommandFindings(
   return findings;
 }
 
-export function collectMinimalProfileOverrideFindings(
-  cfg: ChainbreakerConfig,
-): SecurityAuditFinding[] {
+export function collectMinimalProfileOverrideFindings(cfg: ChainbreakerConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
   if (cfg.tools?.profile !== "minimal") {
     return findings;
@@ -1161,6 +1153,7 @@ export function collectModelHygieneFindings(cfg: ChainbreakerConfig): SecurityAu
   }
 
   if (matches.length > 0) {
+    const lines = matches
       .slice(0, 12)
       .map((m) => `- ${m.model} (${m.reason}) @ ${m.source}`)
       .join("\n");
@@ -1171,12 +1164,14 @@ export function collectModelHygieneFindings(cfg: ChainbreakerConfig): SecurityAu
       title: "Some configured models look legacy",
       detail:
         "Older/legacy models can be less robust against prompt injection and tool misuse.\n" +
+        lines +
         more,
       remediation: "Prefer modern, instruction-hardened models for any bot that can run tools.",
     });
   }
 
   if (weakMatches.size > 0) {
+    const lines = Array.from(weakMatches.values())
       .slice(0, 12)
       .map((m) => `- ${m.model} (${m.reasons.join("; ")}) @ ${m.source}`)
       .join("\n");
@@ -1187,6 +1182,7 @@ export function collectModelHygieneFindings(cfg: ChainbreakerConfig): SecurityAu
       title: "Some configured models are below recommended tiers",
       detail:
         "Smaller/older models are generally more susceptible to prompt injection and tool misuse.\n" +
+        lines +
         more,
       remediation:
         "Use the latest, top-tier model for any bot with tools or untrusted inboxes. Avoid Haiku tiers; prefer GPT-5+ and Claude 4.5+.",
@@ -1320,6 +1316,7 @@ export function collectExposureMatrixFindings(cfg: ChainbreakerConfig): Security
       title: "Open groupPolicy with runtime/filesystem tools exposed",
       detail:
         `Found groupPolicy="open" at:\n${openGroups.map((p) => `- ${p}`).join("\n")}\n` +
+        `Risky tool exposure contexts:\n${riskyContexts.map((line) => `- ${line}`).join("\n")}\n` +
         "Prompt injection in open groups can trigger command/file actions in these contexts.",
       remediation:
         'For open groups, prefer tools.profile="messaging" (or deny group:runtime/group:fs), set tools.fs.workspaceOnly=true, and use agents.defaults.sandbox.mode="all" for exposed agents.',
@@ -1329,10 +1326,10 @@ export function collectExposureMatrixFindings(cfg: ChainbreakerConfig): Security
   return findings;
 }
 
-export function collectLikelyMultiUserSetupFindings(
-  cfg: ChainbreakerConfig,
-): SecurityAuditFinding[] {
+export function collectLikelyMultiUserSetupFindings(cfg: ChainbreakerConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
+  const signals = listPotentialMultiUserSignals(cfg);
+  if (signals.length === 0) {
     return findings;
   }
 
@@ -1342,6 +1339,7 @@ export function collectLikelyMultiUserSetupFindings(
     : "No unguarded runtime/process tools were detected by this heuristic.";
   const riskyContextsDetail =
     riskyContexts.length > 0
+      ? `Potential high-impact tool exposure contexts:\n${riskyContexts.map((line) => `- ${line}`).join("\n")}`
       : "No unguarded runtime/filesystem contexts detected.";
 
   findings.push({
@@ -1349,6 +1347,8 @@ export function collectLikelyMultiUserSetupFindings(
     severity: "warn",
     title: "Potential multi-user setup detected (personal-assistant model warning)",
     detail:
+      "Heuristic signals indicate this gateway may be reachable by multiple users:\n" +
+      signals.map((signal) => `- ${signal}`).join("\n") +
       `\n${impactLine}\n${riskyContextsDetail}\n` +
       "Chainbreaker's default security model is personal-assistant (one trusted operator boundary), not hostile multi-tenant isolation on one shared gateway.",
     remediation:

@@ -450,6 +450,7 @@ describe("provider-runtime", () => {
       accountId: "usage-account",
     }));
     const fetchUsageSnapshot = vi.fn(async () => ({
+      provider: "zai" as const,
       displayName: "Demo",
       windows: [{ label: "Day", usedPercent: 25 }],
     }));
@@ -705,6 +706,7 @@ describe("provider-runtime", () => {
             }),
           }),
         expected: {
+          provider: "zai",
           windows: [{ label: "Day", usedPercent: 25 }],
         },
       },

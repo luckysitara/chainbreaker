@@ -8,6 +8,8 @@ export const formatDirectiveAck = (text: string): string => {
 };
 
 export const formatOptionsLine = (options: string) => `Options: ${options}.`;
+export const withOptions = (line: string, options: string) =>
+  `${line}\n${formatOptionsLine(options)}`;
 
 export const formatElevatedRuntimeHint = () =>
   `${SYSTEM_MARK} Runtime is direct; sandboxing does not apply.`;
@@ -87,16 +89,22 @@ export function formatElevatedUnavailableText(params: {
   failures?: Array<{ gate: string; key: string }>;
   sessionKey?: string;
 }): string {
+  const lines: string[] = [];
+  lines.push(
     `elevated is not available right now (runtime=${params.runtimeSandboxed ? "sandboxed" : "direct"}).`,
   );
   const failures = params.failures ?? [];
   if (failures.length > 0) {
+    lines.push(`Failing gates: ${failures.map((f) => `${f.gate} (${f.key})`).join(", ")}`);
   } else {
+    lines.push(
       "Fix-it keys: tools.elevated.enabled, tools.elevated.allowFrom.<provider>, agents.list[].tools.elevated.*",
     );
   }
   if (params.sessionKey) {
+    lines.push(
       `See: ${formatCliCommand(`chainbreaker sandbox explain --session ${params.sessionKey}`)}`,
     );
   }
+  return lines.join("\n");
 }

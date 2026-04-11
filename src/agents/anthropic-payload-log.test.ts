@@ -5,10 +5,12 @@ import { createAnthropicPayloadLogger } from "./anthropic-payload-log.js";
 
 describe("createAnthropicPayloadLogger", () => {
   it("redacts image base64 payload data before writing logs", async () => {
+    const lines: string[] = [];
     const logger = createAnthropicPayloadLogger({
       env: { CHAINBREAKER_ANTHROPIC_PAYLOAD_LOG: "1" },
       writer: {
         filePath: "memory",
+        write: (line) => lines.push(line),
       },
     });
     expect(logger).not.toBeNull();
@@ -34,6 +36,7 @@ describe("createAnthropicPayloadLogger", () => {
     const wrapped = logger?.wrapStreamFn(streamFn);
     await wrapped?.({ api: "anthropic-messages" } as never, { messages: [] } as never, {});
 
+    const event = JSON.parse(lines[0]?.trim() ?? "{}") as Record<string, unknown>;
     const message = ((event.payload as { messages?: unknown[] } | undefined)?.messages ??
       []) as Array<Record<string, unknown>>;
     const source = (((message[0]?.content as Array<Record<string, unknown>> | undefined) ?? [])[0]

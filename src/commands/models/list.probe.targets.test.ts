@@ -165,6 +165,7 @@ describe("buildProbeTargets reason codes", () => {
     });
   });
 
+  it("reports invalid_expires with a legacy-compatible first error line", async () => {
     const plan = await buildAnthropicProbePlan(["anthropic:default"]);
 
     expect(plan.targets).toHaveLength(0);
@@ -257,13 +258,16 @@ describe("buildProbeTargets reason codes", () => {
         cfg: {
           models: {
             providers: {
+              zai: {
                 baseUrl: "https://api.z.ai/v1",
                 api: "openai-responses",
+                apiKey: "sk-zai-test", // pragma: allowlist secret
                 models: [],
               },
             },
           },
         } as ChainbreakerConfig,
+        providers: ["zai"],
         modelCandidates: [],
         options: {
           timeoutMs: 5_000,
@@ -276,6 +280,8 @@ describe("buildProbeTargets reason codes", () => {
       expect(plan.targets).toHaveLength(1);
       expect(plan.targets[0]).toEqual(
         expect.objectContaining({
+          provider: "zai",
+          model: { provider: "zai", model: "glm-4.7" },
           source: "models.json",
           label: "models.json",
         }),

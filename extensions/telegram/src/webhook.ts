@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
 import type { IncomingMessage } from "node:http";
 import net from "node:net";
+import * as grammy from "grammy";
 import type { ChainbreakerConfig } from "chainbreaker/plugin-sdk/config-runtime";
 import { isDiagnosticsEnabled } from "chainbreaker/plugin-sdk/diagnostic-runtime";
 import type { RuntimeEnv } from "chainbreaker/plugin-sdk/runtime-env";
@@ -20,7 +21,6 @@ import {
   WEBHOOK_RATE_LIMIT_DEFAULTS,
 } from "chainbreaker/plugin-sdk/webhook-ingress";
 import { readJsonBodyWithLimit } from "chainbreaker/plugin-sdk/webhook-request-guards";
-import * as grammy from "grammy";
 import { resolveTelegramAllowedUpdates } from "./allowed-updates.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import { createTelegramBot } from "./bot.js";

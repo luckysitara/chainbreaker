@@ -44,9 +44,7 @@ function warnSecretCliFlag(flag: "--token" | "--password") {
 }
 
 export function registerMcpCli(program: Command) {
-  const mcp = program
-    .command("mcp")
-    .description("Manage Chainbreaker MCP config and channel bridge");
+  const mcp = program.command("mcp").description("Manage Chainbreaker MCP config and channel bridge");
 
   mcp
     .command("serve")

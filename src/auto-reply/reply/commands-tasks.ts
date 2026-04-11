@@ -30,6 +30,7 @@ const TASK_RUNTIME_LABELS: Record<TaskRecord["runtime"], string> = {
   cron: "Cron",
 };
 
+function formatTaskHeadline(snapshot: ReturnType<typeof buildTaskStatusSnapshot>): string {
   if (snapshot.totalCount === 0) {
     return "All clear - nothing linked to this session right now.";
   }
@@ -69,29 +70,40 @@ function formatVisibleTask(task: TaskRecord, index: number): string {
   const timing = formatTaskTiming(task);
   const detail = formatTaskDetail(task);
   const meta = [TASK_RUNTIME_LABELS[task.runtime], status, timing].filter(Boolean).join(" · ");
+  const lines = [`${index + 1}. ${TASK_STATUS_ICONS[task.status]} ${title}`, `   ${meta}`];
   if (detail) {
+    lines.push(`   ${detail}`);
   }
+  return lines.join("\n");
 }
 
 export function buildTasksText(params: { sessionKey: string; agentId: string }): string {
   const sessionSnapshot = buildTaskStatusSnapshot(
     listTasksForSessionKeyForStatus(params.sessionKey),
   );
+  const lines = ["📋 Tasks", formatTaskHeadline(sessionSnapshot)];
 
   if (sessionSnapshot.totalCount > 0) {
     const visible = sessionSnapshot.visible.slice(0, MAX_VISIBLE_TASKS);
+    lines.push("");
     for (const [index, task] of visible.entries()) {
+      lines.push(formatVisibleTask(task, index));
       if (index < visible.length - 1) {
+        lines.push("");
       }
     }
     const hiddenCount = sessionSnapshot.visible.length - visible.length;
     if (hiddenCount > 0) {
+      lines.push("", `+${hiddenCount} more recent task${hiddenCount === 1 ? "" : "s"}`);
     }
+    return lines.join("\n");
   }
 
   const agentFallback = formatAgentFallbackLine(params.agentId);
   if (agentFallback) {
+    lines.push(agentFallback);
   }
+  return lines.join("\n");
 }
 
 export async function buildTasksReply(params: HandleCommandsParams): Promise<ReplyPayload> {

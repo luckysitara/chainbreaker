@@ -79,6 +79,8 @@ export type SessionTranscriptUsageSnapshot = {
 const TRANSCRIPT_OUTPUT_READ_BUFFER_TOKENS = 8192;
 const TRANSCRIPT_TAIL_CHUNK_BYTES = 64 * 1024;
 
+function parseUsageFromTranscriptLine(line: string): ReturnType<typeof normalizeUsage> | undefined {
+  const trimmed = line.trim();
   if (!trimmed) {
     return undefined;
   }
@@ -93,6 +95,7 @@ const TRANSCRIPT_TAIL_CHUNK_BYTES = 64 * 1024;
       return usage;
     }
   } catch {
+    // ignore bad lines
   }
   return undefined;
 }
@@ -235,6 +238,10 @@ async function readLastNonzeroUsageFromSessionLog(logPath: string) {
       }
       const chunk = buffer.toString("utf-8", 0, bytesRead);
       const combined = `${chunk}${leadingPartial}`;
+      const lines = combined.split(/\n+/);
+      leadingPartial = lines.shift() ?? "";
+      for (let i = lines.length - 1; i >= 0; i -= 1) {
+        const usage = parseUsageFromTranscriptLine(lines[i] ?? "");
         if (usage) {
           return usage;
         }

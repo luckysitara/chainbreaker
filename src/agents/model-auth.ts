@@ -400,7 +400,9 @@ export async function resolveApiKeyForProvider(params: {
   }
 
   const providerConfig = resolveProviderConfig(cfg, provider);
+  const hasInlineConfiguredModels =
     Array.isArray(providerConfig?.models) && providerConfig.models.length > 0;
+  const owningPluginIds = !hasInlineConfiguredModels
     ? resolveOwningPluginIdsForProvider({
         provider,
         config: cfg,

@@ -1,4 +1,5 @@
 export async function withTimeout<T>(
+  work: (signal: AbortSignal | undefined) => Promise<T>,
   timeoutMs?: number,
   label?: string,
 ): Promise<T> {
@@ -16,13 +17,19 @@ export async function withTimeout<T>(
   timer.unref?.();
 
   let abortListener: (() => void) | undefined;
+  const abortPromise: Promise<never> = abortCtrl.signal.aborted
+    ? Promise.reject(abortCtrl.signal.reason ?? timeoutError)
     : new Promise((_, reject) => {
+        abortListener = () => reject(abortCtrl.signal.reason ?? timeoutError);
+        abortCtrl.signal.addEventListener("abort", abortListener, { once: true });
       });
 
   try {
+    return await Promise.race([work(abortCtrl.signal), abortPromise]);
   } finally {
     clearTimeout(timer);
     if (abortListener) {
+      abortCtrl.signal.removeEventListener("abort", abortListener);
     }
   }
 }

@@ -170,6 +170,9 @@ export const handleCompactCommand: CommandHandler = async (params) => {
     params.contextTokens ?? params.sessionEntry.contextTokens ?? null,
   );
   const reason = formatCompactionReason(result.reason);
+  const line = reason
     ? `${compactLabel}: ${reason} • ${contextSummary}`
     : `${compactLabel} • ${contextSummary}`;
+  enqueueSystemEvent(line, { sessionKey: params.sessionKey });
+  return { shouldContinue: false, reply: { text: `⚙️ ${line}` } };
 };

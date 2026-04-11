@@ -111,8 +111,7 @@ export function getUpsertChannelPairingRequestMock(): AnyAsyncMock {
 }
 
 vi.doMock("chainbreaker/plugin-sdk/conversation-runtime", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("chainbreaker/plugin-sdk/conversation-runtime")>();
+  const actual = await importOriginal<typeof import("chainbreaker/plugin-sdk/conversation-runtime")>();
   return {
     ...actual,
     readChannelAllowFromStore,
@@ -120,8 +119,7 @@ vi.doMock("chainbreaker/plugin-sdk/conversation-runtime", async (importOriginal)
   };
 });
 vi.doMock("chainbreaker/plugin-sdk/conversation-runtime.js", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("chainbreaker/plugin-sdk/conversation-runtime")>();
+  const actual = await importOriginal<typeof import("chainbreaker/plugin-sdk/conversation-runtime")>();
   return {
     ...actual,
     readChannelAllowFromStore,

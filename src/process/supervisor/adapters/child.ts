@@ -114,10 +114,13 @@ export async function createChildAdapter(params: {
     });
   };
 
+  let waitResult: { code: number | null; signal: NodeJS.Signals | null } | null = null;
   let waitError: unknown;
   let resolveWait:
+    | ((value: { code: number | null; signal: NodeJS.Signals | null }) => void)
     | null = null;
   let rejectWait: ((reason?: unknown) => void) | null = null;
+  let waitPromise: Promise<{ code: number | null; signal: NodeJS.Signals | null }> | null = null;
   let forceKillWaitFallbackTimer: NodeJS.Timeout | null = null;
 
   const clearForceKillWaitFallback = () => {
@@ -128,6 +131,7 @@ export async function createChildAdapter(params: {
     forceKillWaitFallbackTimer = null;
   };
 
+  const settleWait = (value: { code: number | null; signal: NodeJS.Signals | null }) => {
     if (waitResult || waitError !== undefined) {
       return;
     }
@@ -155,9 +159,11 @@ export async function createChildAdapter(params: {
     }
   };
 
+  const scheduleForceKillWaitFallback = (signal: NodeJS.Signals) => {
     clearForceKillWaitFallback();
     // Some Windows child processes never emit `close` after a hard kill.
     forceKillWaitFallbackTimer = setTimeout(() => {
+      settleWait({ code: null, signal });
     }, FORCE_KILL_WAIT_FALLBACK_MS);
     forceKillWaitFallbackTimer.unref?.();
   };
@@ -165,6 +171,8 @@ export async function createChildAdapter(params: {
   child.once("error", (error) => {
     rejectPendingWait(error);
   });
+  child.once("close", (code, signal) => {
+    settleWait({ code, signal });
   });
 
   const wait = async () => {
@@ -175,6 +183,7 @@ export async function createChildAdapter(params: {
       throw waitError;
     }
     if (!waitPromise) {
+      waitPromise = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(
         (resolve, reject) => {
           resolveWait = resolve;
           rejectWait = reject;
@@ -197,7 +206,9 @@ export async function createChildAdapter(params: {
     return waitPromise;
   };
 
+  const kill = (signal?: NodeJS.Signals) => {
     const pid = child.pid ?? undefined;
+    if (signal === undefined || signal === "SIGKILL") {
       if (pid) {
         killProcessTree(pid);
       }
@@ -210,7 +221,9 @@ export async function createChildAdapter(params: {
       return;
     }
     try {
+      child.kill(signal);
     } catch {
+      // ignore kill errors for non-kill signals
     }
   };
 

@@ -8,9 +8,11 @@ type TransportReadyModule = typeof import("./transport-ready.js");
 let waitForTransportReady: TransportReadyModule["waitForTransportReady"];
 
 vi.mock("./backoff.js", () => ({
+  sleepWithAbort: async (ms: number, signal?: AbortSignal) => {
     if (transportReadyMocks.injectedSleepError) {
       throw transportReadyMocks.injectedSleepError;
     }
+    if (signal?.aborted) {
       throw new Error("aborted");
     }
     if (ms <= 0) {
@@ -18,12 +20,15 @@ vi.mock("./backoff.js", () => ({
     }
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
+        signal?.removeEventListener("abort", onAbort);
         resolve();
       }, ms);
       const onAbort = () => {
         clearTimeout(timer);
+        signal?.removeEventListener("abort", onAbort);
         reject(new Error("aborted"));
       };
+      signal?.addEventListener("abort", onAbort, { once: true });
     });
   },
 }));
@@ -97,6 +102,7 @@ describe("waitForTransportReady", () => {
       label: "test transport",
       timeoutMs: 200,
       runtime,
+      abortSignal: controller.signal,
       check: async () => ({ ok: false, error: "still down" }),
     });
     expect(runtime.error).not.toHaveBeenCalled();
@@ -112,6 +118,7 @@ describe("waitForTransportReady", () => {
       timeoutMs: 500,
       pollIntervalMs: 50,
       runtime,
+      abortSignal: controller.signal,
       check: async () => {
         attempts += 1;
         setTimeout(() => controller.abort(), 10);

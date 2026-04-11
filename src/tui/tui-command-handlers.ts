@@ -263,6 +263,9 @@ export function createCommandHandlers(context: CommandHandlerContext) {
             break;
           }
           if (status && typeof status === "object") {
+            const lines = formatStatusSummary(status as GatewayStatusSummary);
+            for (const line of lines) {
+              chatLog.addSystem(line);
             }
             break;
           }

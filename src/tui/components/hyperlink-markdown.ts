@@ -5,6 +5,7 @@ import { addOsc8Hyperlinks, extractUrls } from "../osc8-hyperlinks.js";
 /**
  * Wrapper around pi-tui's Markdown component that adds OSC 8 terminal
  * hyperlinks to rendered output, making URLs clickable even when broken
+ * across multiple lines by word wrapping.
  */
 export class HyperlinkMarkdown implements Component {
   private inner: Markdown;

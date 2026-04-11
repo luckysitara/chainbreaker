@@ -39,6 +39,7 @@ export type WebMonitorTuning = {
   heartbeatSeconds?: number;
   messageTimeoutMs?: number;
   watchdogCheckMs?: number;
+  sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   statusSink?: (status: WebChannelStatus) => void;
   /** WhatsApp account id. Default: "default". */
   accountId?: string;

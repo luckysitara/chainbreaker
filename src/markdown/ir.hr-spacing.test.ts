@@ -7,6 +7,7 @@ import { markdownToIR } from "./ir.js";
  *
  * CommonMark Spec (0.31.2) Section 4.1 - Thematic Breaks:
  * - Thematic breaks (---, ***, ___) produce <hr /> in HTML
+ * - "Thematic breaks do not need blank lines before or after"
  * - A thematic break can interrupt a paragraph
  *
  * HTML Output per spec:
@@ -94,6 +95,7 @@ Para`;
       expect(result.text).toBe("───\n\nPara");
     });
 
+    it("should not produce triple newlines regardless of hr placement", () => {
       const inputs = [
         "Para 1\n\n---\n\nPara 2",
         "Para 1\n---\nPara 2",

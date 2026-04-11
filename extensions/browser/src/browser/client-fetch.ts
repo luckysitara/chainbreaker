@@ -198,6 +198,7 @@ async function fetchHttpJson<T>(
 ): Promise<T> {
   const timeoutMs = init.timeoutMs ?? 5000;
   const ctrl = new AbortController();
+  const upstreamSignal = init.signal;
   let upstreamAbortListener: (() => void) | undefined;
   if (upstreamSignal) {
     if (upstreamSignal.aborted) {
@@ -210,6 +211,7 @@ async function fetchHttpJson<T>(
 
   const t = setTimeout(() => ctrl.abort(new Error("timed out")), timeoutMs);
   try {
+    const res = await fetch(url, { ...init, signal: ctrl.signal });
     if (!res.ok) {
       if (isRateLimitStatus(res.status)) {
         // Do not reflect upstream response text into the error surface (log/agent injection risk)
@@ -262,6 +264,7 @@ export async function fetchBrowserJson<T>(
     }
 
     const abortCtrl = new AbortController();
+    const upstreamSignal = init?.signal;
     let upstreamAbortListener: (() => void) | undefined;
     if (upstreamSignal) {
       if (upstreamSignal.aborted) {
@@ -273,7 +276,11 @@ export async function fetchBrowserJson<T>(
     }
 
     let abortListener: (() => void) | undefined;
+    const abortPromise: Promise<never> = abortCtrl.signal.aborted
+      ? Promise.reject(abortCtrl.signal.reason ?? new Error("aborted"))
       : new Promise((_, reject) => {
+          abortListener = () => reject(abortCtrl.signal.reason ?? new Error("aborted"));
+          abortCtrl.signal.addEventListener("abort", abortListener, { once: true });
         });
 
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -291,6 +298,7 @@ export async function fetchBrowserJson<T>(
       path: parsed.pathname,
       query,
       body,
+      signal: abortCtrl.signal,
     });
 
     const result = await Promise.race([dispatchPromise, abortPromise]).finally(() => {
@@ -298,6 +306,7 @@ export async function fetchBrowserJson<T>(
         clearTimeout(timer);
       }
       if (abortListener) {
+        abortCtrl.signal.removeEventListener("abort", abortListener);
       }
       if (upstreamSignal && upstreamAbortListener) {
         upstreamSignal.removeEventListener("abort", upstreamAbortListener);

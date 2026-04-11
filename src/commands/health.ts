@@ -48,6 +48,7 @@ export type AgentHealthSummary = {
 export type HealthSummary = {
   /**
    * Convenience top-level flag for UIs (e.g. WebChat) that only need a binary
+   * "can talk to the gateway" signal. If this payload exists, the gateway RPC
    * succeeded, so this is always `true`.
    */
   ok: true;
@@ -164,11 +165,7 @@ const buildSessionSummary = (storePath: string) => {
 const asRecord = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : null;
 
-async function inspectHealthAccount(
-  plugin: ChannelPlugin,
-  cfg: ChainbreakerConfig,
-  accountId: string,
-) {
+async function inspectHealthAccount(plugin: ChannelPlugin, cfg: ChainbreakerConfig, accountId: string) {
   return (
     plugin.config.inspectAccount?.(cfg, accountId) ??
     (await inspectReadOnlyChannelAccount({
@@ -335,6 +332,7 @@ export const formatHealthChannelLines = (
     summary.channelOrder?.length > 0 ? summary.channelOrder : Object.keys(channels);
   const accountMode = opts.accountMode ?? "default";
 
+  const lines: string[] = [];
   for (const channelId of channelOrder) {
     const channelSummary = channels[channelId];
     if (!channelSummary) {
@@ -370,13 +368,16 @@ export const formatHealthChannelLines = (
       if (linked) {
         const authAgeMs = typeof baseSummary.authAgeMs === "number" ? baseSummary.authAgeMs : null;
         const authLabel = authAgeMs != null ? ` (auth age ${Math.round(authAgeMs / 60000)}m)` : "";
+        lines.push(`${label}: linked${authLabel}`);
       } else {
+        lines.push(`${label}: not linked`);
       }
       continue;
     }
 
     const configured = typeof baseSummary.configured === "boolean" ? baseSummary.configured : null;
     if (configured === false) {
+      lines.push(`${label}: not configured`);
       continue;
     }
 
@@ -390,23 +391,29 @@ export const formatHealthChannelLines = (
     if (failedSummary) {
       const failureLine = formatProbeLine(failedSummary.probe, { botUsernames });
       if (failureLine) {
+        lines.push(`${label}: ${failureLine}`);
         continue;
       }
     }
 
     if (accountTimings.length > 0) {
+      lines.push(`${label}: ok (${accountTimings.join(", ")})`);
       continue;
     }
 
     const probeLine = formatProbeLine(baseSummary.probe, { botUsernames });
     if (probeLine) {
+      lines.push(`${label}: ${probeLine}`);
       continue;
     }
 
     if (configured === true) {
+      lines.push(`${label}: configured`);
       continue;
     }
+    lines.push(`${label}: unknown`);
   }
+  return lines;
 };
 
 export async function getHealthSnapshot(params?: {
@@ -618,6 +625,8 @@ export async function healthCommand(
     if (opts.verbose) {
       const details = buildGatewayConnectionDetails({ config: cfg });
       runtime.log(info("Gateway connection:"));
+      for (const line of details.message.split("\n")) {
+        runtime.log(`  ${line}`);
       }
     }
     const localAgents = resolveAgentOrder(cfg);
@@ -735,6 +744,8 @@ export async function healthCommand(
         : formatHealthChannelLines(summary, {
             accountMode: opts.verbose ? "all" : "default",
           });
+    for (const line of channelLines) {
+      runtime.log(styleHealthChannelLine(line, rich));
     }
     for (const plugin of listChannelPlugins()) {
       const channelSummary = summary.channels?.[plugin.id];

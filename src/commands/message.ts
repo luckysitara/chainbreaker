@@ -91,5 +91,7 @@ export async function messageCommand(
     return;
   }
 
+  for (const line of formatMessageCliText(result)) {
+    runtime.log(line);
   }
 }

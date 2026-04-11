@@ -200,6 +200,8 @@ export {
 export interface OpenAIWebSocketStreamOptions {
   /** Manager options (url override, retry counts, etc.) */
   managerOptions?: OpenAIWebSocketManagerOptions;
+  /** Abort signal forwarded from the run. */
+  signal?: AbortSignal;
 }
 
 type WsTransport = "sse" | "websocket" | "auto";
@@ -212,6 +214,7 @@ function resolveWsTransport(options: Parameters<StreamFn>[2]): WsTransport {
     : "auto";
 }
 
+type WsOptions = Parameters<StreamFn>[2] & { openaiWsWarmup?: unknown; signal?: AbortSignal };
 
 function resolveWsWarmup(options: Parameters<StreamFn>[2]): boolean {
   const warmup = (options as WsOptions | undefined)?.openaiWsWarmup;
@@ -223,7 +226,9 @@ async function runWarmUp(params: {
   modelId: string;
   tools: FunctionToolDefinition[];
   instructions?: string;
+  signal?: AbortSignal;
 }): Promise<void> {
+  if (params.signal?.aborted) {
     throw new Error("aborted");
   }
   await new Promise<void>((resolve, reject) => {
@@ -256,10 +261,12 @@ async function runWarmUp(params: {
 
     const cleanup = () => {
       clearTimeout(timeout);
+      params.signal?.removeEventListener("abort", abortHandler);
       params.manager.off("close", closeHandler);
       unsubscribe();
     };
 
+    params.signal?.addEventListener("abort", abortHandler, { once: true });
     params.manager.on("close", closeHandler);
     params.manager.warmUp({
       model: params.modelId,
@@ -280,6 +287,7 @@ async function runWarmUp(params: {
  *
  * @param apiKey     OpenAI API key
  * @param sessionId  Agent session ID (used as the registry key)
+ * @param opts       Optional manager + abort signal overrides
  */
 export function createOpenAIWebSocketStreamFn(
   apiKey: string,
@@ -292,6 +300,7 @@ export function createOpenAIWebSocketStreamFn(
     const run = async () => {
       const transport = resolveWsTransport(options);
       if (transport === "sse") {
+        return fallbackToHttp(model, context, options, apiKey, eventStream, opts.signal);
       }
 
       // ── 1. Get or create session state ──────────────────────────────────
@@ -331,6 +340,7 @@ export function createOpenAIWebSocketStreamFn(
             `[ws-stream] WebSocket connect failed for session=${sessionId}; falling back to HTTP. error=${String(connErr)}`,
           );
           // Fall back to HTTP immediately
+          return fallbackToHttp(model, context, options, apiKey, eventStream, opts.signal);
         }
       }
 
@@ -347,8 +357,10 @@ export function createOpenAIWebSocketStreamFn(
           /* ignore */
         }
         wsRegistry.delete(sessionId);
+        return fallbackToHttp(model, context, options, apiKey, eventStream, opts.signal);
       }
 
+      const signal = opts.signal ?? (options as WsOptions | undefined)?.signal;
 
       if (resolveWsWarmup(options) && !session.warmUpAttempted) {
         session.warmUpAttempted = true;
@@ -359,9 +371,11 @@ export function createOpenAIWebSocketStreamFn(
             modelId: model.id,
             tools: convertTools(context.tools),
             instructions: context.systemPrompt ?? undefined,
+            signal,
           });
           log.debug(`[ws-stream] warm-up completed for session=${sessionId}`);
         } catch (warmErr) {
+          if (signal?.aborted) {
             throw warmErr instanceof Error ? warmErr : new Error(String(warmErr));
           }
           warmupFailed = true;
@@ -388,6 +402,7 @@ export function createOpenAIWebSocketStreamFn(
             log.warn(
               `[ws-stream] reconnect after warm-up failed for session=${sessionId}; falling back to HTTP. error=${String(reconnectErr)}`,
             );
+            return fallbackToHttp(model, context, options, apiKey, eventStream, opts.signal);
           }
         }
       }
@@ -507,6 +522,7 @@ export function createOpenAIWebSocketStreamFn(
           /* ignore */
         }
         wsRegistry.delete(sessionId);
+        return fallbackToHttp(model, context, options, apiKey, eventStream, opts.signal);
       }
 
       eventStream.push({
@@ -522,13 +538,16 @@ export function createOpenAIWebSocketStreamFn(
       const capturedContextLength = context.messages.length;
 
       await new Promise<void>((resolve, reject) => {
+        // Honour abort signal
         const abortHandler = () => {
           cleanup();
           reject(new Error("aborted"));
         };
+        if (signal?.aborted) {
           reject(new Error("aborted"));
           return;
         }
+        signal?.addEventListener("abort", abortHandler, { once: true });
 
         // If the WebSocket drops mid-request, reject so we don't hang forever.
         const closeHandler = (code: number, reason: string) => {
@@ -540,6 +559,7 @@ export function createOpenAIWebSocketStreamFn(
         session.manager.on("close", closeHandler);
 
         const cleanup = () => {
+          signal?.removeEventListener("abort", abortHandler);
           session.manager.off("close", closeHandler);
           unsubscribe();
         };
@@ -614,10 +634,12 @@ async function fallbackToHttp(
   options: Parameters<StreamFn>[2],
   apiKey: string,
   eventStream: AssistantMessageEventStreamLike,
+  signal?: AbortSignal,
 ): Promise<void> {
   const mergedOptions = {
     ...options,
     apiKey,
+    ...(signal ? { signal } : {}),
   };
   const httpStream = openAIWsStreamDeps.streamSimple(model, context, mergedOptions);
   for await (const event of httpStream) {

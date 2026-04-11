@@ -282,6 +282,7 @@ export function isNumericTargetId(raw: string): boolean {
   return /^\d{3,}$/.test(trimmed);
 }
 
+/** Append attachment links to plain text when the channel cannot send media inline. */
 export function formatTextWithAttachmentLinks(
   text: string | undefined,
   mediaUrls: string[],

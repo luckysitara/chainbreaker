@@ -47,6 +47,7 @@ describe("createEditorSubmitHandler", () => {
     expect(handleCommand).not.toHaveBeenCalled();
   });
 
+  it("routes bang-prefixed lines to handleBangLine", () => {
     const { handleBangLine, onSubmit } = createSubmitHarness();
 
     onSubmit("!ls");

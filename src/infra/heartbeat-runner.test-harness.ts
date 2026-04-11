@@ -12,6 +12,7 @@ export function installHeartbeatRunnerTestRuntime(params?: { includeSlack?: bool
     if (params?.includeSlack) {
       setActivePluginRegistry(
         createTestRegistry([
+          { pluginId: "slack", plugin: heartbeatRunnerSlackPlugin, source: "test" },
           { pluginId: "whatsapp", plugin: heartbeatRunnerWhatsAppPlugin, source: "test" },
           { pluginId: "telegram", plugin: heartbeatRunnerTelegramPlugin, source: "test" },
         ]),

@@ -1,7 +1,4 @@
-import {
-  postTrustedWebToolsJson,
-  wrapWebContent,
-} from "chainbreaker/plugin-sdk/provider-web-search";
+import { postTrustedWebToolsJson, wrapWebContent } from "chainbreaker/plugin-sdk/provider-web-search";
 import { normalizeXaiModelId } from "../model-id.js";
 import { extractXaiWebSearchContent, type XaiWebSearchResponse } from "./web-search-shared.js";
 
@@ -11,6 +8,7 @@ export const XAI_DEFAULT_X_SEARCH_MODEL = "grok-4-1-fast-non-reasoning";
 export type XaiXSearchConfig = {
   apiKey?: unknown;
   model?: unknown;
+  inlineCitations?: unknown;
   maxTurns?: unknown;
 };
 
@@ -27,6 +25,7 @@ export type XaiXSearchOptions = {
 export type XaiXSearchResult = {
   content: string;
   citations: string[];
+  inlineCitations?: XaiWebSearchResponse["inline_citations"];
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -44,6 +43,8 @@ export function resolveXaiXSearchModel(config?: Record<string, unknown>): string
     : XAI_DEFAULT_X_SEARCH_MODEL;
 }
 
+export function resolveXaiXSearchInlineCitations(config?: Record<string, unknown>): boolean {
+  return resolveXaiXSearchConfig(config).inlineCitations === true;
 }
 
 export function resolveXaiXSearchMaxTurns(config?: Record<string, unknown>): number | undefined {
@@ -73,6 +74,7 @@ export function buildXaiXSearchPayload(params: {
   tookMs: number;
   content: string;
   citations: string[];
+  inlineCitations?: XaiWebSearchResponse["inline_citations"];
   options?: XaiXSearchOptions;
 }): Record<string, unknown> {
   return {
@@ -88,6 +90,7 @@ export function buildXaiXSearchPayload(params: {
     },
     content: wrapWebContent(params.content, "web_search"),
     citations: params.citations,
+    ...(params.inlineCitations ? { inlineCitations: params.inlineCitations } : {}),
     ...(params.options?.allowedXHandles?.length
       ? { allowedXHandles: params.options.allowedXHandles }
       : {}),
@@ -105,6 +108,7 @@ export async function requestXaiXSearch(params: {
   apiKey: string;
   model: string;
   timeoutSeconds: number;
+  inlineCitations: boolean;
   maxTurns?: number;
   options: XaiXSearchOptions;
 }): Promise<XaiXSearchResult> {
@@ -131,6 +135,9 @@ export async function requestXaiXSearch(params: {
       return {
         content: text ?? "No response",
         citations,
+        inlineCitations:
+          params.inlineCitations && Array.isArray(data.inline_citations)
+            ? data.inline_citations
             : undefined,
       };
     },
@@ -142,6 +149,7 @@ export const __testing = {
   buildXaiXSearchPayload,
   requestXaiXSearch,
   resolveXaiXSearchConfig,
+  resolveXaiXSearchInlineCitations,
   resolveXaiXSearchMaxTurns,
   resolveXaiXSearchModel,
   XAI_DEFAULT_X_SEARCH_MODEL,

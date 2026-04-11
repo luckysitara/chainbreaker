@@ -97,6 +97,7 @@ function extractToolResultText(content: unknown): string {
   return joined?.trim() ?? "";
 }
 
+function extractInlineTextContent(content: unknown): string {
   if (!Array.isArray(content)) {
     return "";
   }
@@ -124,6 +125,7 @@ function extractSubagentOutputText(message: unknown): string {
       return sanitizeTextContent(content);
     }
     if (Array.isArray(content)) {
+      return extractInlineTextContent(content);
     }
     return "";
   }
@@ -135,6 +137,7 @@ function extractSubagentOutputText(message: unknown): string {
       return sanitizeTextContent(content);
     }
     if (Array.isArray(content)) {
+      return extractInlineTextContent(content);
     }
   }
   return "";

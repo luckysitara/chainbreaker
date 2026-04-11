@@ -9,8 +9,8 @@
 import { randomUUID } from "node:crypto";
 import type * as LanceDB from "@lancedb/lancedb";
 import { Type } from "@sinclair/typebox";
-import { ensureGlobalUndiciEnvProxyDispatcher } from "chainbreaker/plugin-sdk/runtime-env";
 import OpenAI from "openai";
+import { ensureGlobalUndiciEnvProxyDispatcher } from "chainbreaker/plugin-sdk/runtime-env";
 import { definePluginEntry, type ChainbreakerPluginApi } from "./api.js";
 import {
   DEFAULT_CAPTURE_MAX_CHARS,

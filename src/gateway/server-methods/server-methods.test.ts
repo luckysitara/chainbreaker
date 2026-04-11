@@ -227,11 +227,13 @@ describe("timestampOptsFromConfig", () => {
   it.each([
     {
       name: "extracts timezone from config",
+      // oxlint-disable-next-line typescript/no-explicit-any
       cfg: { agents: { defaults: { userTimezone: "America/Chicago" } } } as any,
       expected: "America/Chicago",
     },
     {
       name: "falls back gracefully with empty config",
+      // oxlint-disable-next-line typescript/no-explicit-any
       cfg: {} as any,
       expected: Intl.DateTimeFormat().resolvedOptions().timeZone,
     },
@@ -296,6 +298,7 @@ describe("sanitizeChatSendMessageInput", () => {
       expected: { ok: false as const, error: "message must not contain null bytes" },
     },
     {
+      name: "strips unsafe control characters while preserving tab/newline/carriage return",
       input: "a\u0001b\tc\nd\re\u0007f\u007f",
       expected: { ok: true as const, message: "ab\tc\nd\ref" },
     },
@@ -1000,6 +1003,7 @@ describe("exec approval handlers", () => {
           timeoutMs: 60_000,
           id: "approval-chat-route",
           host: "gateway",
+          turnSourceChannel: "slack",
           turnSourceTo: "D123",
         },
       });
@@ -1133,6 +1137,7 @@ describe("logs.tail", () => {
       true,
       expect.objectContaining({
         file: newer,
+        lines: ['{"msg":"new"}'],
       }),
       undefined,
     );

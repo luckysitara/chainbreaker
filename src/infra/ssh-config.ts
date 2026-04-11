@@ -21,8 +21,13 @@ function parsePort(value: string | undefined): number | undefined {
 
 export function parseSshConfigOutput(output: string): SshResolvedConfig {
   const result: SshResolvedConfig = { identityFiles: [] };
+  const lines = output.split("\n");
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) {
       continue;
     }
+    const [key, ...rest] = line.split(/\s+/);
     const value = rest.join(" ").trim();
     if (!key || !value) {
       continue;

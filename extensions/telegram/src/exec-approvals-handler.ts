@@ -24,6 +24,7 @@ import { normalizeAccountId } from "chainbreaker/plugin-sdk/routing";
 import { createSubsystemLogger } from "chainbreaker/plugin-sdk/runtime-env";
 import type { RuntimeEnv } from "chainbreaker/plugin-sdk/runtime-env";
 import { telegramNativeApprovalAdapter } from "./approval-native.js";
+import { resolveTelegramInlineButtons } from "./button-types.js";
 import {
   getTelegramExecApprovalApprovers,
   resolveTelegramExecApprovalConfig,
@@ -212,6 +213,7 @@ export class TelegramExecApprovalHandler {
             expiresAtMs: request.expiresAtMs,
             nowMs: this.nowMs(),
           } satisfies ExecApprovalPendingReplyParams);
+    const buttons = resolveTelegramInlineButtons({
       interactive: payload.interactive,
     });
     return await deliverApprovalRequestViaChannelNativePlan({

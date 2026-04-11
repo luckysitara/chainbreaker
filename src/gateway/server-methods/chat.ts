@@ -14,11 +14,14 @@ import { resolveSessionFilePath } from "../../config/sessions.js";
 import { jsonUtf8Bytes } from "../../infra/json-utf8-bytes.js";
 import type { PromptImageOrderEntry } from "../../media/prompt-image-order.js";
 import { type SavedMedia, saveMediaBuffer } from "../../media/store.js";
+import { createChannelReplyPipeline } from "../../plugin-sdk/channel-reply-pipeline.js";
 import { normalizeInputProvenance, type InputProvenance } from "../../sessions/input-provenance.js";
 import { resolveSendPolicy } from "../../sessions/send-policy.js";
 import { parseAgentSessionKey } from "../../sessions/session-key-utils.js";
 import { emitSessionTranscriptUpdate } from "../../sessions/transcript-events.js";
 import {
+  stripInlineDirectiveTagsForDisplay,
+  stripInlineDirectiveTagsFromMessageForDisplay,
 } from "../../utils/directive-tags.js";
 import {
   INTERNAL_MESSAGE_CHANNEL,
@@ -331,12 +334,15 @@ function canInjectSystemProvenance(client: GatewayRequestHandlerOptions["client"
 }
 
 /**
+ * Persist inline images and offloaded-ref media to the transcript media store.
  *
+ * Inline images are re-saved from their base64 payload so that a stable
  * filesystem path can be stored in the transcript.  Offloaded refs are already
  * on disk (saved by parseMessageWithAttachments); their SavedMedia metadata is
  * synthesised directly from the OffloadedRef, avoiding a redundant write.
  *
  * Both sets are combined so that transcript media fields remain complete
+ * regardless of whether attachments were inlined or offloaded.
  */
 async function persistChatSendImages(params: {
   images: ChatImageContent[];
@@ -350,6 +356,7 @@ async function persistChatSendImages(params: {
   }
 
   const saved: SavedMedia[] = [];
+  let inlineIndex = 0;
   let offloadedIndex = 0;
   for (const entry of params.imageOrder) {
     if (entry === "offloaded") {
@@ -366,6 +373,7 @@ async function persistChatSendImages(params: {
       continue;
     }
 
+    const img = params.images[inlineIndex++];
     if (!img) {
       continue;
     }
@@ -492,6 +500,7 @@ function sanitizeChatHistoryContentBlock(block: unknown): { block: unknown; chan
   const entry = { ...(block as Record<string, unknown>) };
   let changed = false;
   if (typeof entry.text === "string") {
+    const stripped = stripInlineDirectiveTagsForDisplay(entry.text);
     const res = truncateChatHistoryText(stripped.text);
     entry.text = res.text;
     changed ||= stripped.changed || res.truncated;
@@ -634,6 +643,7 @@ function sanitizeChatHistoryMessage(message: unknown): { message: unknown; chang
   }
 
   if (typeof entry.content === "string") {
+    const stripped = stripInlineDirectiveTagsForDisplay(entry.content);
     const res = truncateChatHistoryText(stripped.text);
     entry.content = res.text;
     changed ||= stripped.changed || res.truncated;
@@ -646,6 +656,7 @@ function sanitizeChatHistoryMessage(message: unknown): { message: unknown; chang
   }
 
   if (typeof entry.text === "string") {
+    const stripped = stripInlineDirectiveTagsForDisplay(entry.text);
     const res = truncateChatHistoryText(stripped.text);
     entry.text = res.text;
     changed ||= stripped.changed || res.truncated;
@@ -824,8 +835,12 @@ function ensureTranscriptFile(params: { transcriptPath: string; sessionId: strin
 
 function transcriptHasIdempotencyKey(transcriptPath: string, idempotencyKey: string): boolean {
   try {
+    const lines = fs.readFileSync(transcriptPath, "utf-8").split(/\r?\n/);
+    for (const line of lines) {
+      if (!line.trim()) {
         continue;
       }
+      const parsed = JSON.parse(line) as { message?: { idempotencyKey?: unknown } };
       if (parsed?.message?.idempotencyKey === idempotencyKey) {
         return true;
       }
@@ -1124,6 +1139,7 @@ function broadcastChatFinal(params: {
     sessionKey: params.sessionKey,
     seq,
     state: "final" as const,
+    message: stripInlineDirectiveTagsFromMessageForDisplay(strippedEnvelopeMessage),
   };
   params.context.broadcast("chat", payload);
   params.context.nodeSendToSession(params.sessionKey, "chat", payload);
@@ -1536,6 +1552,7 @@ export const chatHandlers: GatewayRequestHandlers = {
       };
       respond(true, ackPayload, undefined, { runId: clientRunId });
 
+      // Persist both inline images and already-offloaded refs to the media
       // store so that transcript media fields remain complete for all attachment
       // sizes. Offloaded refs are already on disk; persistChatSendImages converts
       // their metadata without re-writing the files.
@@ -1604,6 +1621,7 @@ export const chatHandlers: GatewayRequestHandlers = {
         sessionKey,
         config: cfg,
       });
+      const { onModelSelected, ...replyPipeline } = createChannelReplyPipeline({
         cfg,
         agentId,
         channel: INTERNAL_MESSAGE_CHANNEL,
@@ -1671,6 +1689,7 @@ export const chatHandlers: GatewayRequestHandlers = {
         });
       };
       const dispatcher = createReplyDispatcher({
+        ...replyPipeline,
         onError: (err) => {
           context.logGateway.warn(`webchat dispatch failed: ${formatForLog(err)}`);
         },
@@ -1698,6 +1717,7 @@ export const chatHandlers: GatewayRequestHandlers = {
         dispatcher,
         replyOptions: {
           runId: clientRunId,
+          abortSignal: abortController.signal,
           images: parsedImages.length > 0 ? parsedImages : undefined,
           imageOrder: parsedImageOrder.length > 0 ? parsedImageOrder : undefined,
           onAgentRunStart: (runId) => {
@@ -1925,6 +1945,7 @@ export const chatHandlers: GatewayRequestHandlers = {
       sessionKey,
       seq: 0,
       state: "final" as const,
+      message: stripInlineDirectiveTagsFromMessageForDisplay(
         stripEnvelopeFromMessage(appended.message) as Record<string, unknown>,
       ),
     };

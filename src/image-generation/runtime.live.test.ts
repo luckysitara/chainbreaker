@@ -116,9 +116,7 @@ describeLive("image generation live (provider sweep)", () => {
     const agentDir = resolveChainbreakerAgentDir();
     const providerFilter = parseCsvFilter(process.env.CHAINBREAKER_LIVE_IMAGE_GENERATION_PROVIDERS);
     const caseFilter = parseCaseFilter(process.env.CHAINBREAKER_LIVE_IMAGE_GENERATION_CASES);
-    const envModelMap = parseProviderModelMap(
-      process.env.CHAINBREAKER_LIVE_IMAGE_GENERATION_MODELS,
-    );
+    const envModelMap = parseProviderModelMap(process.env.CHAINBREAKER_LIVE_IMAGE_GENERATION_MODELS);
     const configuredModels = resolveConfiguredLiveImageModels(cfg);
     const availableProviders = imageGenerationProviderContractRegistry
       .map((entry) => entry.provider.id)

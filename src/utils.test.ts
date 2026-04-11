@@ -157,9 +157,9 @@ describe("shortenHomePath", () => {
     vi.stubEnv("CHAINBREAKER_HOME", "/srv/chainbreaker-home");
     vi.stubEnv("HOME", "/home/other");
 
-    expect(
-      shortenHomePath(`${path.resolve("/srv/chainbreaker-home")}/.chainbreaker/chainbreaker.json`),
-    ).toBe("$CHAINBREAKER_HOME/.chainbreaker/chainbreaker.json");
+    expect(shortenHomePath(`${path.resolve("/srv/chainbreaker-home")}/.chainbreaker/chainbreaker.json`)).toBe(
+      "$CHAINBREAKER_HOME/.chainbreaker/chainbreaker.json",
+    );
 
     vi.unstubAllEnvs();
   });
@@ -171,9 +171,7 @@ describe("shortenHomeInString", () => {
     vi.stubEnv("HOME", "/home/other");
 
     expect(
-      shortenHomeInString(
-        `config: ${path.resolve("/srv/chainbreaker-home")}/.chainbreaker/chainbreaker.json`,
-      ),
+      shortenHomeInString(`config: ${path.resolve("/srv/chainbreaker-home")}/.chainbreaker/chainbreaker.json`),
     ).toBe("config: $CHAINBREAKER_HOME/.chainbreaker/chainbreaker.json");
 
     vi.unstubAllEnvs();
@@ -225,9 +223,7 @@ describe("resolveUserPath", () => {
     vi.stubEnv("CHAINBREAKER_HOME", "/srv/chainbreaker-home");
     vi.stubEnv("HOME", "/home/other");
 
-    expect(resolveUserPath("~/chainbreaker")).toBe(
-      path.resolve("/srv/chainbreaker-home", "chainbreaker"),
-    );
+    expect(resolveUserPath("~/chainbreaker")).toBe(path.resolve("/srv/chainbreaker-home", "chainbreaker"));
 
     vi.unstubAllEnvs();
   });
@@ -238,9 +234,7 @@ describe("resolveUserPath", () => {
       CHAINBREAKER_HOME: "/srv/chainbreaker-home",
     } as NodeJS.ProcessEnv;
 
-    expect(resolveUserPath("~/chainbreaker", env)).toBe(
-      path.resolve("/srv/chainbreaker-home", "chainbreaker"),
-    );
+    expect(resolveUserPath("~/chainbreaker", env)).toBe(path.resolve("/srv/chainbreaker-home", "chainbreaker"));
   });
 
   it("keeps blank paths blank", () => {

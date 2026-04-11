@@ -4,6 +4,7 @@ import { createSearchableSelectList } from "./components/selectors.js";
 
 type LocalShellDeps = {
   chatLog: {
+    addSystem: (line: string) => void;
   };
   tui: {
     requestRender: () => void;
@@ -77,6 +78,8 @@ export function createLocalShellRunner(deps: LocalShellDeps) {
     });
   };
 
+  const runLocalShellLine = async (line: string) => {
+    const cmd = line.slice(1);
     // NOTE: A lone '!' is handled by the submit handler as a normal message.
     // Keep this guard anyway in case this is called directly.
     if (cmd === "") {
@@ -120,14 +123,18 @@ export function createLocalShellRunner(deps: LocalShellDeps) {
         stderr = appendWithCap(stderr, buf.toString("utf8"));
       });
 
+      child.on("close", (code, signal) => {
         const combined = (stdout + (stderr ? (stdout ? "\n" : "") + stderr : ""))
           .slice(0, maxChars)
           .trimEnd();
 
         if (combined) {
+          for (const line of combined.split("\n")) {
+            deps.chatLog.addSystem(`[local] ${line}`);
           }
         }
         deps.chatLog.addSystem(
+          `[local] exit ${code ?? "?"}${signal ? ` (signal ${String(signal)})` : ""}`,
         );
         deps.tui.requestRender();
         resolve();

@@ -165,6 +165,7 @@ describe("compactEmbeddedPiSessionDirect hooks", () => {
 
   it("bootstraps runtime plugins with the resolved workspace", async () => {
     // This assertion only cares about bootstrap wiring, so stop before the
+    // rest of the compaction pipeline can pull in unrelated runtime surfaces.
     resolveModelMock.mockReturnValue({
       model: undefined,
       error: "stop after bootstrap",
@@ -573,6 +574,7 @@ describe("compactEmbeddedPiSessionDirect hooks", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("aborts in-flight compaction when the caller abort signal fires", async () => {
     const { compactWithSafetyTimeout } = await vi.importActual<
       typeof import("./compaction-safety-timeout.js")
     >("./compaction-safety-timeout.js");
@@ -586,6 +588,7 @@ describe("compactEmbeddedPiSessionDirect hooks", () => {
       },
       30_000,
       {
+        abortSignal: controller.signal,
         onCancel: () => {
           sessionAbortCompactionMock();
         },

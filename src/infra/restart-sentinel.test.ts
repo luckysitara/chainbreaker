@@ -161,6 +161,7 @@ describe("restart sentinel", () => {
 });
 
 describe("restart sentinel message dedup", () => {
+  it("omits duplicate Reason: line when stats.reason matches message", () => {
     const payload = {
       kind: "restart" as const,
       status: "ok" as const,
@@ -175,6 +176,7 @@ describe("restart sentinel message dedup", () => {
     expect(result).not.toContain("Reason:");
   });
 
+  it("keeps Reason: line when stats.reason differs from message", () => {
     const payload = {
       kind: "restart" as const,
       status: "ok" as const,

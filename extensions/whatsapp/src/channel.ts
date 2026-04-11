@@ -99,10 +99,7 @@ function hasAnyWhatsAppAccountWithAgentReactionsEnabled(cfg: ChainbreakerConfig)
   });
 }
 
-function resolveWhatsAppAgentReactionGuidance(params: {
-  cfg: ChainbreakerConfig;
-  accountId?: string;
-}) {
+function resolveWhatsAppAgentReactionGuidance(params: { cfg: ChainbreakerConfig; accountId?: string }) {
   if (!params.cfg.channels?.whatsapp) {
     return undefined;
   }

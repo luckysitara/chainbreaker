@@ -67,6 +67,7 @@ export async function queryOllamaContextWindow(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: modelName }),
+        signal: AbortSignal.timeout(3000),
       },
       policy: buildOllamaBaseUrlSsrFPolicy(apiBase),
       auditContext: "ollama-provider-models.show",
@@ -147,6 +148,7 @@ export async function fetchOllamaModels(
     const { response, release } = await fetchWithSsrFGuard({
       url: `${apiBase}/api/tags`,
       init: {
+        signal: AbortSignal.timeout(5000),
       },
       policy: buildOllamaBaseUrlSsrFPolicy(apiBase),
       auditContext: "ollama-provider-models.tags",

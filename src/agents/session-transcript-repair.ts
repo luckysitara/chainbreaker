@@ -111,6 +111,7 @@ function sanitizeToolCallBlock(block: RawToolCallBlock): RawToolCallBlock {
     return { ...(block as Record<string, unknown>), name: normalizedName } as RawToolCallBlock;
   }
 
+  // Redact large/sensitive inline attachment content from persisted transcripts.
   // Apply redaction to both `.arguments` and `.input` properties since block structures can vary
   const nextArgs = redactSessionsSpawnAttachmentsArgs(block.arguments);
   const nextInput = redactSessionsSpawnAttachmentsArgs(block.input);

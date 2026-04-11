@@ -48,6 +48,7 @@ export {
   setHttpCredentialsViaPlaywright,
   setInputFilesViaPlaywright,
   setLocaleViaPlaywright,
+  setOfflineViaPlaywright,
   setTimezoneViaPlaywright,
   snapshotAiViaPlaywright,
   snapshotAriaViaPlaywright,

@@ -3,6 +3,7 @@ import { registerPluginHttpRoute } from "../plugins/http-registry.js";
 import type { FixedWindowRateLimiter } from "./webhook-memory-guards.js";
 import { normalizeWebhookPath } from "./webhook-path.js";
 import {
+  beginWebhookRequestPipelineOrReject,
   type WebhookInFlightLimiter,
 } from "./webhook-request-guards.js";
 
@@ -117,6 +118,7 @@ export function resolveWebhookTargets<T>(
 }
 
 /** Run common webhook guards, then dispatch only when the request path resolves to live targets. */
+export async function withResolvedWebhookRequestPipeline<T>(params: {
   req: IncomingMessage;
   res: ServerResponse;
   targetsByPath: Map<string, T[]>;
@@ -140,6 +142,7 @@ export function resolveWebhookTargets<T>(
     typeof params.inFlightKey === "function"
       ? params.inFlightKey({ req: params.req, path: resolved.path, targets: resolved.targets })
       : (params.inFlightKey ?? `${resolved.path}:${params.req.socket?.remoteAddress ?? "unknown"}`);
+  const requestLifecycle = beginWebhookRequestPipelineOrReject({
     req: params.req,
     res: params.res,
     allowMethods: params.allowMethods,

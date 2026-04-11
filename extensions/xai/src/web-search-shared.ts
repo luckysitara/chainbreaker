@@ -1,7 +1,4 @@
-import {
-  postTrustedWebToolsJson,
-  wrapWebContent,
-} from "chainbreaker/plugin-sdk/provider-web-search";
+import { postTrustedWebToolsJson, wrapWebContent } from "chainbreaker/plugin-sdk/provider-web-search";
 import { normalizeXaiModelId } from "../model-id.js";
 
 export const XAI_WEB_SEARCH_ENDPOINT = "https://api.x.ai/v1/responses";
@@ -26,6 +23,7 @@ export type XaiWebSearchResponse = {
   }>;
   output_text?: string;
   citations?: string[];
+  inline_citations?: Array<{
     start_index: number;
     end_index: number;
     url: string;
@@ -34,11 +32,13 @@ export type XaiWebSearchResponse = {
 
 type XaiWebSearchConfig = Record<string, unknown> & {
   model?: unknown;
+  inlineCitations?: unknown;
 };
 
 export type XaiWebSearchResult = {
   content: string;
   citations: string[];
+  inlineCitations?: XaiWebSearchResponse["inline_citations"];
 };
 
 export function buildXaiWebSearchPayload(params: {
@@ -48,6 +48,7 @@ export function buildXaiWebSearchPayload(params: {
   tookMs: number;
   content: string;
   citations: string[];
+  inlineCitations?: XaiWebSearchResponse["inline_citations"];
 }): Record<string, unknown> {
   return {
     query: params.query,
@@ -62,6 +63,7 @@ export function buildXaiWebSearchPayload(params: {
     },
     content: wrapWebContent(params.content, "web_search"),
     citations: params.citations,
+    ...(params.inlineCitations ? { inlineCitations: params.inlineCitations } : {}),
   };
 }
 
@@ -82,6 +84,8 @@ export function resolveXaiWebSearchModel(searchConfig?: Record<string, unknown>)
     : XAI_DEFAULT_WEB_SEARCH_MODEL;
 }
 
+export function resolveXaiInlineCitations(searchConfig?: Record<string, unknown>): boolean {
+  return resolveXaiSearchConfig(searchConfig).inlineCitations === true;
 }
 
 export function extractXaiWebSearchContent(data: XaiWebSearchResponse): {
@@ -124,6 +128,7 @@ export async function requestXaiWebSearch(params: {
   model: string;
   apiKey: string;
   timeoutSeconds: number;
+  inlineCitations: boolean;
 }): Promise<XaiWebSearchResult> {
   return await postTrustedWebToolsJson(
     {
@@ -147,6 +152,9 @@ export async function requestXaiWebSearch(params: {
       return {
         content: text ?? "No response",
         citations,
+        inlineCitations:
+          params.inlineCitations && Array.isArray(data.inline_citations)
+            ? data.inline_citations
             : undefined,
       };
     },
@@ -156,6 +164,7 @@ export async function requestXaiWebSearch(params: {
 export const __testing = {
   buildXaiWebSearchPayload,
   extractXaiWebSearchContent,
+  resolveXaiInlineCitations,
   resolveXaiSearchConfig,
   resolveXaiWebSearchModel,
   requestXaiWebSearch,

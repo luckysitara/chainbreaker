@@ -17,6 +17,7 @@ type DiscordAccountParams = {
 };
 
 export function isDiscordSurface(params: DiscordSurfaceParams): boolean {
+  return resolveCommandSurfaceChannel(params) === "discord";
 }
 
 export function isTelegramSurface(params: DiscordSurfaceParams): boolean {
@@ -24,6 +25,7 @@ export function isTelegramSurface(params: DiscordSurfaceParams): boolean {
 }
 
 export function isMatrixSurface(params: DiscordSurfaceParams): boolean {
+  return resolveCommandSurfaceChannel(params) === "matrix";
 }
 
 export function resolveCommandSurfaceChannel(params: DiscordSurfaceParams): string {

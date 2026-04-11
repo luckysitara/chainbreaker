@@ -21,8 +21,12 @@ function formatSection(
   text: string,
   userText?: string,
 ): string {
+  const lines = [`[${title}]`];
   if (userText) {
+    lines.push(`User text:\n${userText}`);
   }
+  lines.push(`${kind}:\n${text}`);
+  return lines.join("\n");
 }
 
 export function formatMediaUnderstandingBody(params: {

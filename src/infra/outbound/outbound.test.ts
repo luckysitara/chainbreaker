@@ -76,6 +76,8 @@ describe("buildOutboundResultEnvelope", () => {
     mediaUrl: null,
     chatId: "c1",
   };
+  const discordDelivery: OutboundDeliveryJson = {
+    channel: "discord",
     via: "gateway",
     to: "channel:C1",
     messageId: "m3",
@@ -116,6 +118,8 @@ describe("buildOutboundResultEnvelope", () => {
       },
       {
         name: "keep wrapped delivery when flatten disabled",
+        input: { delivery: discordDelivery, flattenDelivery: false },
+        expected: { delivery: discordDelivery },
       },
     ]),
   )("$name", ({ input, expected }) => {

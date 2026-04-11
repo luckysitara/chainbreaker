@@ -99,6 +99,7 @@ const {
   setByteplusApiKey: { provider: "byteplus" },
   setSyntheticApiKey: { provider: "synthetic" },
   setVeniceApiKey: { provider: "venice" },
+  setZaiApiKey: { provider: "zai" },
   setXiaomiApiKey: { provider: "xiaomi" },
   setOpenrouterApiKey: {
     provider: "openrouter",
@@ -142,8 +143,10 @@ export {
 export async function setMinimaxApiKey(
   key: SecretInput,
   agentDir?: string,
+  profileId: string = "minimax:default",
   options?: ApiKeyStorageOptions,
 ) {
+  const provider = profileId.split(":")[0] ?? "minimax";
   upsertProviderApiKeyProfile({ provider, key, agentDir, options, profileId });
 }
 

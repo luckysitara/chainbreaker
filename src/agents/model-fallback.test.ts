@@ -1011,6 +1011,7 @@ describe("runWithModelFallback", () => {
       model: "gpt-4.1-mini",
       firstError: Object.assign(new Error("aborted"), {
         name: "AbortError",
+        reason: "deadline exceeded",
       }),
     });
   });

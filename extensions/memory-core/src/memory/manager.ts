@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { type FSWatcher } from "chokidar";
 import {
   resolveAgentDir,
   resolveAgentWorkspaceDir,
@@ -18,7 +19,6 @@ import {
   type MemorySource,
   type MemorySyncProgressUpdate,
 } from "chainbreaker/plugin-sdk/memory-core-host-engine-storage";
-import { type FSWatcher } from "chokidar";
 import {
   createEmbeddingProvider,
   type EmbeddingProvider,
@@ -779,12 +779,14 @@ export class MemoryIndexManager extends MemoryManagerEmbeddingOps implements Mem
   async readFile(params: {
     relPath: string;
     from?: number;
+    lines?: number;
   }): Promise<{ text: string; path: string }> {
     return await readMemoryFile({
       workspaceDir: this.workspaceDir,
       extraPaths: this.settings.extraPaths,
       relPath: params.relPath,
       from: params.from,
+      lines: params.lines,
     });
   }
 

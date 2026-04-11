@@ -43,6 +43,7 @@ function mockPackCommandResult(params: { stdout: string; stderr?: string; code?:
     stdout: params.stdout,
     stderr: params.stderr ?? "",
     code: params.code ?? 0,
+    signal: null,
     killed: false,
   });
 }
@@ -66,6 +67,7 @@ async function expectPackFallsBackToDetectedArchive(params: {
     stdout: params.stdout,
     stderr: "",
     code: 0,
+    signal: null,
     killed: false,
   });
 
@@ -199,6 +201,7 @@ describe("packNpmSpecToArchive", () => {
     );
   });
 
+  it("falls back to parsing final stdout line when npm json output is unavailable", async () => {
     const cwd = await createFixtureDir();
     const expectedArchivePath = path.join(cwd, "chainbreaker-plugin-1.2.3.tgz");
     await fs.writeFile(expectedArchivePath, "", "utf-8");
@@ -256,8 +259,7 @@ describe("packNpmSpecToArchive", () => {
     const cwd = await createFixtureDir();
     mockPackCommandResult({
       stdout: "",
-      stderr:
-        "npm error code E404\nnpm error 404  '@chainbreaker/whatsapp@*' is not in this registry.",
+      stderr: "npm error code E404\nnpm error 404  '@chainbreaker/whatsapp@*' is not in this registry.",
       code: 1,
     });
 

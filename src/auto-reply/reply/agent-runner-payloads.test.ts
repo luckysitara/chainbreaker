@@ -5,6 +5,7 @@ const baseParams = {
   isHeartbeat: false,
   didLogHeartbeatStrip: false,
   blockStreamingEnabled: false,
+  blockReplyPipeline: null,
   replyToMode: "off" as const,
 };
 
@@ -119,6 +120,7 @@ describe("buildReplyPayloads media filter integration", () => {
       messageProvider: "telegram",
       originatingTo: "telegram:123",
       messagingToolSentTexts: ["hello world!"],
+      messagingToolSentTargets: [{ tool: "discord", provider: "discord", to: "channel:C1" }],
     });
 
     expect(replyPayloads).toHaveLength(1);
@@ -132,6 +134,7 @@ describe("buildReplyPayloads media filter integration", () => {
       messageProvider: "telegram",
       originatingTo: "telegram:123",
       messagingToolSentMediaUrls: ["file:///tmp/photo.jpg"],
+      messagingToolSentTargets: [{ tool: "slack", provider: "slack", to: "channel:C1" }],
     });
 
     expect(replyPayloads).toHaveLength(1);
@@ -160,6 +163,8 @@ describe("buildReplyPayloads media filter integration", () => {
     await expectSameTargetRepliesSuppressed({ provider: "lark", to: "ou_abc123" });
   });
 
+  it("drops all final payloads when block pipeline streamed successfully", async () => {
+    const pipeline: Parameters<typeof buildReplyPayloads>[0]["blockReplyPipeline"] = {
       didStream: () => true,
       isAborted: () => false,
       hasSentPayload: () => false,
@@ -168,10 +173,12 @@ describe("buildReplyPayloads media filter integration", () => {
       stop: () => {},
       hasBuffered: () => false,
     };
+    // shouldDropFinalPayloads short-circuits to [] when the pipeline streamed
     // without aborting, so hasSentPayload is never reached.
     const { replyPayloads } = await buildReplyPayloads({
       ...baseParams,
       blockStreamingEnabled: true,
+      blockReplyPipeline: pipeline,
       replyToMode: "all",
       payloads: [{ text: "response", replyToId: "post-123" }],
     });
@@ -192,6 +199,7 @@ describe("buildReplyPayloads media filter integration", () => {
   it("deduplicates final payloads against directly sent block keys regardless of replyToId", async () => {
     // When block streaming is not active but directlySentBlockKeys has entries
     // (e.g. from pre-tool flush), the key should match even if replyToId differs.
+    const { createBlockReplyContentKey } = await import("./block-reply-pipeline.js");
     const directlySentBlockKeys = new Set<string>();
     directlySentBlockKeys.add(
       createBlockReplyContentKey({ text: "response", replyToId: "post-1" }),
@@ -200,6 +208,7 @@ describe("buildReplyPayloads media filter integration", () => {
     const { replyPayloads } = await buildReplyPayloads({
       ...baseParams,
       blockStreamingEnabled: false,
+      blockReplyPipeline: null,
       directlySentBlockKeys,
       replyToMode: "off",
       payloads: [{ text: "response" }],

@@ -79,15 +79,19 @@ describe("describeImageWithModel", () => {
     });
     discoverModelsMock.mockReturnValue({
       find: vi.fn(() => ({
+        provider: "minimax-portal",
         id: "MiniMax-VL-01",
         input: ["text", "image"],
+        baseUrl: "https://api.minimax.io/anthropic",
       })),
     });
   });
 
+  it("routes minimax-portal image models through the MiniMax VLM endpoint", async () => {
     const result = await describeImageWithModel({
       cfg: {},
       agentDir: "/tmp/chainbreaker-agent",
+      provider: "minimax-portal",
       model: "MiniMax-VL-01",
       buffer: Buffer.from("png-bytes"),
       fileName: "image.png",
@@ -103,6 +107,8 @@ describe("describeImageWithModel", () => {
     expect(ensureChainbreakerModelsJsonMock).toHaveBeenCalled();
     expect(getApiKeyForModelMock).toHaveBeenCalled();
     expect(requireApiKeyMock).toHaveBeenCalled();
+    expect(setRuntimeApiKeyMock).toHaveBeenCalledWith("minimax-portal", "oauth-test");
+    expect(fetchMock).toHaveBeenCalledWith("https://api.minimax.io/v1/coding_plan/vlm", {
       method: "POST",
       headers: {
         Authorization: "Bearer oauth-test",
@@ -117,15 +123,19 @@ describe("describeImageWithModel", () => {
     expect(completeMock).not.toHaveBeenCalled();
   });
 
+  it("uses generic completion for non-canonical minimax-portal image models", async () => {
     discoverModelsMock.mockReturnValue({
       find: vi.fn(() => ({
+        provider: "minimax-portal",
         id: "custom-vision",
         input: ["text", "image"],
+        baseUrl: "https://api.minimax.io/anthropic",
       })),
     });
     completeMock.mockResolvedValue({
       role: "assistant",
       api: "anthropic-messages",
+      provider: "minimax-portal",
       model: "custom-vision",
       stopReason: "stop",
       timestamp: Date.now(),
@@ -135,6 +145,7 @@ describe("describeImageWithModel", () => {
     const result = await describeImageWithModel({
       cfg: {},
       agentDir: "/tmp/chainbreaker-agent",
+      provider: "minimax-portal",
       model: "custom-vision",
       buffer: Buffer.from("png-bytes"),
       fileName: "image.png",

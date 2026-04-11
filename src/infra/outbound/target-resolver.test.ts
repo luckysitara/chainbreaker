@@ -81,6 +81,7 @@ describe("resolveMessagingTarget (directory fallback)", () => {
 
     const first = await expectOkResolution({
       cfg,
+      channel: "discord",
       input: "support",
     });
     expect(first.target.source).toBe("directory");
@@ -90,6 +91,7 @@ describe("resolveMessagingTarget (directory fallback)", () => {
 
     const second = await expectOkResolution({
       cfg,
+      channel: "discord",
       input: "support",
     });
     expect(second.target.to).toBe("123456789");
@@ -100,6 +102,7 @@ describe("resolveMessagingTarget (directory fallback)", () => {
   it("skips directory lookup for direct ids", async () => {
     const result = await expectOkResolution({
       cfg,
+      channel: "discord",
       input: "123456789",
     });
     expect(result.target.source).toBe("normalized");
@@ -167,6 +170,7 @@ describe("resolveMessagingTarget (directory fallback)", () => {
 
     const result = await expectOkResolution({
       cfg,
+      channel: "imessage",
       input: "+15551234567",
     });
     expect(result.target).toEqual({
@@ -202,6 +206,7 @@ describe("resolveMessagingTarget (directory fallback)", () => {
 
     const result = await expectOkResolution({
       cfg,
+      channel: "slack",
       input: "#C123ABC",
     });
     expect(result.target.to).toBe("channel:C123ABC");

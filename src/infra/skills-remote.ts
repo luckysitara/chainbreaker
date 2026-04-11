@@ -222,6 +222,7 @@ function parseBinProbePayload(payloadJSON: string | null | undefined, payload?: 
     if (typeof parsed.stdout === "string") {
       return parsed.stdout
         .split(/\r?\n/)
+        .map((line) => line.trim())
         .filter(Boolean);
     }
   } catch {

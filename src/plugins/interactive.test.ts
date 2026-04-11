@@ -35,12 +35,14 @@ type InteractiveDispatchParams =
       respond: PluginInteractiveTelegramHandlerContext["respond"];
     }
   | {
+      channel: "discord";
       data: string;
       interactionId: string;
       ctx: DiscordInteractiveDispatchContext;
       respond: PluginInteractiveDiscordHandlerContext["respond"];
     }
   | {
+      channel: "slack";
       data: string;
       interactionId: string;
       ctx: SlackInteractiveDispatchContext;
@@ -94,7 +96,9 @@ function createDiscordDispatchParams(params: {
   data: string;
   interactionId: string;
   interaction?: Partial<DiscordInteractiveDispatchContext["interaction"]>;
+}): Extract<InteractiveDispatchParams, { channel: "discord" }> {
   return {
+    channel: "discord",
     data: params.data,
     interactionId: params.interactionId,
     ctx: {
@@ -127,7 +131,9 @@ function createSlackDispatchParams(params: {
   data: string;
   interactionId: string;
   interaction?: Partial<SlackInteractiveDispatchContext["interaction"]>;
+}): Extract<InteractiveDispatchParams, { channel: "slack" }> {
   return {
+    channel: "slack",
     data: params.data,
     interactionId: params.interactionId,
     ctx: {
@@ -149,6 +155,7 @@ function createSlackDispatchParams(params: {
         selectedValues: ["approve:thread-1"],
         selectedLabels: ["Approve"],
         triggerId: "trigger-1",
+        responseUrl: "https://hooks.slack.test/response",
         ...params.interaction,
       },
     },
@@ -179,12 +186,14 @@ async function dispatchInteractive(params: InteractiveDispatchParams) {
   if (params.channel === "telegram") {
     return await dispatchPluginInteractiveHandler(params);
   }
+  if (params.channel === "discord") {
     return await dispatchPluginInteractiveHandler(params);
   }
   return await dispatchPluginInteractiveHandler(params);
 }
 
 function registerInteractiveHandler(params: {
+  channel: "telegram" | "discord" | "slack";
   namespace: string;
   handler: ReturnType<typeof vi.fn>;
 }) {
@@ -197,6 +206,7 @@ function registerInteractiveHandler(params: {
 
 type BindingHelperCase = {
   name: string;
+  registerParams: { channel: "telegram" | "discord" | "slack"; namespace: string };
   dispatchParams: InteractiveDispatchParams;
   requestResult: {
     status: "bound";
@@ -341,12 +351,14 @@ describe("plugin interactive handlers", () => {
     },
     {
       name: "routes Discord interactions by namespace and dedupes interaction ids",
+      channel: "discord" as const,
       baseParams: createDiscordDispatchParams({
         data: "codex:approve:thread-1",
         interactionId: "ix-1",
         interaction: { kind: "button", values: ["allow"] },
       }),
       expectedCall: {
+        channel: "discord",
         conversationId: "channel-1",
         interaction: expect.objectContaining({
           namespace: "codex",
@@ -358,11 +370,14 @@ describe("plugin interactive handlers", () => {
     },
     {
       name: "routes Slack interactions by namespace and dedupes interaction ids",
+      channel: "slack" as const,
       baseParams: createSlackDispatchParams({
         data: "codex:approve:thread-1",
+        interactionId: "slack-ix-1",
         interaction: { kind: "button" },
       }),
       expectedCall: {
+        channel: "slack",
         conversationId: "C123",
         threadId: "1710000000.000100",
         interaction: expect.objectContaining({
@@ -451,6 +466,7 @@ describe("plugin interactive handlers", () => {
     });
     expect(
       registerPluginInteractiveHandler("codex-plugin", {
+        channel: "discord",
         namespace: "codex",
         handler,
       }),
@@ -508,6 +524,7 @@ describe("plugin interactive handlers", () => {
     },
     {
       name: "wires Discord conversation binding helpers with parent channel context",
+      registerParams: { channel: "discord", namespace: "codex" },
       dispatchParams: createDiscordDispatchParams({
         data: "codex:bind",
         interactionId: "ix-bind",
@@ -516,9 +533,11 @@ describe("plugin interactive handlers", () => {
       requestResult: {
         status: "bound" as const,
         binding: {
+          bindingId: "binding-discord",
           pluginId: "codex-plugin",
           pluginName: "Codex",
           pluginRoot: "/plugins/codex",
+          channel: "discord",
           accountId: "default",
           conversationId: "channel-1",
           parentConversationId: "parent-1",
@@ -527,6 +546,7 @@ describe("plugin interactive handlers", () => {
       },
       requestSummary: "Bind Discord",
       expectedConversation: {
+        channel: "discord",
         accountId: "default",
         conversationId: "channel-1",
         parentConversationId: "parent-1",
@@ -534,8 +554,10 @@ describe("plugin interactive handlers", () => {
     },
     {
       name: "wires Slack conversation binding helpers with thread context",
+      registerParams: { channel: "slack", namespace: "codex" },
       dispatchParams: createSlackDispatchParams({
         data: "codex:bind",
+        interactionId: "slack-bind",
         interaction: {
           kind: "button",
           value: "bind",
@@ -546,9 +568,11 @@ describe("plugin interactive handlers", () => {
       requestResult: {
         status: "bound" as const,
         binding: {
+          bindingId: "binding-slack",
           pluginId: "codex-plugin",
           pluginName: "Codex",
           pluginRoot: "/plugins/codex",
+          channel: "slack",
           accountId: "default",
           conversationId: "C123",
           parentConversationId: "C123",
@@ -558,6 +582,7 @@ describe("plugin interactive handlers", () => {
       },
       requestSummary: "Bind Slack",
       expectedConversation: {
+        channel: "slack",
         accountId: "default",
         conversationId: "C123",
         parentConversationId: "C123",

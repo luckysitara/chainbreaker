@@ -72,6 +72,7 @@ describe("spawnSubagentDirect runtime model persistence", () => {
       },
       {
         agentSessionKey: "agent:main:main",
+        agentChannel: "discord",
       },
     );
 

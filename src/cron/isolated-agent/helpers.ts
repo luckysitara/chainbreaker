@@ -109,6 +109,7 @@ export function pickDeliverablePayloads(payloads: DeliveryPayload[]): DeliveryPa
 }
 
 /**
+ * Check if delivery should be skipped because the agent signaled no user-visible update.
  * Returns true when any payload is a heartbeat ack token and no payload contains media.
  */
 export function isHeartbeatOnlyResponse(payloads: DeliveryPayload[], ackMaxChars: number) {

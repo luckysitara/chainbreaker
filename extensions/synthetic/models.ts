@@ -28,6 +28,7 @@ export const SYNTHETIC_MODEL_CATALOG = [
     maxTokens: 8192,
   },
   {
+    id: "hf:zai-org/GLM-4.7",
     name: "GLM-4.7",
     reasoning: false,
     input: ["text"],
@@ -139,6 +140,7 @@ export const SYNTHETIC_MODEL_CATALOG = [
     maxTokens: 8192,
   },
   {
+    id: "hf:zai-org/GLM-4.5",
     name: "GLM-4.5",
     reasoning: false,
     input: ["text"],
@@ -146,6 +148,7 @@ export const SYNTHETIC_MODEL_CATALOG = [
     maxTokens: 128000,
   },
   {
+    id: "hf:zai-org/GLM-4.6",
     name: "GLM-4.6",
     reasoning: false,
     input: ["text"],
@@ -153,6 +156,7 @@ export const SYNTHETIC_MODEL_CATALOG = [
     maxTokens: 128000,
   },
   {
+    id: "hf:zai-org/GLM-5",
     name: "GLM-5",
     reasoning: true,
     input: ["text", "image"],

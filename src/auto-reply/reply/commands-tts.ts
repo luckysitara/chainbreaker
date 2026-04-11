@@ -293,6 +293,7 @@ export const handleTtsCommands: CommandHandler = async (params, allowTextCommand
     const maxLength = getTtsMaxLength(prefsPath);
     const summarize = isSummarizationEnabled(prefsPath);
     const last = getLastTtsAttempt();
+    const lines = [
       "📊 TTS status",
       `State: ${enabled ? "✅ enabled" : "❌ disabled"}`,
       `Provider: ${provider} (${hasKey ? "✅ configured" : "❌ not configured"})`,
@@ -301,22 +302,34 @@ export const handleTtsCommands: CommandHandler = async (params, allowTextCommand
     ];
     if (last) {
       const timeAgo = Math.round((Date.now() - last.timestamp) / 1000);
+      lines.push("");
+      lines.push(`Last attempt (${timeAgo}s ago): ${last.success ? "✅" : "❌"}`);
+      lines.push(`Text: ${last.textLength} chars${last.summarized ? " (summarized)" : ""}`);
       if (last.success) {
+        lines.push(`Provider: ${last.provider ?? "unknown"}`);
         if (last.fallbackFrom && last.provider && last.fallbackFrom !== last.provider) {
+          lines.push(`Fallback: ${last.fallbackFrom} -> ${last.provider}`);
         }
         if (last.attemptedProviders && last.attemptedProviders.length > 1) {
+          lines.push(`Attempts: ${last.attemptedProviders.join(" -> ")}`);
         }
         const details = formatAttemptDetails(last.attempts);
         if (details) {
+          lines.push(`Attempt details: ${details}`);
         }
+        lines.push(`Latency: ${last.latencyMs ?? 0}ms`);
       } else if (last.error) {
+        lines.push(`Error: ${last.error}`);
         if (last.attemptedProviders && last.attemptedProviders.length > 0) {
+          lines.push(`Attempts: ${last.attemptedProviders.join(" -> ")}`);
         }
         const details = formatAttemptDetails(last.attempts);
         if (details) {
+          lines.push(`Attempt details: ${details}`);
         }
       }
     }
+    return { shouldContinue: false, reply: { text: lines.join("\n") } };
   }
 
   return { shouldContinue: false, reply: ttsUsage() };

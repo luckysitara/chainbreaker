@@ -7,7 +7,9 @@ import type { AuthProfileStore } from "./auth-profiles/types.js";
 
 const mocks = vi.hoisted(() => ({
   syncExternalCliCredentials: vi.fn((store: AuthProfileStore) => {
+    store.profiles["minimax-portal:default"] = {
       type: "oauth",
+      provider: "minimax-portal",
       access: "access-token",
       refresh: "refresh-token",
       expires: Date.now() + 60_000,
@@ -41,6 +43,7 @@ describe("auth profiles read-only external CLI sync", () => {
     const agentDir = fs.mkdtempSync(path.join(os.tmpdir(), "chainbreaker-auth-readonly-sync-"));
     try {
       const authPath = path.join(agentDir, "auth-profiles.json");
+      const baseline: AuthProfileStore = {
         version: AUTH_STORE_VERSION,
         profiles: {
           "openai:default": {
@@ -50,6 +53,7 @@ describe("auth profiles read-only external CLI sync", () => {
           },
         },
       };
+      fs.writeFileSync(authPath, `${JSON.stringify(baseline, null, 2)}\n`, "utf8");
 
       const loaded = loadAuthProfileStoreForRuntime(agentDir, { readOnly: true });
 
@@ -57,10 +61,13 @@ describe("auth profiles read-only external CLI sync", () => {
         expect.any(Object),
         expect.objectContaining({ log: false }),
       );
+      expect(loaded.profiles["minimax-portal:default"]).toMatchObject({
         type: "oauth",
+        provider: "minimax-portal",
       });
 
       const persisted = JSON.parse(fs.readFileSync(authPath, "utf8")) as AuthProfileStore;
+      expect(persisted.profiles["minimax-portal:default"]).toBeUndefined();
       expect(persisted.profiles["openai:default"]).toMatchObject({
         type: "api_key",
         provider: "openai",

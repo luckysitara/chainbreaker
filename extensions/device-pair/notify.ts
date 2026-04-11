@@ -56,6 +56,7 @@ export function formatPendingRequests(pending: PendingPairingRequest[]): string 
   if (pending.length === 0) {
     return "No pending device pairing requests.";
   }
+  const lines: string[] = ["Pending device pairing requests:"];
   for (const req of pending) {
     const label = req.displayName?.trim() || req.deviceId;
     const platform = req.platform?.trim();
@@ -68,7 +69,9 @@ export function formatPendingRequests(pending: PendingPairingRequest[]): string 
       `scopes=${formatScopeList(req)}`,
       ip ? `ip=${ip}` : null,
     ].filter(Boolean);
+    lines.push(parts.join(" · "));
   }
+  return lines.join("\n");
 }
 
 function resolveNotifyStatePath(stateDir: string): string {
@@ -208,6 +211,7 @@ function buildPairingRequestNotificationText(request: PendingPairingRequest): st
   const ip = request.remoteIp?.trim();
   const role = formatRoleList(request);
   const scopes = formatScopeList(request);
+  const lines = [
     "📲 New device pairing request",
     `ID: ${request.requestId}`,
     `Name: ${label}`,
@@ -219,6 +223,7 @@ function buildPairingRequestNotificationText(request: PendingPairingRequest): st
     `Approve: /pair approve ${request.requestId}`,
     "List pending: /pair pending",
   ];
+  return lines.join("\n");
 }
 
 function requestTimestampMs(request: PendingPairingRequest): number | null {

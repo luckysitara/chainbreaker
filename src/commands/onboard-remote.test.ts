@@ -118,6 +118,7 @@ describe("promptRemoteGatewayConfig", () => {
     );
   });
 
+  it("falls back to manual URL entry when discovery trust is declined", async () => {
     detectBinary.mockResolvedValue(true);
     discoverGatewayBeacons.mockResolvedValue([
       {

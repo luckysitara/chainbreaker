@@ -335,6 +335,7 @@ export function createDiagnosticsOtelService(): ChainbreakerPluginService {
               attributes["code.filepath"] = meta.path.filePath;
             }
             if (meta?.path?.fileLine) {
+              attributes["code.lineno"] = Number(meta.path.fileLine);
             }
             if (meta?.path?.method) {
               attributes["code.function"] = meta.path.method;

@@ -115,9 +115,15 @@ async function readSseEvent(
     if (boundary >= 0) {
       const rawEvent = state.buffer.slice(0, boundary);
       state.buffer = state.buffer.slice(boundary + 2);
+      const lines = rawEvent.split("\n");
       const event =
+        lines
+          .find((line) => line.startsWith("event:"))
           ?.slice("event:".length)
           .trim() ?? "message";
+      const data = lines
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice("data:".length).trim())
         .join("\n");
       if (!data) {
         continue;

@@ -19,6 +19,7 @@ import type { CommandHandlerResult } from "../commands-types.js";
 import {
   resolveMatrixConversationId,
   resolveMatrixParentConversationId,
+} from "../matrix-context.js";
 import {
   type SubagentsCommandContext,
   isDiscordSurface,
@@ -33,6 +34,7 @@ import {
 } from "./shared.js";
 
 type FocusBindingContext = {
+  channel: "discord" | "matrix" | "telegram";
   accountId: string;
   conversationId: string;
   parentConversationId?: string;
@@ -52,6 +54,7 @@ function resolveFocusBindingContext(
       return null;
     }
     return {
+      channel: "discord",
       accountId: resolveChannelAccountId(params),
       conversationId,
       placement: currentThreadId ? "current" : "child",
@@ -98,6 +101,7 @@ function resolveFocusBindingContext(
     const currentThreadId =
       params.ctx.MessageThreadId != null ? String(params.ctx.MessageThreadId).trim() : "";
     return {
+      channel: "matrix",
       accountId: resolveChannelAccountId(params),
       conversationId,
       ...(parentConversationId ? { parentConversationId } : {}),
@@ -113,6 +117,7 @@ export async function handleSubagentsFocusAction(
 ): Promise<CommandHandlerResult> {
   const { params, runs, restTokens } = ctx;
   const channel = resolveCommandSurfaceChannel(params);
+  if (channel !== "discord" && channel !== "matrix" && channel !== "telegram") {
     return stopWithText("⚠️ /focus is only available on Discord, Matrix, and Telegram.");
   }
 
@@ -129,7 +134,9 @@ export async function handleSubagentsFocusAction(
   });
   if (!capabilities.adapterAvailable || !capabilities.bindSupported) {
     const label =
+      channel === "discord"
         ? "Discord thread"
+        : channel === "matrix"
           ? "Matrix thread"
           : "Telegram conversation";
     return stopWithText(`⚠️ ${label} bindings are unavailable for this account.`);
@@ -147,11 +154,13 @@ export async function handleSubagentsFocusAction(
         "⚠️ /focus on Telegram requires a topic context in groups, or a direct-message conversation.",
       );
     }
+    if (channel === "matrix") {
       return stopWithText("⚠️ Could not resolve a Matrix room for /focus.");
     }
     return stopWithText("⚠️ Could not resolve a Discord channel for /focus.");
   }
 
+  if (channel === "matrix") {
     const spawnPolicy = resolveThreadBindingSpawnPolicy({
       cfg: params.cfg,
       channel,

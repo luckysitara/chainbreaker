@@ -109,18 +109,25 @@ describe("normalizeCompatibilityConfigValues", () => {
   it("migrates Slack dm.policy/dm.allowFrom to dmPolicy/allowFrom aliases", () => {
     const res = normalizeCompatibilityConfigValues({
       channels: {
+        slack: {
           dm: { enabled: true, policy: "open", allowFrom: ["*"] },
         },
       },
     });
 
+    expect(res.config.channels?.slack?.dmPolicy).toBe("open");
+    expect(res.config.channels?.slack?.allowFrom).toEqual(["*"]);
+    expect(res.config.channels?.slack?.dm).toEqual({ enabled: true });
     expect(res.changes).toEqual([
+      "Moved channels.slack.dm.policy → channels.slack.dmPolicy.",
+      "Moved channels.slack.dm.allowFrom → channels.slack.allowFrom.",
     ]);
   });
 
   it("migrates Discord account dm.policy/dm.allowFrom to dmPolicy/allowFrom aliases", () => {
     const res = normalizeCompatibilityConfigValues({
       channels: {
+        discord: {
           accounts: {
             work: {
               dm: { policy: "allowlist", allowFrom: ["123"], groupEnabled: true },
@@ -130,13 +137,19 @@ describe("normalizeCompatibilityConfigValues", () => {
       },
     });
 
+    expect(res.config.channels?.discord?.accounts?.work?.dmPolicy).toBe("allowlist");
+    expect(res.config.channels?.discord?.accounts?.work?.allowFrom).toEqual(["123"]);
+    expect(res.config.channels?.discord?.accounts?.work?.dm).toEqual({ groupEnabled: true });
     expect(res.changes).toEqual([
+      "Moved channels.discord.accounts.work.dm.policy → channels.discord.accounts.work.dmPolicy.",
+      "Moved channels.discord.accounts.work.dm.allowFrom → channels.discord.accounts.work.allowFrom.",
     ]);
   });
 
   it("migrates Discord streaming boolean alias to streaming enum", () => {
     const res = normalizeCompatibilityConfigValues({
       channels: {
+        discord: {
           streaming: true,
           accounts: {
             work: {
@@ -147,22 +160,33 @@ describe("normalizeCompatibilityConfigValues", () => {
       },
     });
 
+    expect(res.config.channels?.discord?.streaming).toBe("partial");
+    expect(res.config.channels?.discord?.streamMode).toBeUndefined();
+    expect(res.config.channels?.discord?.accounts?.work?.streaming).toBe("off");
+    expect(res.config.channels?.discord?.accounts?.work?.streamMode).toBeUndefined();
     expect(res.changes).toContain(
+      "Normalized channels.discord.streaming boolean → enum (partial).",
     );
     expect(res.changes).toContain(
+      "Normalized channels.discord.accounts.work.streaming boolean → enum (off).",
     );
   });
 
   it("migrates Discord legacy streamMode into streaming enum", () => {
     const res = normalizeCompatibilityConfigValues({
       channels: {
+        discord: {
           streaming: false,
           streamMode: "block",
         },
       },
     });
 
+    expect(res.config.channels?.discord?.streaming).toBe("block");
+    expect(res.config.channels?.discord?.streamMode).toBeUndefined();
     expect(res.changes).toEqual([
+      "Moved channels.discord.streamMode → channels.discord.streaming (block).",
+      "Normalized channels.discord.streaming boolean → enum (block).",
     ]);
   });
 
@@ -185,13 +209,19 @@ describe("normalizeCompatibilityConfigValues", () => {
   it("migrates Slack legacy streaming keys to unified config", () => {
     const res = normalizeCompatibilityConfigValues({
       channels: {
+        slack: {
           streaming: false,
           streamMode: "status_final",
         },
       },
     });
 
+    expect(res.config.channels?.slack?.streaming).toBe("progress");
+    expect(res.config.channels?.slack?.nativeStreaming).toBe(false);
+    expect(res.config.channels?.slack?.streamMode).toBeUndefined();
     expect(res.changes).toEqual([
+      "Moved channels.slack.streamMode → channels.slack.streaming (progress).",
+      "Moved channels.slack.streaming (boolean) → channels.slack.nativeStreaming (false).",
     ]);
   });
 

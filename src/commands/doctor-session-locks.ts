@@ -66,15 +66,20 @@ export async function noteSessionLockHealth(params?: { shouldRepair?: boolean; s
 
   const staleCount = allLocks.filter((lock) => lock.stale).length;
   const removedCount = allLocks.filter((lock) => lock.removed).length;
+  const lines: string[] = [
     `- Found ${allLocks.length} session lock file${allLocks.length === 1 ? "" : "s"}.`,
     ...allLocks.toSorted((a, b) => a.lockPath.localeCompare(b.lockPath)).map(formatLockLine),
   ];
 
   if (staleCount > 0 && !shouldRepair) {
+    lines.push(`- ${staleCount} lock file${staleCount === 1 ? " is" : "s are"} stale.`);
+    lines.push('- Run "chainbreaker doctor --fix" to remove stale lock files automatically.');
   }
   if (shouldRepair && removedCount > 0) {
+    lines.push(
       `- Removed ${removedCount} stale session lock file${removedCount === 1 ? "" : "s"}.`,
     );
   }
 
+  note(lines.join("\n"), "Session locks");
 }

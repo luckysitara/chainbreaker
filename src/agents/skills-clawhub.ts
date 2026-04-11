@@ -63,6 +63,7 @@ type Logger = {
 };
 
 const VALID_SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
+// eslint-disable-next-line no-control-regex -- detects any character outside printable ASCII
 const NON_ASCII_PATTERN = /[^\x00-\x7F]/;
 
 function normalizeTrackedSlug(raw: string): string {

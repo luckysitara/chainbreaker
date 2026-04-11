@@ -1,10 +1,12 @@
 import type { ChainbreakerConfig } from "../../config/config.js";
 import type { SessionEntry } from "../../config/sessions.js";
 import type { ReplyPayload } from "../types.js";
+import type { InlineDirectives } from "./directive-handling.parse.js";
 import { withOptions } from "./directive-handling.shared.js";
 import { resolveQueueSettings } from "./queue.js";
 
 export function maybeHandleQueueDirective(params: {
+  directives: InlineDirectives;
   cfg: ChainbreakerConfig;
   channel: string;
   sessionEntry?: SessionEntry;

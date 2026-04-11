@@ -51,25 +51,32 @@ export async function noteBootstrapFileSize(cfg: ChainbreakerConfig) {
     return analysis;
   }
 
+  const lines: string[] = [];
   if (analysis.hasTruncation) {
+    lines.push("Workspace bootstrap files exceed limits and will be truncated:");
     for (const file of analysis.truncatedFiles) {
       const truncatedChars = Math.max(0, file.rawChars - file.injectedChars);
+      lines.push(
         `- ${file.name}: ${formatInt(file.rawChars)} raw / ${formatInt(file.injectedChars)} injected (${formatPercent(truncatedChars, file.rawChars)} truncated; ${formatCauses(file.causes)})`,
       );
     }
   } else {
+    lines.push("Workspace bootstrap files are near configured limits:");
   }
 
   const nonTruncatedNearLimit = analysis.nearLimitFiles.filter((file) => !file.truncated);
   if (nonTruncatedNearLimit.length > 0) {
     for (const file of nonTruncatedNearLimit) {
+      lines.push(
         `- ${file.name}: ${formatInt(file.rawChars)} chars (${formatPercent(file.rawChars, bootstrapMaxChars)} of max/file ${formatInt(bootstrapMaxChars)})`,
       );
     }
   }
 
+  lines.push(
     `Total bootstrap injected chars: ${formatInt(analysis.totals.injectedChars)} (${formatPercent(analysis.totals.injectedChars, bootstrapTotalMaxChars)} of max/total ${formatInt(bootstrapTotalMaxChars)}).`,
   );
+  lines.push(
     `Total bootstrap raw chars (before truncation): ${formatInt(analysis.totals.rawChars)}.`,
   );
 
@@ -80,11 +87,15 @@ export async function noteBootstrapFileSize(cfg: ChainbreakerConfig) {
     analysis.truncatedFiles.some((file) => file.causes.includes("total-limit")) ||
     analysis.totalNearLimit;
   if (needsPerFileTip || needsTotalTip) {
+    lines.push("");
   }
   if (needsPerFileTip) {
+    lines.push("- Tip: tune `agents.defaults.bootstrapMaxChars` for per-file limits.");
   }
   if (needsTotalTip) {
+    lines.push("- Tip: tune `agents.defaults.bootstrapTotalMaxChars` for total-budget limits.");
   }
 
+  note(lines.join("\n"), "Bootstrap file size");
   return analysis;
 }

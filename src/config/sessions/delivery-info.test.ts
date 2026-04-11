@@ -43,12 +43,16 @@ describe("extractDeliveryInfo", () => {
       baseSessionKey: "agent:main:telegram:group:1",
       threadId: "55",
     });
+    expect(parseSessionThreadInfo("agent:main:slack:channel:C1:thread:123.456")).toEqual({
+      baseSessionKey: "agent:main:slack:channel:C1",
       threadId: "123.456",
     });
     expect(
       parseSessionThreadInfo(
+        "agent:main:matrix:channel:!room:example.org:thread:$AbC123:example.org",
       ),
     ).toEqual({
+      baseSessionKey: "agent:main:matrix:channel:!room:example.org",
       threadId: "$AbC123:example.org",
     });
     expect(
@@ -91,8 +95,11 @@ describe("extractDeliveryInfo", () => {
   });
 
   it("falls back to base sessions for :thread: keys", () => {
+    const baseKey = "agent:main:slack:channel:C0123ABC";
     const threadKey = `${baseKey}:thread:1234567890.123456`;
     storeState.store[baseKey] = buildEntry({
+      channel: "slack",
+      to: "slack:C0123ABC",
       accountId: "workspace-1",
     });
 
@@ -100,6 +107,8 @@ describe("extractDeliveryInfo", () => {
 
     expect(result).toEqual({
       deliveryContext: {
+        channel: "slack",
+        to: "slack:C0123ABC",
         accountId: "workspace-1",
       },
       threadId: "1234567890.123456",

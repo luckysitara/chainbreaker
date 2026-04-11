@@ -29,9 +29,11 @@ export async function readSystemdUserLingerStatus(
     const { stdout } = await runExec("loginctl", ["show-user", user, "-p", "Linger"], {
       timeoutMs: 5_000,
     });
+    const line = stdout
       .split("\n")
       .map((entry) => entry.trim())
       .find((entry) => entry.startsWith("Linger="));
+    const value = line?.split("=")[1]?.trim().toLowerCase();
     if (value === "yes" || value === "no") {
       return { user, linger: value };
     }

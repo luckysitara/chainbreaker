@@ -112,9 +112,7 @@ describe("backupCreateCommand atomic archive write", () => {
 
   it("falls back to exclusive copy when hard-link publication is unsupported", async () => {
     const stateDir = path.join(tempHome.home, ".chainbreaker");
-    const archiveDir = await fs.mkdtemp(
-      path.join(os.tmpdir(), "chainbreaker-backup-copy-fallback-"),
-    );
+    const archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), "chainbreaker-backup-copy-fallback-"));
     const linkSpy = vi.spyOn(fs, "link");
     try {
       await fs.writeFile(path.join(stateDir, "chainbreaker.json"), JSON.stringify({}), "utf8");

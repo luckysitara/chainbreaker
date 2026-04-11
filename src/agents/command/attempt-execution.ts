@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import readline from "node:readline";
 import { SessionManager } from "@mariozechner/pi-coding-agent";
 import { normalizeReplyPayload } from "../../auto-reply/reply/normalize-reply.js";
 import type { ThinkLevel, VerboseLevel } from "../../auto-reply/thinking.js";
@@ -39,6 +40,7 @@ const SESSION_FILE_MAX_RECORDS = 500;
  * a fallback retry can rely on the on-disk history or must re-send the
  * original prompt.
  *
+ * The check parses JSONL records line-by-line (CWE-703) instead of relying
  * on a raw substring match against a bounded byte prefix, which could
  * produce false negatives when the pre-assistant content exceeds the byte
  * limit.
@@ -56,7 +58,10 @@ export async function sessionFileHasContent(sessionFile: string | undefined): Pr
 
     const fh = await fs.open(sessionFile, "r");
     try {
+      const rl = readline.createInterface({ input: fh.createReadStream({ encoding: "utf-8" }) });
       let recordCount = 0;
+      for await (const line of rl) {
+        if (!line.trim()) {
           continue;
         }
         recordCount++;
@@ -65,6 +70,7 @@ export async function sessionFileHasContent(sessionFile: string | undefined): Pr
         }
         let obj: unknown;
         try {
+          obj = JSON.parse(line);
         } catch {
           continue;
         }

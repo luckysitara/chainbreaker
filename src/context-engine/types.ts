@@ -99,6 +99,7 @@ export type ContextEngineRuntimeContext = Record<string, unknown> & {
  * ContextEngine defines the pluggable contract for context management.
  *
  * Required methods define a generic lifecycle; optional methods allow engines
+ * to provide additional capabilities (retrieval, lineage, etc.).
  */
 export interface ContextEngine {
   /** Engine identifier and metadata */

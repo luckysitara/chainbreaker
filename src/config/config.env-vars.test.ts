@@ -16,18 +16,14 @@ import type { ChainbreakerConfig } from "./types.js";
 describe("config env vars", () => {
   it("applies env vars from env block when missing", async () => {
     await withEnvOverride({ OPENROUTER_API_KEY: undefined }, async () => {
-      applyConfigEnvVars({
-        env: { vars: { OPENROUTER_API_KEY: "config-key" } },
-      } as ChainbreakerConfig);
+      applyConfigEnvVars({ env: { vars: { OPENROUTER_API_KEY: "config-key" } } } as ChainbreakerConfig);
       expect(process.env.OPENROUTER_API_KEY).toBe("config-key");
     });
   });
 
   it("does not override existing env vars", async () => {
     await withEnvOverride({ OPENROUTER_API_KEY: "existing-key" }, async () => {
-      applyConfigEnvVars({
-        env: { vars: { OPENROUTER_API_KEY: "config-key" } },
-      } as ChainbreakerConfig);
+      applyConfigEnvVars({ env: { vars: { OPENROUTER_API_KEY: "config-key" } } } as ChainbreakerConfig);
       expect(process.env.OPENROUTER_API_KEY).toBe("existing-key");
     });
   });
@@ -139,10 +135,12 @@ describe("config env vars", () => {
 
   it("reads key-value pairs from the state-dir .env file", async () => {
     await withTempHome(async (_home) => {
+      await writeStateDirDotEnv("BRAVE_API_KEY=BSA-test-key\nDISCORD_BOT_TOKEN=discord-tok\n", {
         env: process.env,
       });
       const vars = readStateDirDotEnvVars(process.env);
       expect(vars.BRAVE_API_KEY).toBe("BSA-test-key");
+      expect(vars.DISCORD_BOT_TOKEN).toBe("discord-tok");
     });
   });
 

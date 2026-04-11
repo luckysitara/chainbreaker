@@ -23,18 +23,22 @@ describe("buildPairingReply", () => {
       code: "QRS678",
     },
     {
+      channel: "discord",
       idLine: "Your Discord user id: 1",
       code: "ABC123",
     },
     {
+      channel: "slack",
       idLine: "Your Slack user id: U1",
       code: "DEF456",
     },
     {
+      channel: "signal",
       idLine: "Your Signal number: +15550001111",
       code: "GHI789",
     },
     {
+      channel: "imessage",
       idLine: "Your iMessage sender id: +15550002222",
       code: "JKL012",
     },

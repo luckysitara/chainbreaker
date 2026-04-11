@@ -58,6 +58,7 @@ describe("printCronList", () => {
 
     // Verify output contains the job
     expect(logs.length).toBeGreaterThan(1);
+    expect(logs.some((line) => line.includes("test-job-id"))).toBe(true);
   });
 
   it("handles job with defined sessionTarget", () => {
@@ -69,6 +70,7 @@ describe("printCronList", () => {
     });
 
     expect(() => printCronList([jobWithTarget], runtime)).not.toThrow();
+    expect(logs.some((line) => line.includes("isolated"))).toBe(true);
   });
 
   it("shows stagger label for cron schedules", () => {
@@ -83,6 +85,7 @@ describe("printCronList", () => {
     });
 
     printCronList([job], runtime);
+    expect(logs.some((line) => line.includes("(stagger 5m)"))).toBe(true);
   });
 
   it("shows dash for unset agentId instead of default", () => {
@@ -174,6 +177,7 @@ describe("printCronList", () => {
     });
 
     printCronList([job], runtime);
+    expect(logs.some((line) => line.includes("(exact)"))).toBe(true);
   });
 });
 
@@ -184,5 +188,7 @@ describe("getCronChannelOptions", () => {
   });
 
   it("lists discovered channel plugin ids when plugins are available", () => {
+    hoisted.listChannelPluginsMock.mockReturnValue([{ id: "telegram" }, { id: "signal" }]);
+    expect(getCronChannelOptions()).toBe("last|telegram|signal");
   });
 });

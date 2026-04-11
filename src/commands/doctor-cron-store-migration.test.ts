@@ -102,6 +102,7 @@ describe("normalizeStoredCronJobs", () => {
     expect(payload?.provider).toBeUndefined();
     expect(jobs[0]?.delivery).toMatchObject({
       mode: "announce",
+      channel: "slack",
     });
   });
 
@@ -164,6 +165,7 @@ describe("normalizeStoredCronJobs", () => {
     const { job, result } = normalizeOneJob(
       makeLegacyJob({
         id: "job-1",
+        sessionKey: "  agent:main:discord:channel:ops  ",
         schedule: { kind: "at", atMs: 1_700_000_000_000 },
         sessionTarget: "isolated",
         payload: {
@@ -179,6 +181,7 @@ describe("normalizeStoredCronJobs", () => {
     );
 
     expect(result.mutated).toBe(true);
+    expect(job.sessionKey).toBe("agent:main:discord:channel:ops");
     expect(job.delivery).toEqual({
       mode: "announce",
       channel: "telegram",
@@ -283,11 +286,13 @@ describe("normalizeStoredCronJobs", () => {
 
   it("migrates legacy string schedules and command-only payloads (#18445)", () => {
     const { job, result } = normalizeOneJob({
+      id: "imessage-refresh",
       name: "iMessage Refresh",
       enabled: true,
       createdAtMs: 1_700_000_000_000,
       updatedAtMs: 1_700_000_000_000,
       schedule: "0 */2 * * *",
+      command: "bash /tmp/imessage-refresh.sh",
       timeout: 120,
       state: {},
     });
@@ -303,6 +308,7 @@ describe("normalizeStoredCronJobs", () => {
     expect(job.wakeMode).toBe("now");
     expect(job.payload).toEqual({
       kind: "systemEvent",
+      text: "bash /tmp/imessage-refresh.sh",
     });
     expect("command" in job).toBe(false);
     expect("timeout" in job).toBe(false);

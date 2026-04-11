@@ -20,6 +20,7 @@ type RunCommandOptions = {
   args?: string[];
   stdin?: Buffer | string;
   allowFailure?: boolean;
+  signal?: AbortSignal;
 };
 
 export type SandboxResolvedPath = {
@@ -36,22 +37,28 @@ export type SandboxFsStat = {
 
 export type SandboxFsBridge = {
   resolvePath(params: { filePath: string; cwd?: string }): SandboxResolvedPath;
+  readFile(params: { filePath: string; cwd?: string; signal?: AbortSignal }): Promise<Buffer>;
   writeFile(params: {
     filePath: string;
     cwd?: string;
     data: Buffer | string;
     encoding?: BufferEncoding;
     mkdir?: boolean;
+    signal?: AbortSignal;
   }): Promise<void>;
+  mkdirp(params: { filePath: string; cwd?: string; signal?: AbortSignal }): Promise<void>;
   remove(params: {
     filePath: string;
     cwd?: string;
     recursive?: boolean;
     force?: boolean;
+    signal?: AbortSignal;
   }): Promise<void>;
+  rename(params: { from: string; to: string; cwd?: string; signal?: AbortSignal }): Promise<void>;
   stat(params: {
     filePath: string;
     cwd?: string;
+    signal?: AbortSignal;
   }): Promise<SandboxFsStat | null>;
 };
 
@@ -88,6 +95,7 @@ class SandboxFsBridgeImpl implements SandboxFsBridge {
   async readFile(params: {
     filePath: string;
     cwd?: string;
+    signal?: AbortSignal;
   }): Promise<Buffer> {
     const target = this.resolveResolvedPath(params);
     return this.readPinnedFile(target);
@@ -99,6 +107,7 @@ class SandboxFsBridgeImpl implements SandboxFsBridge {
     data: Buffer | string;
     encoding?: BufferEncoding;
     mkdir?: boolean;
+    signal?: AbortSignal;
   }): Promise<void> {
     const target = this.resolveResolvedPath(params);
     this.ensureWriteAccess(target, "write files");
@@ -121,9 +130,11 @@ class SandboxFsBridgeImpl implements SandboxFsBridge {
         mkdir: params.mkdir !== false,
       }),
       stdin: buffer,
+      signal: params.signal,
     });
   }
 
+  async mkdirp(params: { filePath: string; cwd?: string; signal?: AbortSignal }): Promise<void> {
     const target = this.resolveResolvedPath(params);
     this.ensureWriteAccess(target, "create directories");
     const mkdirCheck = {
@@ -139,6 +150,7 @@ class SandboxFsBridgeImpl implements SandboxFsBridge {
         check: mkdirCheck,
         pinned: this.pathGuard.resolvePinnedDirectoryEntry(target, "create directories"),
       }),
+      signal: params.signal,
     });
   }
 
@@ -147,6 +159,7 @@ class SandboxFsBridgeImpl implements SandboxFsBridge {
     cwd?: string;
     recursive?: boolean;
     force?: boolean;
+    signal?: AbortSignal;
   }): Promise<void> {
     const target = this.resolveResolvedPath(params);
     this.ensureWriteAccess(target, "remove files");
@@ -164,6 +177,7 @@ class SandboxFsBridgeImpl implements SandboxFsBridge {
         recursive: params.recursive,
         force: params.force,
       }),
+      signal: params.signal,
     });
   }
 
@@ -171,6 +185,7 @@ class SandboxFsBridgeImpl implements SandboxFsBridge {
     from: string;
     to: string;
     cwd?: string;
+    signal?: AbortSignal;
   }): Promise<void> {
     const from = this.resolveResolvedPath({ filePath: params.from, cwd: params.cwd });
     const to = this.resolveResolvedPath({ filePath: params.to, cwd: params.cwd });
@@ -197,17 +212,20 @@ class SandboxFsBridgeImpl implements SandboxFsBridge {
         from: this.pathGuard.resolvePinnedEntry(from, "rename files"),
         to: this.pathGuard.resolvePinnedEntry(to, "rename files"),
       }),
+      signal: params.signal,
     });
   }
 
   async stat(params: {
     filePath: string;
     cwd?: string;
+    signal?: AbortSignal;
   }): Promise<SandboxFsStat | null> {
     const target = this.resolveResolvedPath(params);
     const anchoredTarget = await this.pathGuard.resolveAnchoredSandboxEntry(target, "stat files");
     const result = await this.runPlannedCommand(
       buildStatPlan(target, anchoredTarget),
+      params.signal,
     );
     if (result.code !== 0) {
       const stderr = result.stderr.toString("utf8");
@@ -239,6 +257,7 @@ class SandboxFsBridgeImpl implements SandboxFsBridge {
         args: options.args,
         stdin: options.stdin,
         allowFailure: options.allowFailure,
+        signal: options.signal,
       });
     }
     return await runDockerSandboxShellCommand({
@@ -247,6 +266,7 @@ class SandboxFsBridgeImpl implements SandboxFsBridge {
       args: options.args,
       stdin: options.stdin,
       allowFailure: options.allowFailure,
+      signal: options.signal,
     });
   }
 
@@ -260,6 +280,7 @@ class SandboxFsBridgeImpl implements SandboxFsBridge {
   }
 
   private async runCheckedCommand(
+    plan: SandboxFsCommandPlan & { stdin?: Buffer | string; signal?: AbortSignal },
   ): Promise<SandboxBackendCommandResult> {
     await this.pathGuard.assertPathChecks(plan.checks);
     if (plan.recheckBeforeCommand) {
@@ -269,12 +290,15 @@ class SandboxFsBridgeImpl implements SandboxFsBridge {
       args: plan.args,
       stdin: plan.stdin,
       allowFailure: plan.allowFailure,
+      signal: plan.signal,
     });
   }
 
   private async runPlannedCommand(
     plan: SandboxFsCommandPlan,
+    signal?: AbortSignal,
   ): Promise<SandboxBackendCommandResult> {
+    return await this.runCheckedCommand({ ...plan, signal });
   }
 
   private ensureWriteAccess(target: SandboxResolvedFsPath, action: string) {

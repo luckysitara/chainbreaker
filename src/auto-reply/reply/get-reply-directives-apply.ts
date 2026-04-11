@@ -5,6 +5,9 @@ import type { MsgContext } from "../templating.js";
 import type { ElevatedLevel } from "../thinking.js";
 import type { ReplyPayload } from "../types.js";
 import type { CommandContext } from "./commands-types.js";
+import type { ApplyInlineDirectivesFastLaneParams } from "./directive-handling.params.js";
+import { isDirectiveOnly, type InlineDirectives } from "./directive-handling.parse.js";
+import { clearInlineDirectives } from "./get-reply-directives-utils.js";
 import type { createModelSelectionState } from "./model-selection.js";
 import type { TypingController } from "./typing.js";
 
@@ -49,16 +52,20 @@ export type ApplyDirectiveResult =
   | { kind: "reply"; reply: ReplyPayload | ReplyPayload[] | undefined }
   | {
       kind: "continue";
+      directives: InlineDirectives;
       provider: string;
       model: string;
       contextTokens: number;
       directiveAck?: ReplyPayload;
+      perMessageQueueMode?: InlineDirectives["queueMode"];
       perMessageQueueOptions?: {
         debounceMs?: number;
         cap?: number;
+        dropPolicy?: InlineDirectives["dropPolicy"];
       };
     };
 
+export async function applyInlineDirectiveOverrides(params: {
   ctx: MsgContext;
   cfg: ChainbreakerConfig;
   agentId: string;
@@ -73,12 +80,14 @@ export type ApplyDirectiveResult =
   isGroup: boolean;
   allowTextCommands: boolean;
   command: CommandContext;
+  directives: InlineDirectives;
   messageProviderKey: string;
   elevatedEnabled: boolean;
   elevatedAllowed: boolean;
   elevatedFailures: Array<{ gate: string; key: string }>;
   defaultProvider: string;
   defaultModel: string;
+  aliasIndex: ApplyInlineDirectivesFastLaneParams["aliasIndex"];
   provider: string;
   model: string;
   modelState: Awaited<ReturnType<typeof createModelSelectionState>>;
@@ -162,6 +171,7 @@ export type ApplyDirectiveResult =
   }
 
   if (!command.isAuthorizedSender) {
+    directives = clearInlineDirectives(directives.cleaned);
   }
 
   const hasAnyDirective =
@@ -263,6 +273,7 @@ export type ApplyDirectiveResult =
   if (hasAnyDirective && command.isAuthorizedSender) {
     const fastLane = await (
       await loadDirectiveFastLane()
+    ).applyInlineDirectivesFastLane({
       directives,
       commandAuthorized: command.isAuthorizedSender,
       ctx,
@@ -298,6 +309,7 @@ export type ApplyDirectiveResult =
 
   const persisted = await (
     await loadDirectivePersist()
+  ).persistInlineDirectives({
     directives,
     effectiveModelDirective,
     cfg,

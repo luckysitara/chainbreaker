@@ -33,6 +33,7 @@ describe("diffConfigPaths", () => {
         qmd: {
           paths: [{ path: "~/docs", pattern: "**/*.md", name: "docs" }],
           scope: {
+            rules: [{ when: { channel: "slack" }, include: ["docs"] }],
           },
         },
       },
@@ -42,6 +43,7 @@ describe("diffConfigPaths", () => {
         qmd: {
           paths: [{ path: "~/docs", pattern: "**/*.md", name: "docs" }],
           scope: {
+            rules: [{ when: { channel: "slack" }, include: ["docs"] }],
           },
         },
       },

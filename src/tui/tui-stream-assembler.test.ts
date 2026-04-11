@@ -11,6 +11,7 @@ const messageWithContent = (content: readonly Record<string, unknown>[]) =>
     content,
   }) as const;
 
+const TEXT_ONLY_TWO_BLOCKS = messageWithContent([text("Draft line 1"), text("Draft line 2")]);
 
 type FinalizeBoundaryCase = {
   name: string;
@@ -34,9 +35,15 @@ const FINALIZE_BOUNDARY_CASES: FinalizeBoundaryCase[] = [
   },
   {
     name: "prefers final text when non-text appears only in final payload",
+    streamedContent: [text("Draft line 1"), text("Draft line 2")],
+    finalContent: [toolUse(), text("Draft line 2")],
+    expected: "Draft line 2",
   },
   {
     name: "keeps non-empty final text for plain text boundary drops",
+    streamedContent: [text("Draft line 1"), text("Draft line 2")],
+    finalContent: [text("Draft line 1")],
+    expected: "Draft line 1",
   },
   {
     name: "prefers final replacement text when payload is not a boundary subset",
@@ -102,9 +109,11 @@ describe("TuiStreamAssembler", () => {
   it("keeps streamed delta text when incoming tool boundary drops a block", () => {
     const assembler = new TuiStreamAssembler();
     const first = assembler.ingestDelta("run-delta-boundary", TEXT_ONLY_TWO_BLOCKS, false);
+    expect(first).toBe("Draft line 1\nDraft line 2");
 
     const second = assembler.ingestDelta(
       "run-delta-boundary",
+      messageWithContent([toolUse(), text("Draft line 2")]),
       false,
     );
     expect(second).toBeNull();

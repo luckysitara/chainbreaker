@@ -1,6 +1,7 @@
 import type { TelegramTransport } from "./fetch.js";
 
 type TelegramPollingTransportStateOpts = {
+  log: (line: string) => void;
   initialTransport?: TelegramTransport;
   createTelegramTransport?: () => TelegramTransport;
 };

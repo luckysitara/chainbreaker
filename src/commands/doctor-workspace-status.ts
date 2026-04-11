@@ -34,6 +34,7 @@ export function noteWorkspaceStatus(cfg: ChainbreakerConfig) {
     const disabled = pluginRegistry.plugins.filter((p) => p.status === "disabled");
     const errored = pluginRegistry.plugins.filter((p) => p.status === "error");
 
+    const lines = [
       `Loaded: ${loaded.length}`,
       `Disabled: ${disabled.length}`,
       `Errors: ${errored.length}`,
@@ -43,14 +44,17 @@ export function noteWorkspaceStatus(cfg: ChainbreakerConfig) {
             .map((p) => p.id)
             .join("\n- ")}${errored.length > 10 ? "\n- ..." : ""}`
         : null,
+    ].filter((line): line is string => Boolean(line));
 
     const bundlePlugins = loaded.filter(
       (p) => p.format === "bundle" && (p.bundleCapabilities?.length ?? 0) > 0,
     );
     if (bundlePlugins.length > 0) {
       const allCaps = new Set(bundlePlugins.flatMap((p) => p.bundleCapabilities ?? []));
+      lines.push(`Bundle plugins: ${bundlePlugins.length} (${[...allCaps].toSorted().join(", ")})`);
     }
 
+    note(lines.join("\n"), "Plugins");
   }
   const compatibilityWarnings = buildPluginCompatibilityWarnings({
     config: cfg,
@@ -58,13 +62,16 @@ export function noteWorkspaceStatus(cfg: ChainbreakerConfig) {
     report: pluginRegistry,
   });
   if (compatibilityWarnings.length > 0) {
+    note(compatibilityWarnings.map((line) => `- ${line}`).join("\n"), "Plugin compatibility");
   }
   if (pluginRegistry.diagnostics.length > 0) {
+    const lines = pluginRegistry.diagnostics.map((diag) => {
       const prefix = diag.level.toUpperCase();
       const plugin = diag.pluginId ? ` ${diag.pluginId}` : "";
       const source = diag.source ? ` (${diag.source})` : "";
       return `- ${prefix}${plugin}: ${diag.message}${source}`;
     });
+    note(lines.join("\n"), "Plugin diagnostics");
   }
 
   return { workspaceDir };

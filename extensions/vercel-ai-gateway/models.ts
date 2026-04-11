@@ -179,6 +179,7 @@ export async function discoverVercelAiGatewayModels(): Promise<ModelDefinitionCo
 
   try {
     const response = await fetch(`${VERCEL_AI_GATEWAY_BASE_URL}/v1/models`, {
+      signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) {
       log.warn(`Failed to discover Vercel AI Gateway models: HTTP ${response.status}`);

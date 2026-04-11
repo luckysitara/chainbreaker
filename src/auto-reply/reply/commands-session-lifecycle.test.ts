@@ -68,6 +68,7 @@ vi.mock("../../plugins/runtime/index.js", () => {
             if (channelId === "telegram") {
               return hoisted.setTelegramThreadBindingIdleTimeoutBySessionKeyMock(params);
             }
+            if (channelId === "matrix") {
               return hoisted.setMatrixThreadBindingIdleTimeoutBySessionKeyMock(params);
             }
             return hoisted.setThreadBindingIdleTimeoutBySessionKeyMock(params);
@@ -76,11 +77,13 @@ vi.mock("../../plugins/runtime/index.js", () => {
             if (channelId === "telegram") {
               return hoisted.setTelegramThreadBindingMaxAgeBySessionKeyMock(params);
             }
+            if (channelId === "matrix") {
               return hoisted.setMatrixThreadBindingMaxAgeBySessionKeyMock(params);
             }
             return hoisted.setThreadBindingMaxAgeBySessionKeyMock(params);
           },
         },
+        discord: {
           threadBindings: {
             getManager: hoisted.getThreadBindingManagerMock,
             resolveIdleTimeoutMs: resolveThreadBindingIdleTimeoutMs,
@@ -92,6 +95,7 @@ vi.mock("../../plugins/runtime/index.js", () => {
             unbindBySessionKey: vi.fn(),
           },
         },
+        matrix: {
           threadBindings: {
             setIdleTimeoutBySessionKey: hoisted.setMatrixThreadBindingIdleTimeoutBySessionKeyMock,
             setMaxAgeBySessionKey: hoisted.setMatrixThreadBindingMaxAgeBySessionKeyMock,
@@ -138,6 +142,9 @@ type FakeBinding = {
 
 function createDiscordCommandParams(commandBody: string, overrides?: Record<string, unknown>) {
   return buildCommandTestParams(commandBody, baseCfg, {
+    Provider: "discord",
+    Surface: "discord",
+    OriginatingChannel: "discord",
     OriginatingTo: "channel:thread-1",
     AccountId: "default",
     MessageThreadId: "thread-1",
@@ -159,6 +166,9 @@ function createTelegramCommandParams(commandBody: string, overrides?: Record<str
 
 function createMatrixThreadCommandParams(commandBody: string, overrides?: Record<string, unknown>) {
   return buildCommandTestParams(commandBody, baseCfg, {
+    Provider: "matrix",
+    Surface: "matrix",
+    OriginatingChannel: "matrix",
     OriginatingTo: "room:!room:example.org",
     AccountId: "default",
     MessageThreadId: "$thread-1",
@@ -171,6 +181,9 @@ function createMatrixTriggerThreadCommandParams(
   overrides?: Record<string, unknown>,
 ) {
   return buildCommandTestParams(commandBody, baseCfg, {
+    Provider: "matrix",
+    Surface: "matrix",
+    OriginatingChannel: "matrix",
     OriginatingTo: "room:!room:example.org",
     AccountId: "default",
     MessageThreadId: "$root",
@@ -180,6 +193,9 @@ function createMatrixTriggerThreadCommandParams(
 
 function createMatrixRoomCommandParams(commandBody: string, overrides?: Record<string, unknown>) {
   return buildCommandTestParams(commandBody, baseCfg, {
+    Provider: "matrix",
+    Surface: "matrix",
+    OriginatingChannel: "matrix",
     OriginatingTo: "room:!room:example.org",
     AccountId: "default",
     ...overrides,
@@ -230,6 +246,7 @@ function createMatrixBinding(overrides?: Partial<SessionBindingRecord>): Session
     targetSessionKey: "agent:main:subagent:child",
     targetKind: "subagent",
     conversation: {
+      channel: "matrix",
       accountId: "default",
       conversationId: "$thread-1",
       parentConversationId: "!room:example.org",
@@ -252,6 +269,7 @@ function createMatrixTriggerBinding(
   return createMatrixBinding({
     bindingId: "default:$root",
     conversation: {
+      channel: "matrix",
       accountId: "default",
       conversationId: "$root",
       parentConversationId: "!room:example.org",
@@ -442,6 +460,7 @@ describe("/session idle and /session max-age", () => {
     const text = result?.reply?.text ?? "";
 
     expect(hoisted.sessionBindingResolveByConversationMock).toHaveBeenCalledWith({
+      channel: "matrix",
       accountId: "default",
       conversationId: "$root",
       parentConversationId: "!room:example.org",
@@ -536,6 +555,7 @@ describe("/session idle and /session max-age", () => {
     expect(result?.reply?.text).toContain("Max age disabled");
   });
 
+  it("is unavailable outside discord and telegram", async () => {
     const params = buildCommandTestParams("/session idle 2h", baseCfg);
     const result = await handleSessionCommand(params, true);
     expect(result?.reply?.text).toContain(

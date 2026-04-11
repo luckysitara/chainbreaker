@@ -82,6 +82,7 @@ export async function executeJobCoreWithTimeout(
   let timeoutId: NodeJS.Timeout | undefined;
   try {
     return await Promise.race([
+      executeJobCore(state, job, runAbortController.signal),
       new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => {
           runAbortController.abort(timeoutErrorMessage());

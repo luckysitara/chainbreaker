@@ -89,10 +89,7 @@ let secretsRuntime: typeof import("../secrets/runtime.js");
 let createWebSearchTool: typeof import("./tools/web-tools.js").createWebSearchTool;
 let createWebFetchTool: typeof import("./tools/web-tools.js").createWebFetchTool;
 
-function requireWebSearchTool(
-  config: ChainbreakerConfig,
-  runtimeWebSearch?: RuntimeWebSearchMetadata,
-) {
+function requireWebSearchTool(config: ChainbreakerConfig, runtimeWebSearch?: RuntimeWebSearchMetadata) {
   const tool = createWebSearchTool({
     config,
     sandboxed: true,

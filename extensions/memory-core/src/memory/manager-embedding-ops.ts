@@ -617,6 +617,7 @@ export abstract class MemoryManagerEmbeddingOps extends MemoryManagerSyncOps {
       );
       this.db
         .prepare(
+          `INSERT INTO chunks (id, path, source, start_line, end_line, hash, model, text, embedding, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(id) DO UPDATE SET
              hash=excluded.hash,
@@ -648,6 +649,7 @@ export abstract class MemoryManagerEmbeddingOps extends MemoryManagerSyncOps {
       if (this.fts.enabled && this.fts.available) {
         this.db
           .prepare(
+            `INSERT INTO ${FTS_TABLE} (text, id, path, source, model, start_line, end_line)\n` +
               ` VALUES (?, ?, ?, ?, ?, ?, ?)`,
           )
           .run(chunk.text, id, entry.path, source, model, chunk.startLine, chunk.endLine);
@@ -670,6 +672,8 @@ export abstract class MemoryManagerEmbeddingOps extends MemoryManagerSyncOps {
       const chunks = chunkMarkdown(content, this.settings.chunking).filter(
         (chunk) => chunk.text.trim().length > 0,
       );
+      if (options.source === "sessions" && "lineMap" in entry) {
+        remapChunkLines(chunks, entry.lineMap);
       }
       this.writeChunks(entry, options.source, "fts-only", chunks, [], false);
       return;
@@ -703,6 +707,8 @@ export abstract class MemoryManagerEmbeddingOps extends MemoryManagerSyncOps {
       chunks = this.provider
         ? enforceEmbeddingMaxInputTokens(this.provider, baseChunks, EMBEDDING_BATCH_MAX_TOKENS)
         : baseChunks;
+      if (options.source === "sessions" && "lineMap" in entry) {
+        remapChunkLines(chunks, entry.lineMap);
       }
     }
     if (!this.provider) {

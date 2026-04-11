@@ -118,7 +118,9 @@ function resolvePinnedPathPython(): string {
   return cachedPinnedPathPython;
 }
 
+function buildPinnedPathError(stderr: string, code: number | null, signal: NodeJS.Signals | null) {
   return new Error(
+    stderr.trim() || `Pinned path helper failed with code ${code ?? "null"} (${signal ?? "?"})`,
   );
 }
 
@@ -154,11 +156,13 @@ export async function runPinnedPathHelper(params: {
     stderr += chunk;
   });
 
+  const [code, signal] = await new Promise<[number | null, NodeJS.Signals | null]>(
     (resolve, reject) => {
       child.once("error", reject);
       child.once("close", (exitCode, exitSignal) => resolve([exitCode, exitSignal]));
     },
   );
   if (code !== 0) {
+    throw buildPinnedPathError(stderr, code, signal);
   }
 }

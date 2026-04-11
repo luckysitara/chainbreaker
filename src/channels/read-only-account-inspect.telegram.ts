@@ -77,10 +77,7 @@ function resolveTelegramAccountConfig(
   return resolveAccountEntry(cfg.channels?.telegram?.accounts, normalizeAccountId(accountId));
 }
 
-function mergeTelegramAccountConfig(
-  cfg: ChainbreakerConfig,
-  accountId: string,
-): TelegramAccountConfig {
+function mergeTelegramAccountConfig(cfg: ChainbreakerConfig, accountId: string): TelegramAccountConfig {
   const {
     accounts: _ignored,
     defaultAccount: _ignoredDefaultAccount,

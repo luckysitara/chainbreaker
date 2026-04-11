@@ -1,8 +1,5 @@
 import path from "node:path";
-import {
-  buildPluginConfigSchema,
-  type ChainbreakerPluginConfigSchema,
-} from "chainbreaker/plugin-sdk/core";
+import { buildPluginConfigSchema, type ChainbreakerPluginConfigSchema } from "chainbreaker/plugin-sdk/core";
 import { z } from "chainbreaker/plugin-sdk/zod";
 
 export type OpenShellPluginConfig = {

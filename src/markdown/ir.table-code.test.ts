@@ -44,6 +44,7 @@ describe("markdownToIR tableMode code - style overlap", () => {
     }
   });
 
+  it("should not have overlapping styles when cell has inline code", () => {
     const md = `
 | Name | Value |
 |------|-------|

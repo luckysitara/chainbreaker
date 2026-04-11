@@ -14,6 +14,7 @@ function formatConversationBindingText(params: {
   channel: string;
   conversationId: string;
 }): string {
+  if (params.channel === "discord" || params.channel === "matrix") {
     return `thread:${params.conversationId}`;
   }
   if (params.channel === "telegram") {
@@ -84,7 +85,9 @@ export function handleSubagentsAgentsAction(ctx: SubagentsCommandContext): Comma
     visibleRuns.push(entry);
   }
 
+  const lines = ["agents:", "-----"];
   if (visibleRuns.length === 0) {
+    lines.push("(none)");
   } else {
     for (const entry of visibleRuns) {
       const binding = resolveSessionBindings(entry.childSessionKey)[0];
@@ -93,9 +96,12 @@ export function handleSubagentsAgentsAction(ctx: SubagentsCommandContext): Comma
             channel,
             conversationId: binding.conversation.conversationId,
           })
+        : channel === "discord" || channel === "telegram" || channel === "matrix"
           ? "unbound"
+          : "bindings available on discord/telegram";
       const resolvedIndex = indexByChildSessionKey.get(entry.childSessionKey);
       const prefix = resolvedIndex ? `${resolvedIndex}.` : "-";
+      lines.push(`${prefix} ${formatRunLabel(entry)} (${bindingText})`);
     }
   }
 
@@ -103,11 +109,13 @@ export function handleSubagentsAgentsAction(ctx: SubagentsCommandContext): Comma
     (entry) => entry.targetKind === "session",
   );
   if (requesterBindings.length > 0) {
+    lines.push("", "acp/session bindings:", "-----");
     for (const binding of requesterBindings) {
       const label =
         typeof binding.metadata?.label === "string" && binding.metadata.label.trim()
           ? binding.metadata.label.trim()
           : binding.targetSessionKey;
+      lines.push(
         `- ${label} (${formatConversationBindingText({
           channel,
           conversationId: binding.conversation.conversationId,
@@ -116,4 +124,5 @@ export function handleSubagentsAgentsAction(ctx: SubagentsCommandContext): Comma
     }
   }
 
+  return stopWithText(lines.join("\n"));
 }

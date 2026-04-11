@@ -290,6 +290,7 @@ describe("resolveDeliveryTarget", () => {
       bindings: [
         {
           agentId: "agent-b",
+          match: { channel: "discord", accountId: "discord-account" },
         },
       ],
     });
@@ -340,6 +341,7 @@ describe("resolveDeliveryTarget", () => {
   it("returns an error when channel selection is ambiguous", async () => {
     setMainSessionEntry(undefined);
     vi.mocked(resolveMessageChannelSelection).mockRejectedValueOnce(
+      new Error("Channel is required when multiple channels are configured: telegram, slack"),
     );
 
     const result = await resolveLastTarget(makeCfg({ bindings: [] }));

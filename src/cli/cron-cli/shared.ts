@@ -50,6 +50,7 @@ export async function warnIfCronSchedulerDisabled(opts: GatewayRpcOpts) {
         .join("\n"),
     );
   } catch {
+    // Ignore status failures (older gateway, offline, etc.)
   }
 }
 
@@ -276,6 +277,7 @@ export function printCronList(jobs: CronJob[], runtime: RuntimeEnv = defaultRunt
       ? colorize(rich, theme.info, agentLabel)
       : colorize(rich, theme.muted, agentLabel);
 
+    const line = [
       colorize(rich, theme.accent, idLabel),
       colorize(rich, theme.info, nameLabel),
       colorize(rich, theme.info, scheduleLabel),
@@ -289,5 +291,6 @@ export function printCronList(jobs: CronJob[], runtime: RuntimeEnv = defaultRunt
         : colorize(rich, theme.muted, modelLabel),
     ].join(" ");
 
+    runtime.log(line.trimEnd());
   }
 }

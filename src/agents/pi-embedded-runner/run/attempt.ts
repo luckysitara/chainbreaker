@@ -51,6 +51,7 @@ import { DEFAULT_CONTEXT_TOKENS } from "../../defaults.js";
 import { resolveChainbreakerDocsPath } from "../../docs-path.js";
 import { isTimeoutError } from "../../failover-error.js";
 import { resolveImageSanitizationLimits } from "../../image-sanitization.js";
+import { buildModelAliasLines } from "../../model-alias-lines.js";
 import { resolveModelAuthMode } from "../../model-auth.js";
 import { resolveDefaultModelForAgent } from "../../model-selection.js";
 import { supportsModelTools } from "../../model-tool-support.js";
@@ -221,6 +222,7 @@ export function resolveEmbeddedAgentStreamFn(params: {
   shouldUseWebSocketTransport: boolean;
   wsApiKey?: string;
   sessionId: string;
+  signal?: AbortSignal;
   model: EmbeddedRunAttemptParams["model"];
 }): StreamFn {
   if (params.providerStreamFn) {
@@ -231,6 +233,7 @@ export function resolveEmbeddedAgentStreamFn(params: {
   if (params.shouldUseWebSocketTransport) {
     return params.wsApiKey
       ? createOpenAIWebSocketStreamFn(params.wsApiKey, params.sessionId, {
+          signal: params.signal,
         })
       : currentStreamFn;
   }
@@ -416,63 +419,64 @@ export async function runEmbeddedAttempt(
       ? []
       : (() => {
           const allTools = createChainbreakerCodingTools({
-            agentId: sessionAgentId,
-            trigger: params.trigger,
-            memoryFlushWritePath: params.memoryFlushWritePath,
-            exec: {
-              ...params.execOverrides,
-              elevated: params.bashElevated,
-            },
+          agentId: sessionAgentId,
+          trigger: params.trigger,
+          memoryFlushWritePath: params.memoryFlushWritePath,
+          exec: {
+            ...params.execOverrides,
+            elevated: params.bashElevated,
+          },
+          sandbox,
+          messageProvider: params.messageChannel ?? params.messageProvider,
+          agentAccountId: params.agentAccountId,
+          messageTo: params.messageTo,
+          messageThreadId: params.messageThreadId,
+          groupId: params.groupId,
+          groupChannel: params.groupChannel,
+          groupSpace: params.groupSpace,
+          spawnedBy: params.spawnedBy,
+          senderId: params.senderId,
+          senderName: params.senderName,
+          senderUsername: params.senderUsername,
+          senderE164: params.senderE164,
+          senderIsOwner: params.senderIsOwner,
+          allowGatewaySubagentBinding: params.allowGatewaySubagentBinding,
+          sessionKey: sandboxSessionKey,
+          sessionId: params.sessionId,
+          runId: params.runId,
+          agentDir,
+          workspaceDir: effectiveWorkspace,
+          // When sandboxing uses a copied workspace (`ro` or `none`), effectiveWorkspace points
+          // at the sandbox copy. Spawned subagents should inherit the real workspace instead.
+          spawnWorkspaceDir: resolveAttemptSpawnWorkspaceDir({
             sandbox,
-            messageProvider: params.messageChannel ?? params.messageProvider,
-            agentAccountId: params.agentAccountId,
-            messageTo: params.messageTo,
-            messageThreadId: params.messageThreadId,
-            groupId: params.groupId,
-            groupChannel: params.groupChannel,
-            groupSpace: params.groupSpace,
-            spawnedBy: params.spawnedBy,
-            senderId: params.senderId,
-            senderName: params.senderName,
-            senderUsername: params.senderUsername,
-            senderE164: params.senderE164,
-            senderIsOwner: params.senderIsOwner,
-            allowGatewaySubagentBinding: params.allowGatewaySubagentBinding,
-            sessionKey: sandboxSessionKey,
-            sessionId: params.sessionId,
-            runId: params.runId,
-            agentDir,
-            workspaceDir: effectiveWorkspace,
-            // When sandboxing uses a copied workspace (`ro` or `none`), effectiveWorkspace points
-            // at the sandbox copy. Spawned subagents should inherit the real workspace instead.
-            spawnWorkspaceDir: resolveAttemptSpawnWorkspaceDir({
-              sandbox,
-              resolvedWorkspace,
-            }),
-            config: params.config,
-            modelProvider: params.model.provider,
-            modelId: params.modelId,
-            modelCompat: params.model.compat,
-            modelApi: params.model.api,
-            modelContextWindowTokens: params.model.contextWindow,
-            modelAuthMode: resolveModelAuthMode(params.model.provider, params.config),
-            currentChannelId: params.currentChannelId,
-            currentThreadTs: params.currentThreadTs,
-            currentMessageId: params.currentMessageId,
-            replyToMode: params.replyToMode,
-            hasRepliedRef: params.hasRepliedRef,
-            modelHasVision,
-            requireExplicitMessageTarget:
-              params.requireExplicitMessageTarget ?? isSubagentSessionKey(params.sessionKey),
-            disableMessageTool: params.disableMessageTool,
-            onYield: (message) => {
-              yieldDetected = true;
-              yieldMessage = message;
-              queueYieldInterruptForSession?.();
-              runAbortController.abort("sessions_yield");
-              abortSessionForYield?.();
-            },
-          });
+            resolvedWorkspace,
+          }),
+          config: params.config,
+          abortSignal: runAbortController.signal,
+          modelProvider: params.model.provider,
+          modelId: params.modelId,
+          modelCompat: params.model.compat,
+          modelApi: params.model.api,
+          modelContextWindowTokens: params.model.contextWindow,
+          modelAuthMode: resolveModelAuthMode(params.model.provider, params.config),
+          currentChannelId: params.currentChannelId,
+          currentThreadTs: params.currentThreadTs,
+          currentMessageId: params.currentMessageId,
+          replyToMode: params.replyToMode,
+          hasRepliedRef: params.hasRepliedRef,
+          modelHasVision,
+          requireExplicitMessageTarget:
+            params.requireExplicitMessageTarget ?? isSubagentSessionKey(params.sessionKey),
+          disableMessageTool: params.disableMessageTool,
+          onYield: (message) => {
+            yieldDetected = true;
+            yieldMessage = message;
+            queueYieldInterruptForSession?.();
+            runAbortController.abort("sessions_yield");
+            abortSessionForYield?.();
+          },
+        });
           if (params.toolsAllow && params.toolsAllow.length > 0) {
             const allowSet = new Set(params.toolsAllow);
             return allTools.filter((tool) => allowSet.has(tool.name));
@@ -617,7 +621,7 @@ export async function runEmbeddedAttempt(
     const promptMode = resolvePromptModeForSession(params.sessionKey);
 
     // When toolsAllow is set, use minimal prompt and strip skills catalog
-    const effectivePromptMode = params.toolsAllow?.length ? ("minimal" as const) : promptMode;
+    const effectivePromptMode = params.toolsAllow?.length ? "minimal" as const : promptMode;
     const effectiveSkillsPrompt = params.toolsAllow?.length ? undefined : skillsPrompt;
     const docsPath = await resolveChainbreakerDocsPath({
       workspaceDir: effectiveWorkspace,
@@ -909,6 +913,7 @@ export async function runEmbeddedAttempt(
         shouldUseWebSocketTransport,
         wsApiKey,
         sessionId: params.sessionId,
+        signal: runAbortController.signal,
         model: params.model,
       });
 
@@ -1024,6 +1029,8 @@ export async function runEmbeddedAttempt(
 
       const innerStreamFn = activeSession.agent.streamFn;
       activeSession.agent.streamFn = (model, context, options) => {
+        const signal = runAbortController.signal as AbortSignal & { reason?: unknown };
+        if (yieldDetected && signal.aborted && signal.reason === "sessions_yield") {
           return createYieldAbortedResponse(model) as unknown as Awaited<
             ReturnType<typeof innerStreamFn>
           >;
@@ -1148,6 +1155,7 @@ export async function runEmbeddedAttempt(
             }
           } catch (assembleErr) {
             log.warn(
+              `context engine assemble failed, using pipeline messages: ${String(assembleErr)}`,
             );
           }
         }
@@ -1165,11 +1173,15 @@ export async function runEmbeddedAttempt(
       let yieldAborted = false;
       let timedOut = false;
       let timedOutDuringCompaction = false;
+      const getAbortReason = (signal: AbortSignal): unknown =>
+        "reason" in signal ? (signal as { reason?: unknown }).reason : undefined;
       const makeTimeoutAbortReason = (): Error => {
         const err = new Error("request timed out");
         err.name = "TimeoutError";
         return err;
       };
+      const makeAbortError = (signal: AbortSignal): Error => {
+        const reason = getAbortReason(signal);
         // If the reason is already an Error, preserve it to keep the original message
         // (e.g., "LLM idle timeout (60s): no response from model" instead of "aborted")
         if (reason instanceof Error) {
@@ -1212,15 +1224,23 @@ export async function runEmbeddedAttempt(
         abortRun(true, error);
       };
       const abortable = <T>(promise: Promise<T>): Promise<T> => {
+        const signal = runAbortController.signal;
+        if (signal.aborted) {
+          return Promise.reject(makeAbortError(signal));
         }
         return new Promise<T>((resolve, reject) => {
           const onAbort = () => {
+            signal.removeEventListener("abort", onAbort);
+            reject(makeAbortError(signal));
           };
+          signal.addEventListener("abort", onAbort, { once: true });
           promise.then(
             (value) => {
+              signal.removeEventListener("abort", onAbort);
               resolve(value);
             },
             (err) => {
+              signal.removeEventListener("abort", onAbort);
               reject(err);
             },
           );
@@ -1297,6 +1317,7 @@ export async function runEmbeddedAttempt(
               compactionGraceUsed = true;
               if (!isProbeSession) {
                 log.warn(
+                  `embedded run timeout reached during compaction; extending deadline: ` +
                     `runId=${params.runId} sessionId=${params.sessionId} extraMs=${compactionTimeoutMs}`,
                 );
               }
@@ -1378,6 +1399,7 @@ export async function runEmbeddedAttempt(
         // Legacy compatibility: before_agent_start is also checked for context fields.
         let effectivePrompt = prependBootstrapPromptWarning(
           params.prompt,
+          bootstrapPromptWarning.lines,
           {
             preserveExactPrompt: heartbeatPrompt,
           },
@@ -1592,11 +1614,13 @@ export async function runEmbeddedAttempt(
         try {
           // Flush buffered block replies before waiting for compaction so the
           // user receives the assistant response immediately.  Without this,
+          // coalesced/buffered blocks stay in the pipeline until compaction
           // finishes — which can take minutes on large contexts (#35074).
           if (params.onBlockReplyFlush) {
             await params.onBlockReplyFlush();
           }
 
+          // Skip compaction wait when yield aborted the run — the signal is
           // already tripped and abortable() would immediately reject.
           const compactionRetryWait = yieldAborted
             ? { timedOut: false }
@@ -1634,6 +1658,7 @@ export async function runEmbeddedAttempt(
         // Check if ANY compaction occurred during the entire attempt (prompt + retry).
         // Using a cumulative count (> 0) instead of a delta check avoids missing
         // compactions that complete during activeSession.prompt() before the delta
+        // baseline is sampled.
         const compactionOccurredThisAttempt = getCompactionCount() > 0;
         // Append cache-TTL timestamp AFTER prompt + compaction retry completes.
         // Previously this was before the prompt, which caused a custom entry to be

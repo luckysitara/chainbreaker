@@ -226,14 +226,12 @@ describe("maybeRepairGatewayServiceConfig", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fsMocks.realpath.mockImplementation(async (value: string) => value);
-    mocks.resolveGatewayAuthTokenForService.mockImplementation(
-      async (cfg: ChainbreakerConfig, env) => {
-        const configToken =
-          typeof cfg.gateway?.auth?.token === "string" ? cfg.gateway.auth.token.trim() : undefined;
-        const envToken = env.CHAINBREAKER_GATEWAY_TOKEN?.trim() || undefined;
-        return { token: configToken || envToken };
-      },
-    );
+    mocks.resolveGatewayAuthTokenForService.mockImplementation(async (cfg: ChainbreakerConfig, env) => {
+      const configToken =
+        typeof cfg.gateway?.auth?.token === "string" ? cfg.gateway.auth.token.trim() : undefined;
+      const envToken = env.CHAINBREAKER_GATEWAY_TOKEN?.trim() || undefined;
+      return { token: configToken || envToken };
+    });
   });
 
   afterEach(() => {
@@ -325,8 +323,7 @@ describe("maybeRepairGatewayServiceConfig", () => {
 
   it("does not flag entrypoint mismatch when symlink and realpath match", async () => {
     setupGatewayEntrypointRepairScenario({
-      currentEntrypoint:
-        "/Users/test/Library/pnpm/global/5/node_modules/chainbreaker/dist/index.js",
+      currentEntrypoint: "/Users/test/Library/pnpm/global/5/node_modules/chainbreaker/dist/index.js",
       installEntrypoint:
         "/Users/test/Library/pnpm/global/5/node_modules/.pnpm/chainbreaker@2026.3.12/node_modules/chainbreaker/dist/index.js",
       realpath: async (value: string) => {
@@ -371,8 +368,7 @@ describe("maybeRepairGatewayServiceConfig", () => {
     setupGatewayEntrypointRepairScenario({
       currentEntrypoint:
         "/Users/test/.nvm/versions/node/v22.0.0/lib/node_modules/chainbreaker/dist/index.js",
-      installEntrypoint:
-        "/Users/test/Library/pnpm/global/5/node_modules/chainbreaker/dist/index.js",
+      installEntrypoint: "/Users/test/Library/pnpm/global/5/node_modules/chainbreaker/dist/index.js",
     });
 
     await runRepair({ gateway: {} });

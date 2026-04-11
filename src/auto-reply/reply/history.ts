@@ -37,12 +37,15 @@ export type HistoryEntry = {
 export function buildHistoryContext(params: {
   historyText: string;
   currentMessage: string;
+  lineBreak?: string;
 }): string {
   const { historyText, currentMessage } = params;
+  const lineBreak = params.lineBreak ?? "\n";
   if (!historyText.trim()) {
     return currentMessage;
   }
   return [HISTORY_CONTEXT_MARKER, historyText, "", CURRENT_MESSAGE_MARKER, currentMessage].join(
+    lineBreak,
   );
 }
 
@@ -106,6 +109,7 @@ export function buildPendingHistoryContextFromMap(params: {
   limit: number;
   currentMessage: string;
   formatEntry: (entry: HistoryEntry) => string;
+  lineBreak?: string;
 }): string {
   if (params.limit <= 0) {
     return params.currentMessage;
@@ -115,6 +119,7 @@ export function buildPendingHistoryContextFromMap(params: {
     entries,
     currentMessage: params.currentMessage,
     formatEntry: params.formatEntry,
+    lineBreak: params.lineBreak,
     excludeLast: false,
   });
 }
@@ -126,6 +131,7 @@ export function buildHistoryContextFromMap(params: {
   entry?: HistoryEntry;
   currentMessage: string;
   formatEntry: (entry: HistoryEntry) => string;
+  lineBreak?: string;
   excludeLast?: boolean;
 }): string {
   if (params.limit <= 0) {
@@ -143,6 +149,7 @@ export function buildHistoryContextFromMap(params: {
     entries,
     currentMessage: params.currentMessage,
     formatEntry: params.formatEntry,
+    lineBreak: params.lineBreak,
     excludeLast: params.excludeLast,
   });
 }
@@ -169,14 +176,18 @@ export function buildHistoryContextFromEntries(params: {
   entries: HistoryEntry[];
   currentMessage: string;
   formatEntry: (entry: HistoryEntry) => string;
+  lineBreak?: string;
   excludeLast?: boolean;
 }): string {
+  const lineBreak = params.lineBreak ?? "\n";
   const entries = params.excludeLast === false ? params.entries : params.entries.slice(0, -1);
   if (entries.length === 0) {
     return params.currentMessage;
   }
+  const historyText = entries.map(params.formatEntry).join(lineBreak);
   return buildHistoryContext({
     historyText,
     currentMessage: params.currentMessage,
+    lineBreak,
   });
 }

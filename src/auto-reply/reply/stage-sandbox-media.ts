@@ -9,7 +9,10 @@ import { logVerbose } from "../../globals.js";
 import { copyFileWithinRoot, SafeOpenError } from "../../infra/fs-safe.js";
 import { normalizeScpRemoteHost, normalizeScpRemotePath } from "../../infra/scp-host.js";
 import { resolvePreferredChainbreakerTmpDir } from "../../infra/tmp-chainbreaker-dir.js";
-import { isInboundPathAllowed } from "../../media/inbound-path-policy.js";
+import {
+  isInboundPathAllowed,
+  resolveIMessageRemoteAttachmentRoots,
+} from "../../media/inbound-path-policy.js";
 import { getMediaDir, MEDIA_MAX_BYTES } from "../../media/store.js";
 import { CONFIG_DIR } from "../../utils.js";
 import type { MsgContext, TemplateContext } from "../templating.js";
@@ -46,7 +49,10 @@ export async function stageSandboxMedia(params: {
   }
 
   await fs.mkdir(effectiveWorkspaceDir, { recursive: true });
-  const remoteAttachmentRoots: string[] = [];
+  const remoteAttachmentRoots = resolveIMessageRemoteAttachmentRoots({
+    cfg,
+    accountId: ctx.AccountId,
+  });
 
   const usedNames = new Set<string>();
   const staged = new Map<string, string>(); // absolute source -> relative sandbox path
@@ -272,7 +278,7 @@ function rewriteStagedMediaPaths(params: {
 
   if (Array.isArray(params.ctx.MediaUrls) && params.ctx.MediaUrls.length > 0) {
     const nextUrls = params.ctx.MediaUrls.map((u) => rewriteIfStaged(u) ?? u);
-    params.ctx.MediaPaths = nextUrls;
+    params.ctx.MediaUrls = nextUrls;
     params.sessionCtx.MediaUrls = nextUrls;
   }
   const rewrittenUrl = rewriteIfStaged(params.ctx.MediaUrl);

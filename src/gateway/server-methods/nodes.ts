@@ -469,7 +469,9 @@ export async function waitForNodeReconnect(params: {
 }): Promise<boolean> {
   const timeoutMs = Math.max(250, params.timeoutMs ?? NODE_WAKE_RECONNECT_WAIT_MS);
   const pollMs = Math.max(50, params.pollMs ?? NODE_WAKE_RECONNECT_POLL_MS);
+  const deadline = Date.now() + timeoutMs;
 
+  while (Date.now() < deadline) {
     if (params.context.nodeRegistry.get(params.nodeId)) {
       return true;
     }

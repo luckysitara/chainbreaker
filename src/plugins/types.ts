@@ -1136,6 +1136,7 @@ export type ProviderPlugin = {
   /**
    * Provider-owned auth-doctor hint.
    *
+   * Return a multiline repair hint when OAuth refresh fails and the provider
    * wants to steer users toward a specific auth-profile migration or recovery
    * path. Return nothing to keep Chainbreaker's generic error text.
    */
@@ -1238,9 +1239,7 @@ export type WebSearchProviderPlugin = {
   getConfiguredCredentialValue?: (config?: ChainbreakerConfig) => unknown;
   setConfiguredCredentialValue?: (configTarget: ChainbreakerConfig, value: unknown) => void;
   applySelectionConfig?: (config: ChainbreakerConfig) => ChainbreakerConfig;
-  runSetup?: (
-    ctx: WebSearchProviderSetupContext,
-  ) => ChainbreakerConfig | Promise<ChainbreakerConfig>;
+  runSetup?: (ctx: WebSearchProviderSetupContext) => ChainbreakerConfig | Promise<ChainbreakerConfig>;
   resolveRuntimeMetadata?: (
     ctx: WebSearchRuntimeMetadataContext,
   ) => Partial<RuntimeWebSearchMetadata> | Promise<Partial<RuntimeWebSearchMetadata>>;
@@ -1295,6 +1294,7 @@ export type ChainbreakerPluginGatewayMethod = {
 export type PluginCommandContext = {
   /** The sender's identifier (e.g., Telegram user ID) */
   senderId?: string;
+  /** The channel/surface (e.g., "telegram", "discord") */
   channel: string;
   /** Provider channel id (e.g., "telegram") */
   channelId?: ChannelId;
@@ -1401,6 +1401,7 @@ export type ChainbreakerPluginCommandDefinition = {
   /**
    * Optional native-command aliases for slash/menu surfaces.
    * `default` applies to all native providers unless a provider-specific
+   * override exists (for example `{ default: "talkvoice", discord: "voice2" }`).
    */
   nativeNames?: Partial<Record<string, string>> & { default?: string };
   /** Description shown in /help and command menus */
@@ -1413,6 +1414,7 @@ export type ChainbreakerPluginCommandDefinition = {
   handler: PluginCommandHandler;
 };
 
+export type PluginInteractiveChannel = "telegram" | "discord" | "slack";
 
 export type PluginInteractiveButtons = Array<
   Array<{ text: string; callback_data: string; style?: "danger" | "success" | "primary" }>
@@ -1463,6 +1465,7 @@ export type PluginInteractiveDiscordHandlerResult = {
 } | void;
 
 export type PluginInteractiveDiscordHandlerContext = {
+  channel: "discord";
   accountId: string;
   interactionId: string;
   conversationId: string;
@@ -1504,6 +1507,7 @@ export type PluginInteractiveSlackHandlerResult = {
 } | void;
 
 export type PluginInteractiveSlackHandlerContext = {
+  channel: "slack";
   accountId: string;
   interactionId: string;
   conversationId: string;
@@ -1554,6 +1558,7 @@ export type PluginInteractiveTelegramHandlerRegistration = {
 };
 
 export type PluginInteractiveDiscordHandlerRegistration = {
+  channel: "discord";
   namespace: string;
   handler: (
     ctx: PluginInteractiveDiscordHandlerContext,
@@ -1561,6 +1566,7 @@ export type PluginInteractiveDiscordHandlerRegistration = {
 };
 
 export type PluginInteractiveSlackHandlerRegistration = {
+  channel: "slack";
   namespace: string;
   handler: (
     ctx: PluginInteractiveSlackHandlerContext,
@@ -1595,9 +1601,7 @@ export type ChainbreakerPluginCliContext = {
   logger: PluginLogger;
 };
 
-export type ChainbreakerPluginCliRegistrar = (
-  ctx: ChainbreakerPluginCliContext,
-) => void | Promise<void>;
+export type ChainbreakerPluginCliRegistrar = (ctx: ChainbreakerPluginCliContext) => void | Promise<void>;
 
 /**
  * Top-level CLI metadata for plugin-owned commands.
@@ -1879,6 +1883,7 @@ export type PluginHookAgentContext = {
   messageProvider?: string;
   /** What initiated this agent run: "user", "heartbeat", "cron", or "memory". */
   trigger?: string;
+  /** Channel identifier (e.g. "telegram", "discord", "whatsapp"). */
   channelId?: string;
 };
 
@@ -2027,6 +2032,7 @@ export type PluginHookAfterCompactionEvent = {
   compactedCount: number;
   /** Path to the session JSONL transcript. All pre-compaction messages are
    *  preserved on disk, so plugins can read and process them asynchronously
+   *  without blocking the compaction pipeline. */
   sessionFile?: string;
 };
 
@@ -2074,6 +2080,7 @@ export type PluginHookBeforeDispatchEvent = {
   content: string;
   /** Body text prepared for agent (after command parsing). */
   body?: string;
+  /** Channel identifier (e.g. "telegram", "discord"). */
   channel?: string;
   /** Session key for this message. */
   sessionKey?: string;

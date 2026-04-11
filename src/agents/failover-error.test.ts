@@ -57,6 +57,7 @@ describe("failover-error", () => {
         message: "insufficient credits — please top up your account",
       }),
     ).toBe("billing");
+    // Ambiguous "quota exceeded" + billing signal → billing wins
     expect(
       resolveFailoverReasonFromError({
         status: 402,
@@ -101,6 +102,7 @@ describe("failover-error", () => {
     ).toBe("session_expired");
   });
 
+  it("preserves explicit auth and billing signals on HTTP 410", () => {
     expect(
       resolveFailoverReasonFromError({
         status: 410,

@@ -359,12 +359,14 @@ describe("canvas host", () => {
         expect(ws).toBeTruthy();
 
         const msg = new Promise<string>((resolve, reject) => {
+          const deadline = Date.now() + CANVAS_RELOAD_TIMEOUT_MS;
           const poll = () => {
             const value = ws?.sent[0];
             if (value) {
               resolve(value);
               return;
             }
+            if (Date.now() >= deadline) {
               reject(new Error("reload timeout"));
               return;
             }

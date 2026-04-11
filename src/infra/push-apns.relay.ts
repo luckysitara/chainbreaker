@@ -176,6 +176,7 @@ async function sendApnsRelayRequest(params: {
       [GATEWAY_SIGNED_AT_HEADER]: String(params.signedAtMs),
     },
     body: params.bodyJson,
+    signal: AbortSignal.timeout(params.relayConfig.timeoutMs),
   });
   if (response.status >= 300 && response.status < 400) {
     return {

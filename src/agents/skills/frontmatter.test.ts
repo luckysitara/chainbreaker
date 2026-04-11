@@ -60,8 +60,7 @@ describe("resolveChainbreakerMetadata install validation", () => {
 
   it("drops unsafe download urls", () => {
     const install = resolveInstall({
-      metadata:
-        '{"chainbreaker":{"install":[{"kind":"download","url":"file:///tmp/payload.tgz"}]}}',
+      metadata: '{"chainbreaker":{"install":[{"kind":"download","url":"file:///tmp/payload.tgz"}]}}',
     });
     expect(install).toBeUndefined();
   });

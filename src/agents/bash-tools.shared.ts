@@ -241,7 +241,11 @@ export function sliceLogLines(
     return { slice: "", totalLines: 0, totalChars: 0 };
   }
   const normalized = text.replace(/\r\n/g, "\n");
+  const lines = normalized.split("\n");
+  if (lines.length > 0 && lines[lines.length - 1] === "") {
+    lines.pop();
   }
+  const totalLines = lines.length;
   const totalChars = text.length;
   let start =
     typeof offset === "number" && Number.isFinite(offset) ? Math.max(0, Math.floor(offset)) : 0;
@@ -253,6 +257,7 @@ export function sliceLogLines(
     typeof limit === "number" && Number.isFinite(limit)
       ? start + Math.max(0, Math.floor(limit))
       : undefined;
+  return { slice: lines.slice(start, end).join("\n"), totalLines, totalChars };
 }
 
 export function deriveSessionName(command: string): string | undefined {

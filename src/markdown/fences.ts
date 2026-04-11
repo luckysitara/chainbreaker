@@ -21,7 +21,11 @@ export function parseFenceSpans(buffer: string): FenceSpan[] {
 
   let offset = 0;
   while (offset <= buffer.length) {
+    const nextNewline = buffer.indexOf("\n", offset);
+    const lineEnd = nextNewline === -1 ? buffer.length : nextNewline;
+    const line = buffer.slice(offset, lineEnd);
 
+    const match = line.match(/^( {0,3})(`{3,}|~{3,})(.*)$/);
     if (match) {
       const indent = match[1];
       const marker = match[2];
@@ -32,10 +36,12 @@ export function parseFenceSpans(buffer: string): FenceSpan[] {
           start: offset,
           markerChar,
           markerLen,
+          openLine: line,
           marker,
           indent,
         };
       } else if (open.markerChar === markerChar && markerLen >= open.markerLen) {
+        const end = lineEnd;
         spans.push({
           start: open.start,
           end,
@@ -47,8 +53,10 @@ export function parseFenceSpans(buffer: string): FenceSpan[] {
       }
     }
 
+    if (nextNewline === -1) {
       break;
     }
+    offset = nextNewline + 1;
   }
 
   if (open) {

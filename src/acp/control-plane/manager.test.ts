@@ -429,6 +429,7 @@ describe("AcpSessionManager", () => {
       text: "second",
       mode: "prompt",
       requestId: "r2",
+      signal: abortController.signal,
     });
     abortController.abort();
 
@@ -1327,11 +1328,14 @@ describe("AcpSessionManager", () => {
     });
 
     let enteredRun = false;
+    runtimeState.runTurn.mockImplementation(async function* (input: { signal?: AbortSignal }) {
       enteredRun = true;
       await new Promise<void>((resolve) => {
+        if (input.signal?.aborted) {
           resolve();
           return;
         }
+        input.signal?.addEventListener("abort", () => resolve(), { once: true });
       });
       yield { type: "done" as const, stopReason: "cancel" };
     });
@@ -1522,6 +1526,7 @@ describe("AcpSessionManager", () => {
     expect(states).not.toContain("error");
   });
 
+  it("retries once with a fresh runtime handle after an early acpx signal exit", async () => {
     const runtimeState = createRuntime();
     hoisted.requireAcpRuntimeBackendMock.mockReturnValue({
       id: "acpx",
@@ -1536,6 +1541,7 @@ describe("AcpSessionManager", () => {
       .mockImplementationOnce(async function* () {
         yield {
           type: "error" as const,
+          message: "acpx exited with signal SIGTERM",
         };
       })
       .mockImplementationOnce(async function* () {

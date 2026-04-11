@@ -28,6 +28,7 @@ export type BlockStreamingCoalesceConfig = {
 export type BlockStreamingChunkConfig = {
   minChars?: number;
   maxChars?: number;
+  breakPreference?: "paragraph" | "newline" | "sentence";
 };
 
 export type MarkdownTableMode = "off" | "bullets" | "code" | "block";
@@ -111,6 +112,7 @@ export type SessionConfig = {
   idleMinutes?: number;
   reset?: SessionResetConfig;
   resetByType?: SessionResetByTypeConfig;
+  /** Channel-specific reset overrides (e.g. { discord: { mode: "idle", idleMinutes: 10080 } }). */
   resetByChannel?: Record<string, SessionResetConfig>;
   store?: string;
   typingIntervalSeconds?: number;

@@ -90,6 +90,7 @@ export async function findTailscaleBinary(): Promise<string | null> {
     const candidates = stdout
       .trim()
       .split("\n")
+      .filter((line) => line.includes("/Tailscale.app/Contents/MacOS/Tailscale"));
     for (const candidate of candidates) {
       if (await checkBinary(candidate)) {
         return candidate;

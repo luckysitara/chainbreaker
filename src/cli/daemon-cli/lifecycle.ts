@@ -5,6 +5,7 @@ import { probeGateway } from "../../gateway/probe.js";
 import {
   findVerifiedGatewayListenerPidsOnPortSync,
   formatGatewayPidList,
+  signalVerifiedGatewayPidSync,
 } from "../../infra/gateway-processes.js";
 import { defaultRuntime } from "../../runtime.js";
 import { theme } from "../../terminal/theme.js";
@@ -83,9 +84,11 @@ async function stopGatewayWithoutServiceManager(port: number) {
     return null;
   }
   for (const pid of pids) {
+    signalVerifiedGatewayPidSync(pid, "SIGTERM");
   }
   return {
     result: "stopped" as const,
+    message: `Gateway stop signal sent to unmanaged process${pids.length === 1 ? "" : "es"} on port ${port}: ${formatGatewayPidList(pids)}.`,
   };
 }
 
@@ -100,8 +103,10 @@ async function restartGatewayWithoutServiceManager(port: number) {
       `multiple gateway processes are listening on port ${port}: ${formatGatewayPidList(pids)}; use "chainbreaker gateway status --deep" before retrying restart`,
     );
   }
+  signalVerifiedGatewayPidSync(pids[0], "SIGUSR1");
   return {
     result: "restarted" as const,
+    message: `Gateway restart signal sent to unmanaged process on port ${port}: ${pids[0]}.`,
   };
 }
 
@@ -180,6 +185,8 @@ export async function runDaemonRestart(opts: DaemonLifecycleOptions = {}): Promi
         const timeoutLine = `Timed out after ${restartWaitSeconds}s waiting for gateway port ${restartPort} to become healthy.`;
         if (!json) {
           defaultRuntime.log(theme.warn(timeoutLine));
+          for (const line of diagnostics) {
+            defaultRuntime.log(theme.muted(line));
           }
         } else {
           warnings.push(timeoutLine);
@@ -237,6 +244,8 @@ export async function runDaemonRestart(opts: DaemonLifecycleOptions = {}): Promi
         if (runningNoPortLine) {
           defaultRuntime.log(theme.warn(runningNoPortLine));
         }
+        for (const line of diagnostics) {
+          defaultRuntime.log(theme.muted(line));
         }
       } else {
         warnings.push(timeoutLine);

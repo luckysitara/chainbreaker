@@ -189,6 +189,7 @@ async function doFetch(): Promise<void> {
     const fetchFn = resolveProxyFetchFromEnv() ?? globalThis.fetch;
 
     const response = await fetchFn(OPENROUTER_MODELS_URL, {
+      signal: controller.signal,
     });
 
     if (!response.ok) {

@@ -37,21 +37,25 @@ export function resolveQueueSettings(params: ResolveQueueSettingsParams): QueueS
       ? (queueCfg.byChannel as Record<string, string | undefined>)[channelKey]
       : undefined;
   const resolvedMode =
+    params.inlineMode ??
     normalizeQueueMode(params.sessionEntry?.queueMode) ??
     normalizeQueueMode(providerModeRaw) ??
     normalizeQueueMode(queueCfg?.mode) ??
     defaultQueueModeForChannel(channelKey);
   const debounceRaw =
+    params.inlineOptions?.debounceMs ??
     params.sessionEntry?.queueDebounceMs ??
     resolveChannelDebounce(queueCfg?.debounceMsByChannel, channelKey) ??
     resolvePluginDebounce(channelKey) ??
     queueCfg?.debounceMs ??
     DEFAULT_QUEUE_DEBOUNCE_MS;
   const capRaw =
+    params.inlineOptions?.cap ??
     params.sessionEntry?.queueCap ??
     queueCfg?.cap ??
     DEFAULT_QUEUE_CAP;
   const dropRaw =
+    params.inlineOptions?.dropPolicy ??
     params.sessionEntry?.queueDrop ??
     normalizeQueueDropPolicy(queueCfg?.drop) ??
     DEFAULT_QUEUE_DROP;

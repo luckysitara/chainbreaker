@@ -95,15 +95,19 @@ export function collectStalePluginConfigWarnings(params: {
   if (params.hits.length === 0) {
     return [];
   }
+  const lines = params.hits.map(
     (hit) => `- ${hit.pathLabel}: stale plugin reference "${hit.pluginId}" was found.`,
   );
   if (params.autoRepairBlocked) {
+    lines.push(
       `- Auto-removal is paused because plugin discovery currently has errors. Fix plugin discovery first, then rerun "${params.doctorFixCommand}".`,
     );
   } else {
+    lines.push(
       `- Run "${params.doctorFixCommand}" to remove stale plugins.allow and plugins.entries ids.`,
     );
   }
+  return lines.map((line) => sanitizeForLog(line));
 }
 
 export function maybeRepairStalePluginConfig(

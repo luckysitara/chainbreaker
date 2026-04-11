@@ -37,6 +37,8 @@ function findMcpConfigPath(args?: string[]): string | undefined {
       return typeof next === "string" && next.trim() ? next.trim() : undefined;
     }
     if (arg.startsWith("--mcp-config=")) {
+      const inline = arg.slice("--mcp-config=".length).trim();
+      return inline || undefined;
     }
   }
   return undefined;

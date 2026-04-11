@@ -240,10 +240,6 @@ describe("browser server-context listKnownProfileNames", () => {
       ]),
     };
 
-    expect(listKnownProfileNames(state).toSorted()).toEqual([
-      "chainbreaker",
-      "stale-removed",
-      "user",
-    ]);
+    expect(listKnownProfileNames(state).toSorted()).toEqual(["chainbreaker", "stale-removed", "user"]);
   });
 });

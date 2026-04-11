@@ -5,6 +5,7 @@ import type { TelegramExecApprovalConfig } from "chainbreaker/plugin-sdk/config-
 import type { ReplyPayload } from "chainbreaker/plugin-sdk/reply-runtime";
 import { normalizeAccountId } from "chainbreaker/plugin-sdk/routing";
 import { resolveTelegramAccount } from "./accounts.js";
+import { resolveTelegramInlineButtonsConfigScope } from "./inline-buttons.js";
 import { normalizeTelegramChatId, resolveTelegramTargetChatType } from "./targets.js";
 
 function normalizeApproverId(value: string | number): string {
@@ -138,6 +139,7 @@ function resolveExecApprovalButtonsExplicitlyDisabled(params: {
   accountId?: string | null;
 }): boolean {
   const capabilities = resolveTelegramAccount(params).config.capabilities;
+  return resolveTelegramInlineButtonsConfigScope(capabilities) === "off";
 }
 
 export function shouldEnableTelegramExecApprovalButtons(params: {

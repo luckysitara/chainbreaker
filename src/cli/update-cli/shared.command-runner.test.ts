@@ -14,6 +14,7 @@ describe("createGlobalCommandRunner", () => {
       stdout: "",
       stderr: "",
       code: 0,
+      signal: null,
       killed: false,
       termination: "exit",
     });
@@ -24,6 +25,7 @@ describe("createGlobalCommandRunner", () => {
       stdout: "out",
       stderr: "err",
       code: 17,
+      signal: null,
       killed: false,
       termination: "exit",
     });

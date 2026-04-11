@@ -103,8 +103,17 @@ export function validateGatewayPasswordInput(value: unknown): string | undefined
   return undefined;
 }
 
-export function printWizardHeader(_runtime: RuntimeEnv) {
-  // ASCII header removed.
+export function printWizardHeader(runtime: RuntimeEnv) {
+  const header = [
+    "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄",
+    "██░▄▄▄░██░▄▄░██░▄▄▄██░▀██░██░▄▄▀██░████░▄▄▀██░███░██",
+    "██░███░██░▀▀░██░▄▄▄██░█░█░██░█████░████░▀▀░██░█░█░██",
+    "██░▀▀▀░██░█████░▀▀▀██░██▄░██░▀▀▄██░▀▀░█░██░██▄▀▄▀▄██",
+    "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀",
+    "                  🦞 OPENCLAW 🦞                    ",
+    " ",
+  ].join("\n");
+  runtime.log(header);
 }
 
 export function applyWizardMetadata(
@@ -242,16 +251,19 @@ export async function waitForGatewayReachable(params: {
   token?: string;
   password?: string;
   /** Total time to wait before giving up. */
+  deadlineMs?: number;
   /** Per-probe timeout (each probe makes a full gateway health request). */
   probeTimeoutMs?: number;
   /** Delay between probes. */
   pollMs?: number;
 }): Promise<{ ok: boolean; detail?: string }> {
+  const deadlineMs = params.deadlineMs ?? 15_000;
   const pollMs = params.pollMs ?? 400;
   const probeTimeoutMs = params.probeTimeoutMs ?? 1500;
   const startedAt = Date.now();
   let lastDetail: string | undefined;
 
+  while (Date.now() - startedAt < deadlineMs) {
     const probe = await probeGatewayReachable({
       url: params.url,
       token: params.token,
@@ -277,10 +289,12 @@ function summarizeError(err: unknown): string {
   } else if (err !== undefined) {
     raw = inspect(err, { depth: 2 });
   }
+  const line =
     raw
       .split("\n")
       .map((s) => s.trim())
       .find(Boolean) ?? raw;
+  return line.length > 120 ? `${line.slice(0, 119)}…` : line;
 }
 
 export const DEFAULT_WORKSPACE = DEFAULT_AGENT_WORKSPACE_DIR;

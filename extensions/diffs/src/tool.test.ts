@@ -321,6 +321,7 @@ describe("diffs tool", () => {
       context: {
         agentId: "main",
         sessionId: "session-123",
+        messageChannel: "discord",
         agentAccountId: "default",
       },
     });
@@ -336,6 +337,7 @@ describe("diffs tool", () => {
     expect((result?.details as Record<string, unknown>).context).toEqual({
       agentId: "main",
       sessionId: "session-123",
+      messageChannel: "discord",
       agentAccountId: "default",
     });
 
@@ -441,6 +443,7 @@ function createToolWithScreenshotter(
   context: ChainbreakerPluginToolContext | undefined = {
     agentId: "main",
     sessionId: "session-123",
+    messageChannel: "discord",
     agentAccountId: "default",
   },
 ) {

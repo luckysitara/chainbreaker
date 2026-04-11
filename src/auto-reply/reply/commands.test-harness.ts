@@ -2,6 +2,7 @@ import type { ChainbreakerConfig } from "../../config/config.js";
 import type { MsgContext } from "../templating.js";
 import type { HandleCommandsParams } from "./commands-types.js";
 import { buildCommandContext } from "./commands.js";
+import { parseInlineDirectives } from "./directive-handling.js";
 
 export function buildCommandTestParams(
   commandBody: string,
@@ -33,6 +34,7 @@ export function buildCommandTestParams(
     ctx,
     cfg,
     command,
+    directives: parseInlineDirectives(commandBody),
     elevated: { enabled: true, allowed: true, failures: [] },
     sessionKey: "agent:main:main",
     workspaceDir: options?.workspaceDir ?? "/tmp",

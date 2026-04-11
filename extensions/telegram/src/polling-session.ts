@@ -51,6 +51,7 @@ type TelegramPollingSessionOpts = {
   runnerOptions: RunOptions<unknown>;
   getLastUpdateId: () => number | null;
   persistUpdateId: (updateId: number) => Promise<void>;
+  log: (line: string) => void;
   /** Pre-resolved Telegram transport to reuse across bot instances */
   telegramTransport?: TelegramTransport;
   /** Rebuild Telegram transport after stall/network recovery when marked dirty. */
@@ -150,6 +151,7 @@ export class TelegramPollingSession {
         proxyFetch: this.opts.proxyFetch,
         config: this.opts.config,
         accountId: this.opts.accountId,
+        fetchAbortSignal: fetchAbortController.signal,
         updateOffset: {
           lastUpdateId: this.opts.getLastUpdateId(),
           onUpdateId: this.opts.persistUpdateId,
@@ -216,6 +218,7 @@ export class TelegramPollingSession {
     let stopSequenceLogged = false;
     let stallDiagLoggedAt = 0;
 
+    bot.api.config.use(async (prev, method, payload, signal) => {
       if (method !== "getUpdates") {
         const startedAt = Date.now();
         const callId = nextInFlightApiCallId;
@@ -226,6 +229,7 @@ export class TelegramPollingSession {
             ? startedAt
             : Math.max(latestInFlightApiStartedAt, startedAt);
         try {
+          const result = await prev(method, payload, signal);
           lastApiActivityAt = Date.now();
           return result;
         } finally {
@@ -255,6 +259,7 @@ export class TelegramPollingSession {
       lastGetUpdatesError = null;
 
       try {
+        const result = await prev(method, payload, signal);
         const finishedAt = Date.now();
         lastGetUpdatesFinishedAt = finishedAt;
         lastGetUpdatesDurationMs = finishedAt - startedAt;
@@ -331,6 +336,7 @@ export class TelegramPollingSession {
       const apiElapsed = now - apiLivenessAt;
 
       // Treat recent non-getUpdates success and recent non-getUpdates start as
+      // the same liveness signal. Slow delivery should suppress the watchdog,
       // but only for the same bounded window as recent successful API traffic.
       if (
         elapsed > POLL_STALL_THRESHOLD_MS &&

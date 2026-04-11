@@ -33,6 +33,7 @@ const readLastGatewayErrorLineMock = vi.hoisted(() =>
   vi.fn(async () => "Gateway failed to start: required secrets are unavailable."),
 );
 let waitForGatewayReachableMock:
+  | ((params: { url: string; token?: string; password?: string; deadlineMs?: number }) => Promise<{
       ok: boolean;
       detail?: string;
     }>)
@@ -444,7 +445,11 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
     });
   }, 60_000);
 
+  it("uses a longer health deadline when daemon install was requested", async () => {
     await withStateDir("state-local-daemon-health-", async (stateDir) => {
+      let capturedDeadlineMs: number | undefined;
+      waitForGatewayReachableMock = vi.fn(async (params: { deadlineMs?: number }) => {
+        capturedDeadlineMs = params.deadlineMs;
         return { ok: true };
       });
 
@@ -463,6 +468,7 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
       );
 
       expect(installGatewayDaemonNonInteractiveMock).toHaveBeenCalledTimes(1);
+      expect(capturedDeadlineMs).toBe(45_000);
     });
   }, 60_000);
 

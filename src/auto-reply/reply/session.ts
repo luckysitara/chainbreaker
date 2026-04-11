@@ -38,6 +38,7 @@ import { resolveCommandAuthorization } from "../command-auth.js";
 import type { MsgContext, TemplateContext } from "../templating.js";
 import { resolveEffectiveResetTargetSessionKey } from "./acp-reset-target.js";
 import { resolveConversationBindingContextFromMessage } from "./conversation-binding-input.js";
+import { normalizeInboundTextNewlines } from "./inbound-text.js";
 import { stripMentions, stripStructuralPrefixes } from "./mentions.js";
 import {
   maybeRetireLegacyMainDeliveryRoute,
@@ -662,6 +663,7 @@ export async function initSessionState(params: {
     ...ctx,
     // Keep BodyStripped aligned with Body (best default for agent prompts).
     // RawBody is reserved for command/directive parsing and may omit context.
+    BodyStripped: normalizeInboundTextNewlines(
       bodyStripped ??
         ctx.BodyForAgent ??
         ctx.Body ??

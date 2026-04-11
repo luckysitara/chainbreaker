@@ -82,16 +82,16 @@ describe("detectChangedScope", () => {
   });
 
   it("does not force macOS for generated protocol model-only changes", () => {
-    expect(
-      detectChangedScope(["apps/macos/Sources/ChainbreakerProtocol/GatewayModels.swift"]),
-    ).toEqual({
-      runNode: false,
-      runMacos: false,
-      runAndroid: false,
-      runWindows: false,
-      runSkillsPython: false,
-      runChangedSmoke: false,
-    });
+    expect(detectChangedScope(["apps/macos/Sources/ChainbreakerProtocol/GatewayModels.swift"])).toEqual(
+      {
+        runNode: false,
+        runMacos: false,
+        runAndroid: false,
+        runWindows: false,
+        runSkillsPython: false,
+        runChangedSmoke: false,
+      },
+    );
   });
 
   it("enables node lane for non-native non-doc files by fallback", () => {
@@ -167,6 +167,7 @@ describe("detectChangedScope", () => {
       runSkillsPython: false,
       runChangedSmoke: true,
     });
+    expect(detectChangedScope([bundledPluginFile("matrix", "package.json")])).toEqual({
       runNode: true,
       runMacos: false,
       runAndroid: false,

@@ -4,6 +4,7 @@ declare module "../../scripts/watch-node.mjs" {
       cmd: string,
       args: string[],
       options: unknown,
+    ) => { on: (event: "exit", cb: (code: number | null, signal: string | null) => void) => void };
     process?: NodeJS.Process;
     cwd?: string;
     args?: string[];

@@ -45,10 +45,7 @@ describe("oauth paths", () => {
 describe("gateway port resolution", () => {
   it("prefers numeric env values over config", () => {
     expect(
-      resolveGatewayPort(
-        { gateway: { port: 19002 } },
-        envWith({ CHAINBREAKER_GATEWAY_PORT: "19001" }),
-      ),
+      resolveGatewayPort({ gateway: { port: 19002 } }, envWith({ CHAINBREAKER_GATEWAY_PORT: "19001" })),
     ).toBe(19001);
   });
 
@@ -90,10 +87,7 @@ describe("gateway port resolution", () => {
 
   it("falls back when malformed IPv6 inputs do not provide an explicit port", () => {
     expect(
-      resolveGatewayPort(
-        { gateway: { port: 19003 } },
-        envWith({ CHAINBREAKER_GATEWAY_PORT: "::1" }),
-      ),
+      resolveGatewayPort({ gateway: { port: 19003 } }, envWith({ CHAINBREAKER_GATEWAY_PORT: "::1" })),
     ).toBe(19003);
     expect(resolveGatewayPort({}, envWith({ CHAINBREAKER_GATEWAY_PORT: "2001:db8::1" }))).toBe(
       DEFAULT_GATEWAY_PORT,
@@ -101,9 +95,9 @@ describe("gateway port resolution", () => {
   });
 
   it("falls back to the default port when env is invalid and config is unset", () => {
-    expect(
-      resolveGatewayPort({}, envWith({ CHAINBREAKER_GATEWAY_PORT: "127.0.0.1:not-a-port" })),
-    ).toBe(DEFAULT_GATEWAY_PORT);
+    expect(resolveGatewayPort({}, envWith({ CHAINBREAKER_GATEWAY_PORT: "127.0.0.1:not-a-port" }))).toBe(
+      DEFAULT_GATEWAY_PORT,
+    );
   });
 });
 

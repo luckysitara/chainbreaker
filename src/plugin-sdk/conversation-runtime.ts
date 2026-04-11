@@ -93,6 +93,7 @@ export * from "../pairing/pairing-messages.js";
 export * from "../pairing/pairing-store.js";
 export {
   buildPluginBindingApprovalCustomId,
+  buildPluginBindingDeclinedText,
   buildPluginBindingErrorText,
   buildPluginBindingResolvedText,
   buildPluginBindingUnavailableText,

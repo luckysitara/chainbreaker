@@ -11,21 +11,26 @@ import {
 describe("attachChannelToResult(s)", () => {
   it("stamps channel metadata on single and batch results", () => {
     expect(
+      attachChannelToResult("discord", {
         messageId: "m1",
         ok: true,
         extra: "value",
       }),
     ).toEqual({
+      channel: "discord",
       messageId: "m1",
       ok: true,
       extra: "value",
     });
 
     expect(
+      attachChannelToResults("signal", [
         { messageId: "m1", timestamp: 1 },
         { messageId: "m2", timestamp: 2 },
       ]),
     ).toEqual([
+      { channel: "signal", messageId: "m1", timestamp: 1 },
+      { channel: "signal", messageId: "m2", timestamp: 2 },
     ]);
   });
 });
@@ -47,6 +52,8 @@ describe("buildChannelSendResult", () => {
 
 describe("createEmptyChannelResult", () => {
   it("builds an empty outbound result with channel metadata", () => {
+    expect(createEmptyChannelResult("line", { chatId: "u1" })).toEqual({
+      channel: "line",
       messageId: "",
       chatId: "u1",
     });
@@ -56,6 +63,7 @@ describe("createEmptyChannelResult", () => {
 describe("createAttachedChannelResultAdapter", () => {
   it("wraps outbound delivery and poll results", async () => {
     const adapter = createAttachedChannelResultAdapter({
+      channel: "discord",
       sendText: async () => ({ messageId: "m1", channelId: "c1" }),
       sendMedia: async () => ({ messageId: "m2" }),
       sendPoll: async () => ({ messageId: "m3", pollId: "p1" }),
@@ -66,6 +74,7 @@ describe("createAttachedChannelResultAdapter", () => {
         name: "sendText",
         run: () => adapter.sendText!({ cfg: {} as never, to: "x", text: "hi" }),
         expected: {
+          channel: "discord",
           messageId: "m1",
           channelId: "c1",
         },
@@ -74,6 +83,7 @@ describe("createAttachedChannelResultAdapter", () => {
         name: "sendMedia",
         run: () => adapter.sendMedia!({ cfg: {} as never, to: "x", text: "hi" }),
         expected: {
+          channel: "discord",
           messageId: "m2",
         },
       },
@@ -86,6 +96,7 @@ describe("createAttachedChannelResultAdapter", () => {
             poll: { question: "t", options: ["a", "b"] },
           }),
         expected: {
+          channel: "discord",
           messageId: "m3",
           pollId: "p1",
         },

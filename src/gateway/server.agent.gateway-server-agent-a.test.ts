@@ -132,6 +132,9 @@ const createStubChannelPlugin = (params: {
 
 const defaultDirectChannelEntries = [
   { id: "telegram", label: "Telegram" },
+  { id: "discord", label: "Discord" },
+  { id: "slack", label: "Slack" },
+  { id: "signal", label: "Signal" },
 ] as const;
 
 const defaultRegistry = createRegistry([
@@ -469,11 +472,25 @@ describe("gateway server agent", () => {
       idempotencyKey: "idem-agent-last",
     },
     {
+      name: "discord",
+      sessionId: "sess-discord",
+      lastChannel: "discord",
+      lastTo: "channel:discord-123",
+      idempotencyKey: "idem-agent-last-discord",
     },
     {
+      name: "slack",
+      sessionId: "sess-slack",
+      lastChannel: "slack",
+      lastTo: "channel:slack-123",
+      idempotencyKey: "idem-agent-last-slack",
     },
     {
+      name: "signal",
+      sessionId: "sess-signal",
+      lastChannel: "signal",
       lastTo: "+15551234567",
+      idempotencyKey: "idem-agent-last-signal",
     },
   ])("agent routes main last-channel $name", async (tc) => {
     setRegistry(defaultRegistry);

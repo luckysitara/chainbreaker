@@ -175,6 +175,8 @@ describe("resolveCommandSecretRefsViaGateway", () => {
     callGateway.mockResolvedValueOnce({
       assignments: [
         {
+          path: "channels.discord.accounts.ops.token",
+          pathSegments: ["channels", "discord", "accounts", "ops", "token"],
           value: "ops-token",
         },
       ],
@@ -184,6 +186,7 @@ describe("resolveCommandSecretRefsViaGateway", () => {
     const result = await resolveCommandSecretRefsViaGateway({
       config: {
         channels: {
+          discord: {
             accounts: {
               ops: {
                 token: { source: "env", provider: "default", id: "DISCORD_OPS_TOKEN" },
@@ -196,9 +199,13 @@ describe("resolveCommandSecretRefsViaGateway", () => {
         },
       } as ChainbreakerConfig,
       commandName: "message",
+      targetIds: new Set(["channels.discord.accounts.*.token"]),
+      allowedPaths: new Set(["channels.discord.accounts.ops.token"]),
     });
 
+    expect(result.resolvedConfig.channels?.discord?.accounts?.ops?.token).toBe("ops-token");
     expect(result.targetStatesByPath).toEqual({
+      "channels.discord.accounts.ops.token": "resolved_gateway",
     });
     expect(result.hadUnresolvedTargets).toBe(false);
   });

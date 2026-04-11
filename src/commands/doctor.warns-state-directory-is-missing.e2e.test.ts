@@ -114,9 +114,7 @@ describe("doctor command", () => {
     const gatewayAuthNote = terminalNoteMock.mock.calls.find((call) => call[1] === "Gateway auth");
     expect(gatewayAuthNote).toBeTruthy();
     expect(String(gatewayAuthNote?.[0])).toContain("gateway.auth.mode is unset");
-    expect(String(gatewayAuthNote?.[0])).toContain(
-      "chainbreaker config set gateway.auth.mode token",
-    );
+    expect(String(gatewayAuthNote?.[0])).toContain("chainbreaker config set gateway.auth.mode token");
     expect(String(gatewayAuthNote?.[0])).toContain(
       "chainbreaker config set gateway.auth.mode password",
     );

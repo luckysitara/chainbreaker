@@ -111,9 +111,7 @@ export function createGatewayReloadHandlers(params: {
         cfg: nextConfig,
         log: params.logHooks,
         onSkipped: () =>
-          params.logHooks.info(
-            "skipping gmail watcher restart (CHAINBREAKER_SKIP_GMAIL_WATCHER=1)",
-          ),
+          params.logHooks.info("skipping gmail watcher restart (CHAINBREAKER_SKIP_GMAIL_WATCHER=1)"),
       });
     }
 
@@ -239,6 +237,7 @@ export function createGatewayReloadHandlers(params: {
       params.logReload.warn(`config change requires gateway restart (${reasons})`);
       const emitted = emitGatewayRestart();
       if (!emitted) {
+        params.logReload.info("gateway restart already scheduled; skipping duplicate signal");
       }
     }
   };

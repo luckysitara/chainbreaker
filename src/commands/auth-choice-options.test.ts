@@ -94,13 +94,21 @@ describe("buildAuthChoiceOptions", () => {
         groupLabel: "Moonshot AI (Kimi K2.5)",
       },
       {
+        pluginId: "minimax",
+        providerId: "minimax",
         methodId: "api-global",
+        choiceId: "minimax-global-api",
         choiceLabel: "MiniMax API key (Global)",
+        groupId: "minimax",
         groupLabel: "MiniMax",
       },
       {
+        pluginId: "zai",
+        providerId: "zai",
         methodId: "api-key",
+        choiceId: "zai-api-key",
         choiceLabel: "Z.AI API key",
+        groupId: "zai",
         groupLabel: "Z.AI",
       },
       {
@@ -195,7 +203,9 @@ describe("buildAuthChoiceOptions", () => {
     for (const value of [
       "github-copilot",
       "token",
+      "zai-api-key",
       "xiaomi-api-key",
+      "minimax-global-api",
       "moonshot-api-key",
       "together-api-key",
       "chutes",

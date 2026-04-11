@@ -10,8 +10,10 @@ describe("approval request filters", () => {
       matchesApprovalRequestFilters({
         request: {
           agentId: "ops-agent",
+          sessionKey: "agent:ops-agent:slack:direct:U1:tail",
         },
         agentFilter: ["ops-agent"],
+        sessionFilter: ["slack:direct:", "tail$"],
       }),
     ).toBe(true);
   });

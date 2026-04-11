@@ -29,6 +29,7 @@ export type GuardedFetchOptions = {
   init?: RequestInit;
   maxRedirects?: number;
   timeoutMs?: number;
+  signal?: AbortSignal;
   policy?: SsrFPolicy;
   lookupFn?: LookupFn;
   dispatcherPolicy?: PinnedDispatcherPolicy;
@@ -121,7 +122,9 @@ export async function fetchWithSsrFGuard(params: GuardedFetchOptions): Promise<G
       : DEFAULT_MAX_REDIRECTS;
   const mode = resolveGuardedFetchMode(params);
 
+  const { signal, cleanup } = buildTimeoutAbortSignal({
     timeoutMs: params.timeoutMs,
+    signal: params.signal,
   });
 
   let released = false;
@@ -172,6 +175,7 @@ export async function fetchWithSsrFGuard(params: GuardedFetchOptions): Promise<G
         ...(currentInit ? { ...currentInit } : {}),
         redirect: "manual",
         ...(dispatcher ? { dispatcher } : {}),
+        ...(signal ? { signal } : {}),
       };
 
       const response = await fetcher(parsedUrl.toString(), init);

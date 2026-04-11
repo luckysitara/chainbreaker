@@ -66,6 +66,7 @@ describe("cron run log", () => {
     );
   });
 
+  it("appends JSONL and prunes by line count", async () => {
     await withRunLogDir("chainbreaker-cron-log-", async (dir) => {
       const logPath = path.join(dir, "runs", "job-1.jsonl");
 
@@ -84,9 +85,12 @@ describe("cron run log", () => {
       }
 
       const raw = await fs.readFile(logPath, "utf-8");
+      const lines = raw
         .split("\n")
         .map((l) => l.trim())
         .filter(Boolean);
+      expect(lines.length).toBe(3);
+      const last = JSON.parse(lines[2] ?? "{}") as { ts?: number };
       expect(last.ts).toBe(1009);
     });
   });
@@ -188,6 +192,7 @@ describe("cron run log", () => {
     });
   });
 
+  it("ignores invalid and non-finished lines while preserving delivery fields", async () => {
     await withRunLogDir("chainbreaker-cron-log-filter-", async (dir) => {
       const logPath = path.join(dir, "runs", "job-1.jsonl");
       await fs.mkdir(path.dirname(logPath), { recursive: true });

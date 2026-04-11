@@ -5,6 +5,7 @@ import { withTempDir } from "../test-helpers/temp-dir.js";
 import { requestJsonlSocket } from "./jsonl-socket.js";
 
 describe.runIf(process.platform !== "win32")("requestJsonlSocket", () => {
+  it("ignores malformed and non-accepted lines until one is accepted", async () => {
     await withTempDir({ prefix: "chainbreaker-jsonl-socket-" }, async (dir) => {
       const socketPath = path.join(dir, "socket.sock");
       const server = net.createServer((socket) => {

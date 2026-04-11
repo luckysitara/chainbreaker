@@ -224,8 +224,12 @@ export async function maybeRepairGatewayDaemon(params: {
     env: process.env,
   });
   if (summary || hints.length > 0) {
+    const lines: string[] = [];
     if (summary) {
+      lines.push(`Runtime: ${summary}`);
     }
+    lines.push(...hints);
+    note(lines.join("\n"), "Gateway");
   }
 
   if (serviceRuntime?.status !== "running") {

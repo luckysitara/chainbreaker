@@ -73,6 +73,7 @@ export type ChannelConfigSchema = {
 };
 
 /** Full capability contract for a native channel plugin. */
+// oxlint-disable-next-line typescript/no-explicit-any
 export type ChannelPlugin<ResolvedAccount = any, Probe = unknown, Audit = unknown> = {
   id: ChannelId;
   meta: ChannelMeta;

@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import path from "node:path";
+import { pipeline } from "node:stream/promises";
 import { SafeOpenError, readLocalFileSafely } from "../infra/fs-safe.js";
 import { retainSafeHeadersForCrossOriginRedirect } from "../infra/net/redirect-headers.js";
 import { resolvePinnedHostname } from "../infra/net/ssrf.js";
@@ -232,6 +233,7 @@ async function downloadToFile(
               req.destroy(new Error("Media exceeds 5MB limit"));
             }
           });
+          pipeline(res, out)
             .then(() => {
               const sniffBuffer = Buffer.concat(sniffChunks, Math.min(sniffLen, 16384));
               const rawHeader = res.headers["content-type"];

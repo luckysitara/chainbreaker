@@ -590,9 +590,7 @@ export function buildAllowedModelSet(params: {
   return { allowAny: false, allowedCatalog, allowedKeys };
 }
 
-export function buildConfiguredModelCatalog(params: {
-  cfg: ChainbreakerConfig;
-}): ModelCatalogEntry[] {
+export function buildConfiguredModelCatalog(params: { cfg: ChainbreakerConfig }): ModelCatalogEntry[] {
   const providers = params.cfg.models?.providers;
   if (!providers || typeof providers !== "object") {
     return [];

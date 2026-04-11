@@ -13,9 +13,13 @@ vi.mock("../channels/plugins/index.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../channels/plugins/index.js")>();
   const knownChannels = new Map([
     [
+      "discord",
+      createBindingResolverTestPlugin({ id: "discord", config: { listAccountIds: () => [] } }),
     ],
     [
+      "matrix",
       createBindingResolverTestPlugin({
+        id: "matrix",
         config: { listAccountIds: () => [] },
         resolveBindingAccountId: ({ agentId }) => agentId.toLowerCase(),
       }),
@@ -61,6 +65,7 @@ describe("agents bind/unbind commands", () => {
       ...baseConfigSnapshot,
       config: {
         bindings: [
+          { agentId: "main", match: { channel: "matrix" } },
           { agentId: "ops", match: { channel: "telegram", accountId: "work" } },
         ],
       },
@@ -68,6 +73,7 @@ describe("agents bind/unbind commands", () => {
 
     await agentsBindingsCommand({}, runtime);
 
+    expect(runtime.log).toHaveBeenCalledWith(expect.stringContaining("main <- matrix"));
     expect(runtime.log).toHaveBeenCalledWith(
       expect.stringContaining("ops <- telegram accountId=work"),
     );
@@ -89,11 +95,13 @@ describe("agents bind/unbind commands", () => {
     expect(runtime.exit).not.toHaveBeenCalled();
   });
 
+  it("defaults matrix accountId to the target agent id when omitted", async () => {
     readConfigFileSnapshotMock.mockResolvedValue({
       ...baseConfigSnapshot,
       config: {},
     });
 
+    await agentsBindCommand({ agent: "main", bind: ["matrix"] }, runtime);
 
     expect(writeConfigFileMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -101,6 +109,7 @@ describe("agents bind/unbind commands", () => {
           {
             type: "route",
             agentId: "main",
+            match: { channel: "matrix", accountId: "main" },
           },
         ],
       }),
@@ -133,6 +142,7 @@ describe("agents bind/unbind commands", () => {
       config: {
         agents: { list: [{ id: "ops", workspace: "/tmp/ops" }] },
         bindings: [
+          { agentId: "main", match: { channel: "matrix" } },
           { agentId: "ops", match: { channel: "telegram", accountId: "work" } },
         ],
       },
@@ -142,6 +152,7 @@ describe("agents bind/unbind commands", () => {
 
     expect(writeConfigFileMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        bindings: [{ agentId: "main", match: { channel: "matrix" } }],
       }),
     );
     expect(runtime.exit).not.toHaveBeenCalled();
@@ -163,6 +174,7 @@ describe("agents bind/unbind commands", () => {
     expect(runtime.exit).toHaveBeenCalledWith(1);
   });
 
+  it("keeps role-based bindings when removing channel-level discord binding", async () => {
     readConfigFileSnapshotMock.mockResolvedValue({
       ...baseConfigSnapshot,
       config: {
@@ -170,6 +182,7 @@ describe("agents bind/unbind commands", () => {
           {
             agentId: "main",
             match: {
+              channel: "discord",
               accountId: "guild-a",
               roles: ["111", "222"],
             },
@@ -177,6 +190,7 @@ describe("agents bind/unbind commands", () => {
           {
             agentId: "main",
             match: {
+              channel: "discord",
               accountId: "guild-a",
             },
           },
@@ -184,6 +198,7 @@ describe("agents bind/unbind commands", () => {
       },
     });
 
+    await agentsUnbindCommand({ bind: ["discord:guild-a"] }, runtime);
 
     expect(writeConfigFileMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -191,6 +206,7 @@ describe("agents bind/unbind commands", () => {
           {
             agentId: "main",
             match: {
+              channel: "discord",
               accountId: "guild-a",
               roles: ["111", "222"],
             },

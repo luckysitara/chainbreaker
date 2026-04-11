@@ -101,6 +101,7 @@ function buildDiscordCleanupHooks(onDelete: (key: string | undefined) => void) {
   return {
     onAgentSubagentSpawn: (params: unknown) => {
       const rec = params as { channel?: string; timeout?: number } | undefined;
+      expect(rec?.channel).toBe("discord");
       expect(rec?.timeout).toBe(1);
     },
     onSessionsDelete: (params: unknown) => {
@@ -121,6 +122,8 @@ const waitFor = async (predicate: () => boolean, timeoutMs = 1_500) => {
 
 async function getDiscordGroupSpawnTool() {
   return await getSessionsSpawnTool({
+    agentSessionKey: "discord:group:req",
+    agentChannel: "discord",
   });
 }
 
@@ -312,6 +315,7 @@ describe("chainbreaker-tools: subagents (sessions_spawn lifecycle)", () => {
       | undefined;
     expect(first?.lane).toBe("subagent");
     expect(first?.deliver).toBe(false);
+    expect(first?.channel).toBe("discord");
     expect(first?.sessionKey?.startsWith("agent:main:subagent:")).toBe(true);
     expect(child.sessionKey?.startsWith("agent:main:subagent:")).toBe(true);
 
@@ -322,6 +326,7 @@ describe("chainbreaker-tools: subagents (sessions_spawn lifecycle)", () => {
           deliver?: boolean;
         }
       | undefined;
+    expect(second?.sessionKey).toBe("agent:main:discord:group:req");
     expect(second?.deliver).toBe(false);
     expect(second?.message).toContain("subagent task");
 
@@ -373,6 +378,7 @@ describe("chainbreaker-tools: subagents (sessions_spawn lifecycle)", () => {
 
     // Second call: main agent trigger
     const second = agentCalls[1]?.params as { sessionKey?: string; deliver?: boolean } | undefined;
+    expect(second?.sessionKey).toBe("agent:main:discord:group:req");
     expect(second?.deliver).toBe(false);
 
     // No direct send to external channel (main agent handles delivery)

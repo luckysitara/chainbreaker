@@ -74,11 +74,15 @@ export function buildCompactionStructureInstructions(
 function normalizedSummaryLines(summary: string): string[] {
   return summary
     .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
 }
 
 function hasRequiredSummarySections(summary: string): boolean {
+  const lines = normalizedSummaryLines(summary);
   let cursor = 0;
   for (const heading of REQUIRED_SUMMARY_SECTIONS) {
+    const index = lines.findIndex((line, lineIndex) => lineIndex >= cursor && line === heading);
     if (index < 0) {
       return false;
     }
@@ -218,7 +222,9 @@ export function auditSummaryQuality(params: {
   identifierPolicy?: CompactionSummarizationInstructions["identifierPolicy"];
 }): { ok: boolean; reasons: string[] } {
   const reasons: string[] = [];
+  const lines = new Set(normalizedSummaryLines(params.summary));
   for (const section of REQUIRED_SUMMARY_SECTIONS) {
+    if (!lines.has(section)) {
       reasons.push(`missing_section:${section}`);
     }
   }

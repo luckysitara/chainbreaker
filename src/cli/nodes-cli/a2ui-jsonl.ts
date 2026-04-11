@@ -36,11 +36,14 @@ export function buildA2UITextJsonl(text: string) {
 }
 
 export function validateA2UIJsonl(jsonl: string) {
+  const lines = jsonl.split(/\r?\n/);
   const errors: string[] = [];
   let sawV08 = false;
   let sawV09 = false;
   let messageCount = 0;
 
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim();
     if (!trimmed) {
       return;
     }
@@ -49,15 +52,18 @@ export function validateA2UIJsonl(jsonl: string) {
     try {
       obj = JSON.parse(trimmed) as unknown;
     } catch (err) {
+      errors.push(`line ${idx + 1}: ${String(err)}`);
       return;
     }
     if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
+      errors.push(`line ${idx + 1}: expected JSON object`);
       return;
     }
     const record = obj as Record<string, unknown>;
     const actionKeys = A2UI_ACTION_KEYS.filter((key) => key in record);
     if (actionKeys.length !== 1) {
       errors.push(
+        `line ${idx + 1}: expected exactly one action key (${A2UI_ACTION_KEYS.join(", ")})`,
       );
       return;
     }

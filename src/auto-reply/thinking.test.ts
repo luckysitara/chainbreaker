@@ -121,11 +121,14 @@ describe("listThinkingLevelLabels", () => {
 
   it("returns on/off for provider-advertised binary thinking", () => {
     providerRuntimeMocks.resolveProviderBinaryThinking.mockImplementation(({ provider }) =>
+      provider === "zai" ? true : undefined,
     );
 
+    expect(listThinkingLevelLabels("zai", "glm-4.7")).toEqual(["off", "on"]);
   });
 
   it("keeps built-in binary thinking fallback without provider runtime", () => {
+    expect(listThinkingLevelLabels("zai", "glm-4.7")).toEqual(["off", "on"]);
   });
 
   it("returns full levels for non-ZAI", () => {

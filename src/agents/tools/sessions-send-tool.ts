@@ -338,6 +338,7 @@ export function createSessionsSendTool(opts?: {
         method: "chat.history",
         params: { sessionKey: resolvedKey, limit: SESSIONS_SEND_REPLY_HISTORY_LIMIT },
       });
+      const baselineReply = resolveLatestAssistantReplySnapshot(
         stripToolMessages(Array.isArray(historyBefore?.messages) ? historyBefore.messages : []),
       );
 
@@ -390,6 +391,7 @@ export function createSessionsSendTool(opts?: {
         stripToolMessages(Array.isArray(history?.messages) ? history.messages : []),
       );
       const reply =
+        latestReply.text && latestReply.fingerprint !== baselineReply.fingerprint
           ? latestReply.text
           : undefined;
       startA2AFlow(reply ?? undefined);

@@ -15,6 +15,7 @@ describe("config issue format", () => {
     expect(normalizeConfigIssuePath(undefined)).toBe("<root>");
   });
 
+  it("formats issue lines with and without markers", () => {
     expect(formatConfigIssueLine({ path: "", message: "broken" }, "-")).toBe("- : broken");
     expect(
       formatConfigIssueLine({ path: "", message: "broken" }, "-", { normalizeRoot: true }),
@@ -26,12 +27,15 @@ describe("config issue format", () => {
       formatConfigIssueLines(
         [
           { path: "", message: "first" },
+          { path: "channels.signal.dmPolicy", message: "second" },
         ],
         "×",
         { normalizeRoot: true },
       ),
+    ).toEqual(["× <root>: first", "× channels.signal.dmPolicy: second"]);
   });
 
+  it("sanitizes control characters and ANSI sequences in formatted lines", () => {
     expect(
       formatConfigIssueLine(
         {

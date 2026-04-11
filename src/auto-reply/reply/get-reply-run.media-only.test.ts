@@ -118,6 +118,7 @@ function baseParams(
       RawBody: "",
       CommandBody: "",
       ThreadHistoryBody: "Earlier message in this thread",
+      OriginatingChannel: "slack",
       OriginatingTo: "C123",
       ChatType: "group",
     },
@@ -126,7 +127,9 @@ function baseParams(
       BodyStripped: "",
       ThreadHistoryBody: "Earlier message in this thread",
       MediaPath: "/tmp/input.png",
+      Provider: "slack",
       ChatType: "group",
+      OriginatingChannel: "slack",
       OriginatingTo: "C123",
     },
     cfg: { session: {}, channels: {}, agents: { defaults: {} } },
@@ -136,6 +139,8 @@ function baseParams(
     sessionCfg: {},
     commandAuthorized: true,
     command: {
+      surface: "slack",
+      channel: "slack",
       isAuthorizedSender: true,
       abortKey: "session-key",
       ownerList: [],
@@ -230,6 +235,7 @@ describe("runPreparedReply media-only handling", () => {
         sessionCtx: {
           Body: "",
           BodyStripped: "",
+          Provider: "slack",
         },
       }),
     );

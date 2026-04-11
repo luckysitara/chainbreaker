@@ -1844,6 +1844,8 @@ describe("buildAfterTurnRuntimeContext", () => {
     const legacy = buildAfterTurnRuntimeContext({
       attempt: {
         sessionKey: "agent:main:session:abc",
+        messageChannel: "slack",
+        messageProvider: "slack",
         agentAccountId: "acct-1",
         authProfileId: "openai:p1",
         config: {} as ChainbreakerConfig,
@@ -1870,6 +1872,8 @@ describe("buildAfterTurnRuntimeContext", () => {
     const legacy = buildAfterTurnRuntimeContext({
       attempt: {
         sessionKey: "agent:main:session:abc",
+        messageChannel: "slack",
+        messageProvider: "slack",
         agentAccountId: "acct-1",
         authProfileId: "openai:p1",
         config: {
@@ -1908,6 +1912,8 @@ describe("buildAfterTurnRuntimeContext", () => {
     const legacy = buildAfterTurnRuntimeContext({
       attempt: {
         sessionKey: "agent:main:session:abc",
+        messageChannel: "slack",
+        messageProvider: "slack",
         agentAccountId: "acct-1",
         authProfileId: "openai:p1",
         config: { plugins: { slots: { contextEngine: "lossless-claw" } } } as ChainbreakerConfig,
@@ -1937,6 +1943,8 @@ describe("buildAfterTurnRuntimeContext", () => {
     const legacy = buildAfterTurnRuntimeContext({
       attempt: {
         sessionKey: "agent:main:session:abc",
+        messageChannel: "slack",
+        messageProvider: "slack",
         agentAccountId: "acct-1",
         currentChannelId: "C123",
         currentThreadTs: "thread-9",

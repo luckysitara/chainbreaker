@@ -8,7 +8,6 @@ import {
 } from "../../image-generation/runtime.js";
 import type {
   ImageGenerationProvider,
-  ImageGenerationProviderCapabilities,
   ImageGenerationResolution,
   ImageGenerationSourceImage,
 } from "../../image-generation/types.js";
@@ -251,11 +250,9 @@ function resolveSelectedImageGenerationProvider(params: {
   }
   const selectedProvider = normalizeProviderId(selectedRef.provider);
   return listRuntimeImageGenerationProviders({ config: params.config }).find(
-    (provider: ImageGenerationProvider) =>
+    (provider) =>
       normalizeProviderId(provider.id) === selectedProvider ||
-      (provider.aliases ?? []).some(
-        (alias: string) => normalizeProviderId(alias) === selectedProvider,
-      ),
+      (provider.aliases ?? []).some((alias) => normalizeProviderId(alias) === selectedProvider),
   );
 }
 
@@ -504,7 +501,7 @@ export function createImageGenerateTool(options?: {
       const action = resolveAction(params);
       if (action === "list") {
         const providers = listRuntimeImageGenerationProviders({ config: effectiveCfg }).map(
-          (provider: ImageGenerationProvider) => ({
+          (provider) => ({
             id: provider.id,
             ...(provider.label ? { label: provider.label } : {}),
             ...(provider.defaultModel ? { defaultModel: provider.defaultModel } : {}),
@@ -513,46 +510,38 @@ export function createImageGenerateTool(options?: {
             capabilities: provider.capabilities,
           }),
         );
-          (provider: {
-            id: string;
-            capabilities: ImageGenerationProviderCapabilities;
-            defaultModel?: string;
-            models: string[];
-            authEnvVars: string[];
-          }) => {
-            const caps: string[] = [];
-            if (provider.capabilities.edit.enabled) {
-              const maxRefs = provider.capabilities.edit.maxInputImages;
-              caps.push(
-                `editing${typeof maxRefs === "number" ? ` up to ${maxRefs} ref${maxRefs === 1 ? "" : "s"}` : ""}`,
-              );
-            }
-            if ((provider.capabilities.geometry?.resolutions?.length ?? 0) > 0) {
-              caps.push(`resolutions ${provider.capabilities.geometry?.resolutions?.join("/")}`);
-            }
-            if ((provider.capabilities.geometry?.sizes?.length ?? 0) > 0) {
-              caps.push(`sizes ${provider.capabilities.geometry?.sizes?.join(", ")}`);
-            }
-            if ((provider.capabilities.geometry?.aspectRatios?.length ?? 0) > 0) {
-              caps.push(
-                `aspect ratios ${provider.capabilities.geometry?.aspectRatios?.join(", ")}`,
-              );
-            }
-            const modelLine =
-              provider.models.length > 0
-                ? `models: ${provider.models.join(", ")}`
-                : "models: unknown";
-            return [
-              `${provider.id}${provider.defaultModel ? ` (default ${provider.defaultModel})` : ""}`,
-              `  ${modelLine}`,
-              ...(provider.authEnvVars.length > 0
-                ? [`  auth: set ${provider.authEnvVars.join(" / ")} to use ${provider.id}/*`]
-                : []),
-              ...(caps.length > 0 ? [`  capabilities: ${caps.join("; ")}`] : []),
-            ];
-          },
-        );
+        const lines = providers.flatMap((provider) => {
+          const caps: string[] = [];
+          if (provider.capabilities.edit.enabled) {
+            const maxRefs = provider.capabilities.edit.maxInputImages;
+            caps.push(
+              `editing${typeof maxRefs === "number" ? ` up to ${maxRefs} ref${maxRefs === 1 ? "" : "s"}` : ""}`,
+            );
+          }
+          if ((provider.capabilities.geometry?.resolutions?.length ?? 0) > 0) {
+            caps.push(`resolutions ${provider.capabilities.geometry?.resolutions?.join("/")}`);
+          }
+          if ((provider.capabilities.geometry?.sizes?.length ?? 0) > 0) {
+            caps.push(`sizes ${provider.capabilities.geometry?.sizes?.join(", ")}`);
+          }
+          if ((provider.capabilities.geometry?.aspectRatios?.length ?? 0) > 0) {
+            caps.push(`aspect ratios ${provider.capabilities.geometry?.aspectRatios?.join(", ")}`);
+          }
+          const modelLine =
+            provider.models.length > 0
+              ? `models: ${provider.models.join(", ")}`
+              : "models: unknown";
+          return [
+            `${provider.id}${provider.defaultModel ? ` (default ${provider.defaultModel})` : ""}`,
+            `  ${modelLine}`,
+            ...(provider.authEnvVars.length > 0
+              ? [`  auth: set ${provider.authEnvVars.join(" / ")} to use ${provider.id}/*`]
+              : []),
+            ...(caps.length > 0 ? [`  capabilities: ${caps.join("; ")}`] : []),
+          ];
+        });
         return {
+          content: [{ type: "text", text: lines.join("\n") }],
           details: { providers },
         };
       }
@@ -605,7 +594,7 @@ export function createImageGenerateTool(options?: {
       });
 
       const savedImages = await Promise.all(
-        result.images.map((image: { buffer: Buffer; mimeType: string; fileName?: string }) =>
+        result.images.map((image) =>
           saveMediaBuffer(
             image.buffer,
             image.mimeType,
@@ -617,20 +606,22 @@ export function createImageGenerateTool(options?: {
       );
 
       const revisedPrompts = result.images
-        .map((image: { revisedPrompt?: string }) => image.revisedPrompt?.trim())
-        .filter((entry: string | undefined): entry is string => Boolean(entry));
+        .map((image) => image.revisedPrompt?.trim())
+        .filter((entry): entry is string => Boolean(entry));
+      const lines = [
         `Generated ${savedImages.length} image${savedImages.length === 1 ? "" : "s"} with ${result.provider}/${result.model}.`,
       ];
 
       return {
+        content: [{ type: "text", text: lines.join("\n") }],
         details: {
           provider: result.provider,
           model: result.model,
           count: savedImages.length,
           media: {
-            mediaUrls: savedImages.map((image: { path: string }) => image.path),
+            mediaUrls: savedImages.map((image) => image.path),
           },
-          paths: savedImages.map((image: { path: string }) => image.path),
+          paths: savedImages.map((image) => image.path),
           ...(imageInputs.length === 1
             ? {
                 image: loadedReferenceImages[0]?.resolvedImage,

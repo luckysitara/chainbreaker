@@ -72,13 +72,25 @@ export async function readSystemdServiceExecStart(
     const content = await fs.readFile(unitPath, "utf8");
     let execStart = "";
     let workingDirectory = "";
+    const inlineEnvironment: Record<string, string> = {};
     const environmentFileSpecs: string[] = [];
     for (const rawLine of content.split("\n")) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith("#")) {
         continue;
       }
+      if (line.startsWith("ExecStart=")) {
+        execStart = line.slice("ExecStart=".length).trim();
+      } else if (line.startsWith("WorkingDirectory=")) {
+        workingDirectory = line.slice("WorkingDirectory=".length).trim();
+      } else if (line.startsWith("Environment=")) {
+        const raw = line.slice("Environment=".length).trim();
         const parsed = parseSystemdEnvAssignment(raw);
         if (parsed) {
+          inlineEnvironment[parsed.key] = parsed.value;
         }
+      } else if (line.startsWith("EnvironmentFile=")) {
+        const raw = line.slice("EnvironmentFile=".length).trim();
         if (raw) {
           environmentFileSpecs.push(raw);
         }
@@ -93,9 +105,11 @@ export async function readSystemdServiceExecStart(
       unitPath,
     });
     const mergedEnvironment = {
+      ...inlineEnvironment,
       ...environmentFromFiles.environment,
     };
     const mergedEnvironmentSources = {
+      ...buildEnvironmentValueSources(inlineEnvironment, "inline"),
       ...buildEnvironmentValueSources(environmentFromFiles.environment, "file"),
     };
     const programArguments = parseSystemdExecStart(execStart);
@@ -115,6 +129,8 @@ export async function readSystemdServiceExecStart(
 
 function buildEnvironmentValueSources(
   environment: Record<string, string>,
+  source: "inline" | "file",
+): Record<string, "inline" | "file"> {
   return Object.fromEntries(Object.keys(environment).map((key) => [key, source]));
 }
 

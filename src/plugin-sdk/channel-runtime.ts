@@ -6,6 +6,7 @@ export * from "../channels/reply-prefix.js";
 export * from "../channels/typing.js";
 export type * from "../channels/plugins/types.js";
 export { normalizeChannelId } from "../channels/plugins/registry.js";
+export * from "../channels/plugins/normalize/signal.js";
 export * from "../channels/plugins/normalize/whatsapp.js";
 export * from "../channels/plugins/outbound/interactive.js";
 export * from "../channels/plugins/whatsapp-heartbeat.js";

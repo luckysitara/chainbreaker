@@ -14,6 +14,7 @@ const { logWarnMock, logDebugMock, logInfoMock } = vi.hoisted(() => ({
 type MockChild = EventEmitter & {
   stdout: EventEmitter;
   stderr: EventEmitter;
+  kill: (signal?: NodeJS.Signals) => void;
   closeWith: (code?: number | null) => void;
 };
 
@@ -189,6 +190,7 @@ describe("QmdMemoryManager slugified path resolution", () => {
     const actualRelative = "extra-docs/Category/Sub Category/Topic Name/Topic Name.md";
     const actualFile = path.join(workspaceDir, actualRelative);
     await fs.mkdir(path.dirname(actualFile), { recursive: true });
+    await fs.writeFile(actualFile, "line-1\nline-2\nline-3", "utf-8");
 
     spawnMock.mockImplementation((_cmd: string, args: string[]) => {
       if (args[0] === "search") {
@@ -200,6 +202,7 @@ describe("QmdMemoryManager slugified path resolution", () => {
             {
               file: "qmd://workspace-main/extra-docs/category/sub-category/topic-name/topic-name.md",
               score: 0.73,
+              snippet: "@@ -2,1\nline-2",
             },
           ]),
         );
@@ -216,6 +219,8 @@ describe("QmdMemoryManager slugified path resolution", () => {
       actualPath: actualRelative,
     });
 
+    const results = await manager.search("line-2", {
+      sessionKey: "agent:main:slack:dm:u123",
     });
     expect(results).toEqual([
       {
@@ -223,12 +228,14 @@ describe("QmdMemoryManager slugified path resolution", () => {
         startLine: 2,
         endLine: 2,
         score: 0.73,
+        snippet: "@@ -2,1\nline-2",
         source: "memory",
       },
     ]);
 
     await expect(manager.readFile({ relPath: results[0]!.path })).resolves.toEqual({
       path: actualRelative,
+      text: "line-1\nline-2\nline-3",
     });
   });
 
@@ -283,6 +290,7 @@ describe("QmdMemoryManager slugified path resolution", () => {
     });
 
     const results = await manager.search("vault memory", {
+      sessionKey: "agent:main:slack:dm:u123",
     });
     expect(results).toEqual([
       {
@@ -339,6 +347,7 @@ describe("QmdMemoryManager slugified path resolution", () => {
     });
 
     const results = await manager.search("exact slugified path", {
+      sessionKey: "agent:main:slack:dm:u123",
     });
     expect(results).toEqual([
       {

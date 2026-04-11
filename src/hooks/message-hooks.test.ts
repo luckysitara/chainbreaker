@@ -21,20 +21,26 @@ const actionCases: ActionCase[] = [
     key: "message:received",
     action: "received",
     context: {
+      from: "signal:+15551234567",
       to: "bot:+15559876543",
       content: "Test message",
+      channelId: "signal",
       conversationId: "conv-abc",
       messageId: "msg-xyz",
       senderId: "sender-1",
       senderName: "Test User",
       senderUsername: "testuser",
       senderE164: "+15551234567",
+      provider: "signal",
+      surface: "signal",
       threadId: "thread-1",
+      originatingChannel: "signal",
       originatingTo: "bot:+15559876543",
       timestamp: 1707600000,
     },
     assertContext: (context) => {
       expect(context.content).toBe("Test message");
+      expect(context.channelId).toBe("signal");
       expect(context.senderE164).toBe("+15551234567");
       expect(context.threadId).toBe("thread-1");
     },
@@ -83,12 +89,17 @@ const actionCases: ActionCase[] = [
       from: "bot:456",
       to: "user:123",
       content: "Reply text",
+      channelId: "discord",
       conversationId: "channel:C123",
+      provider: "discord",
+      surface: "discord",
       threadId: "thread-abc",
+      originatingChannel: "discord",
       originatingTo: "channel:C123",
     },
     assertContext: (context) => {
       expect(context.content).toBe("Reply text");
+      expect(context.channelId).toBe("discord");
       expect(context.conversationId).toBe("channel:C123");
       expect(context.threadId).toBe("thread-abc");
     },

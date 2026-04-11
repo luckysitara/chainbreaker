@@ -329,9 +329,7 @@ describe("modelsAuthLoginCommand", () => {
 
     await modelsAuthLoginCommand({ provider: "openai-codex" }, runtime);
 
-    expect(mocks.loadAuthProfileStoreForRuntime).toHaveBeenCalledWith(
-      "/tmp/chainbreaker/agents/main",
-    );
+    expect(mocks.loadAuthProfileStoreForRuntime).toHaveBeenCalledWith("/tmp/chainbreaker/agents/main");
   });
 
   it("reports loaded plugin providers when requested provider is unavailable", async () => {

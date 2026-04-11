@@ -16,11 +16,14 @@ describe("session conversation routing", () => {
 
   it("keeps generic :thread: parsing in core", () => {
     expect(
+      resolveSessionConversationRef("agent:main:slack:channel:general:thread:1699999999.0001"),
     ).toEqual({
+      channel: "slack",
       kind: "channel",
       rawId: "general:thread:1699999999.0001",
       id: "general",
       threadId: "1699999999.0001",
+      baseSessionKey: "agent:main:slack:channel:general",
       baseConversationId: "general",
       parentConversationCandidates: ["general"],
     });

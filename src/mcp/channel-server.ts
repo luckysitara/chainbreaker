@@ -17,9 +17,7 @@ export type ChainbreakerMcpServeOptions = {
   verbose?: boolean;
 };
 
-export async function createChainbreakerChannelMcpServer(
-  opts: ChainbreakerMcpServeOptions = {},
-): Promise<{
+export async function createChainbreakerChannelMcpServer(opts: ChainbreakerMcpServeOptions = {}): Promise<{
   server: McpServer;
   bridge: ChainbreakerChannelBridge;
   start: () => Promise<void>;
@@ -64,9 +62,7 @@ export async function createChainbreakerChannelMcpServer(
   };
 }
 
-export async function serveChainbreakerChannelMcp(
-  opts: ChainbreakerMcpServeOptions = {},
-): Promise<void> {
+export async function serveChainbreakerChannelMcp(opts: ChainbreakerMcpServeOptions = {}): Promise<void> {
   const { server, start, close } = await createChainbreakerChannelMcpServer(opts);
   const transport = new StdioServerTransport();
 

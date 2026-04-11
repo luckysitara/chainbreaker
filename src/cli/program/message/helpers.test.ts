@@ -54,12 +54,14 @@ vi.mock("../../deps.js", () => ({
 const { createMessageCliHelpers } = await import("./helpers.js");
 
 const baseSendOptions = {
+  channel: "discord",
   target: "123",
   message: "hi",
 };
 
 function createRunMessageAction() {
   const fakeCommand = { help: vi.fn() } as never;
+  return createMessageCliHelpers(fakeCommand, "discord").runMessageAction;
 }
 
 async function runSendAction(opts: Record<string, unknown> = {}) {
@@ -166,9 +168,11 @@ describe("runMessageAction", () => {
 
   it("passes action and maps account to accountId", async () => {
     const fakeCommand = { help: vi.fn() } as never;
+    const { runMessageAction } = createMessageCliHelpers(fakeCommand, "discord");
 
     await expect(
       runMessageAction("poll", {
+        channel: "discord",
         target: "456",
         account: "acct-1",
         message: "hi",
@@ -178,6 +182,7 @@ describe("runMessageAction", () => {
     expect(messageCommandMock).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "poll",
+        channel: "discord",
         target: "456",
         accountId: "acct-1",
         message: "hi",
@@ -194,6 +199,7 @@ describe("runMessageAction", () => {
 
     await expect(
       runMessageAction("send", {
+        channel: "discord",
         target: "789",
         account: 42,
         message: "hi",
@@ -203,6 +209,7 @@ describe("runMessageAction", () => {
     expect(messageCommandMock).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "send",
+        channel: "discord",
         target: "789",
         accountId: undefined,
       }),

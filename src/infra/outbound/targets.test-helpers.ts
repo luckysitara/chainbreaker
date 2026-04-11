@@ -158,6 +158,7 @@ export function createWhatsAppTestPlugin(): ChannelPlugin {
 }
 
 export function createNoopOutboundChannelPlugin(
+  id: "discord" | "imessage" | "slack",
 ): ChannelPlugin {
   return createTestChannelPlugin({
     id,

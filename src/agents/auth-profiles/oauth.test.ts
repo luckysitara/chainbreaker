@@ -50,12 +50,14 @@ function tokenStore(params: {
   };
 }
 
+function githubCopilotTokenStore(profileId: string, includeInlineToken = true): AuthProfileStore {
   return {
     version: 1,
     profiles: {
       [profileId]: {
         type: "token",
         provider: "github-copilot",
+        ...(includeInlineToken ? { token: "" } : {}),
         tokenRef: { source: "env", provider: "default", id: "GITHUB_TOKEN" },
       },
     },
@@ -349,6 +351,8 @@ describe("resolveApiKeyForProfile secret refs", () => {
     });
   });
 
+  it("resolves token tokenRef without inline token when expires is absent", async () => {
+    const profileId = "github-copilot:no-inline-token";
     await withEnvVar("GITHUB_TOKEN", "gh-ref-token", async () => {
       await expectResolvedApiKey({
         profileId,
@@ -380,7 +384,10 @@ describe("resolveApiKeyForProfile secret refs", () => {
     ).rejects.toThrow(/mode is "oauth"/i);
   });
 
+  it("resolves inline ${ENV} api_key values", async () => {
+    const profileId = "openai:inline-env";
     const previous = process.env.OPENAI_API_KEY;
+    process.env.OPENAI_API_KEY = "sk-openai-inline"; // pragma: allowlist secret
     try {
       const result = await resolveApiKeyForProfile({
         cfg: cfgFor(profileId, "openai", "api_key"),
@@ -397,6 +404,7 @@ describe("resolveApiKeyForProfile secret refs", () => {
         profileId,
       });
       expect(result).toEqual({
+        apiKey: "sk-openai-inline", // pragma: allowlist secret
         provider: "openai",
         email: undefined,
       });
@@ -409,7 +417,10 @@ describe("resolveApiKeyForProfile secret refs", () => {
     }
   });
 
+  it("resolves inline ${ENV} token values", async () => {
+    const profileId = "github-copilot:inline-env";
     const previous = process.env.GITHUB_TOKEN;
+    process.env.GITHUB_TOKEN = "gh-inline-token";
     try {
       const result = await resolveApiKeyForProfile({
         cfg: cfgFor(profileId, "github-copilot", "token"),
@@ -426,6 +437,7 @@ describe("resolveApiKeyForProfile secret refs", () => {
         profileId,
       });
       expect(result).toEqual({
+        apiKey: "gh-inline-token", // pragma: allowlist secret
         provider: "github-copilot",
         email: undefined,
       });

@@ -19,6 +19,11 @@ export type OutboundSendDeps = LegacyOutboundSendDeps & { [channelId: string]: u
 const LEGACY_SEND_DEP_KEYS = {
   whatsapp: "sendWhatsApp",
   telegram: "sendTelegram",
+  discord: "sendDiscord",
+  slack: "sendSlack",
+  signal: "sendSignal",
+  imessage: "sendIMessage",
+  matrix: "sendMatrix",
   msteams: "sendMSTeams",
 } as const satisfies Record<string, keyof LegacyOutboundSendDeps>;
 

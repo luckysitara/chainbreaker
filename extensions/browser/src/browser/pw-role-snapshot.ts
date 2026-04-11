@@ -10,6 +10,7 @@ export type RoleRef = {
 export type RoleRefMap = Record<string, RoleRef>;
 
 export type RoleSnapshotStats = {
+  lines: number;
   chars: number;
   refs: number;
   interactive: number;
@@ -27,21 +28,27 @@ export type RoleSnapshotOptions = {
 export function getRoleSnapshotStats(snapshot: string, refs: RoleRefMap): RoleSnapshotStats {
   const interactive = Object.values(refs).filter((r) => INTERACTIVE_ROLES.has(r.role)).length;
   return {
+    lines: snapshot.split("\n").length,
     chars: snapshot.length,
     refs: Object.keys(refs).length,
     interactive,
   };
 }
 
+function getIndentLevel(line: string): number {
+  const match = line.match(/^(\s*)/);
   return match ? Math.floor(match[1].length / 2) : 0;
 }
 
 function matchInteractiveSnapshotLine(
+  line: string,
   options: RoleSnapshotOptions,
 ): { roleRaw: string; role: string; name?: string; suffix: string } | null {
+  const depth = getIndentLevel(line);
   if (options.maxDepth !== undefined && depth > options.maxDepth) {
     return null;
   }
+  const match = line.match(/^(\s*-\s*)(\w+)(?:\s+"([^"]*)")?(.*)$/);
   if (!match) {
     return null;
   }
@@ -111,22 +118,34 @@ function removeNthFromNonDuplicates(refs: RoleRefMap, tracker: RoleNameTracker) 
 }
 
 function compactTree(tree: string) {
+  const lines = tree.split("\n");
   const result: string[] = [];
 
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (line.includes("[ref=")) {
+      result.push(line);
       continue;
     }
+    if (line.includes(":") && !line.trimEnd().endsWith(":")) {
+      result.push(line);
       continue;
     }
 
+    const currentIndent = getIndentLevel(line);
     let hasRelevantChildren = false;
+    for (let j = i + 1; j < lines.length; j += 1) {
+      const childIndent = getIndentLevel(lines[j]);
       if (childIndent <= currentIndent) {
         break;
       }
+      if (lines[j]?.includes("[ref=")) {
         hasRelevantChildren = true;
         break;
       }
     }
     if (hasRelevantChildren) {
+      result.push(line);
     }
   }
 
@@ -134,20 +153,25 @@ function compactTree(tree: string) {
 }
 
 function processLine(
+  line: string,
   refs: RoleRefMap,
   options: RoleSnapshotOptions,
   tracker: RoleNameTracker,
   nextRef: () => string,
 ): string | null {
+  const depth = getIndentLevel(line);
   if (options.maxDepth !== undefined && depth > options.maxDepth) {
     return null;
   }
 
+  const match = line.match(/^(\s*-\s*)(\w+)(?:\s+"([^"]*)")?(.*)$/);
   if (!match) {
+    return options.interactive ? null : line;
   }
 
   const [, prefix, roleRaw, name, suffix] = match;
   if (roleRaw.startsWith("/")) {
+    return options.interactive ? null : line;
   }
 
   const role = roleRaw.toLowerCase();
@@ -164,6 +188,7 @@ function processLine(
 
   const shouldHaveRef = isInteractive || (isContent && name);
   if (!shouldHaveRef) {
+    return line;
   }
 
   const ref = nextRef();
@@ -192,12 +217,15 @@ function processLine(
 type InteractiveSnapshotLine = NonNullable<ReturnType<typeof matchInteractiveSnapshotLine>>;
 
 function buildInteractiveSnapshotLines(params: {
+  lines: string[];
   options: RoleSnapshotOptions;
   resolveRef: (parsed: InteractiveSnapshotLine) => { ref: string; nth?: number } | null;
   recordRef: (parsed: InteractiveSnapshotLine, ref: string, nth?: number) => void;
   includeSuffix: (suffix: string) => boolean;
 }): string[] {
   const out: string[] = [];
+  for (const line of params.lines) {
+    const parsed = matchInteractiveSnapshotLine(line, params.options);
     if (!parsed) {
       continue;
     }
@@ -243,6 +271,7 @@ export function buildRoleSnapshotFromAriaSnapshot(
   ariaSnapshot: string,
   options: RoleSnapshotOptions = {},
 ): { snapshot: string; refs: RoleRefMap } {
+  const lines = ariaSnapshot.split("\n");
   const refs: RoleRefMap = {};
   const tracker = createRoleNameTracker();
 
@@ -254,6 +283,7 @@ export function buildRoleSnapshotFromAriaSnapshot(
 
   if (options.interactive) {
     const result = buildInteractiveSnapshotLines({
+      lines,
       options,
       resolveRef: ({ role, name }) => {
         const ref = nextRef();
@@ -280,6 +310,8 @@ export function buildRoleSnapshotFromAriaSnapshot(
   }
 
   const result: string[] = [];
+  for (const line of lines) {
+    const processed = processLine(line, refs, options, tracker, nextRef);
     if (processed !== null) {
       result.push(processed);
     }
@@ -307,10 +339,12 @@ export function buildRoleSnapshotFromAiSnapshot(
   aiSnapshot: string,
   options: RoleSnapshotOptions = {},
 ): { snapshot: string; refs: RoleRefMap } {
+  const lines = String(aiSnapshot ?? "").split("\n");
   const refs: RoleRefMap = {};
 
   if (options.interactive) {
     const out = buildInteractiveSnapshotLines({
+      lines,
       options,
       resolveRef: ({ suffix }) => {
         const ref = parseAiSnapshotRef(suffix);
@@ -328,15 +362,20 @@ export function buildRoleSnapshotFromAiSnapshot(
   }
 
   const out: string[] = [];
+  for (const line of lines) {
+    const depth = getIndentLevel(line);
     if (options.maxDepth !== undefined && depth > options.maxDepth) {
       continue;
     }
 
+    const match = line.match(/^(\s*-\s*)(\w+)(?:\s+"([^"]*)")?(.*)$/);
     if (!match) {
+      out.push(line);
       continue;
     }
     const [, , roleRaw, name, suffix] = match;
     if (roleRaw.startsWith("/")) {
+      out.push(line);
       continue;
     }
 
@@ -352,6 +391,7 @@ export function buildRoleSnapshotFromAiSnapshot(
       refs[ref] = { role, ...(name ? { name } : {}) };
     }
 
+    out.push(line);
   }
 
   const tree = out.join("\n") || "(empty)";

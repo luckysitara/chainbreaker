@@ -6,12 +6,14 @@ import { isPlainTextSurface, sanitizeForPlainText } from "./sanitize-text.js";
 // ---------------------------------------------------------------------------
 
 describe("isPlainTextSurface", () => {
+  it.each(["whatsapp", "signal", "sms", "irc", "telegram", "imessage", "googlechat"])(
     "returns true for %s",
     (channel) => {
       expect(isPlainTextSurface(channel)).toBe(true);
     },
   );
 
+  it.each(["discord", "slack", "web", "matrix"])("returns false for %s", (channel) => {
     expect(isPlainTextSurface(channel)).toBe(false);
   });
 
@@ -26,7 +28,9 @@ describe("isPlainTextSurface", () => {
 // ---------------------------------------------------------------------------
 
 describe("sanitizeForPlainText", () => {
+  // --- line breaks --------------------------------------------------------
 
+  it("converts <br> to newline", () => {
     expect(sanitizeForPlainText("hello<br>world")).toBe("hello\nworld");
   });
 
@@ -35,6 +39,7 @@ describe("sanitizeForPlainText", () => {
     expect(sanitizeForPlainText("a<br />b")).toBe("a\nb");
   });
 
+  // --- inline formatting --------------------------------------------------
 
   it("converts <b> and <strong> to WhatsApp bold", () => {
     expect(sanitizeForPlainText("<b>bold</b>")).toBe("*bold*");
@@ -58,9 +63,11 @@ describe("sanitizeForPlainText", () => {
 
   // --- block elements -----------------------------------------------------
 
+  it("converts <p> and <div> to newlines", () => {
     expect(sanitizeForPlainText("<p>paragraph</p>")).toBe("\nparagraph\n");
   });
 
+  it("converts headings to bold text with newlines", () => {
     expect(sanitizeForPlainText("<h1>Title</h1>")).toBe("\n*Title*\n");
     expect(sanitizeForPlainText("<h3>Section</h3>")).toBe("\n*Section*\n");
   });
@@ -103,6 +110,7 @@ describe("sanitizeForPlainText", () => {
     expect(sanitizeForPlainText(input)).toBe("Hello\n*world* this is _nice_");
   });
 
+  it("collapses excessive newlines", () => {
     expect(sanitizeForPlainText("a<br><br><br><br>b")).toBe("a\n\nb");
   });
 });

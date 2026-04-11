@@ -5,8 +5,7 @@ const recordInboundSessionMock = vi.hoisted(() => vi.fn().mockResolvedValue(unde
 const resolveTelegramConversationRouteMock = vi.hoisted(() => vi.fn());
 
 vi.mock("chainbreaker/plugin-sdk/conversation-runtime", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("chainbreaker/plugin-sdk/conversation-runtime")>();
+  const actual = await importOriginal<typeof import("chainbreaker/plugin-sdk/conversation-runtime")>();
   return {
     ...actual,
     ensureConfiguredBindingRouteReady: (...args: unknown[]) =>

@@ -192,8 +192,10 @@ function setMinimalAcpCommandRegistryForTests(): void {
         },
       },
       {
+        pluginId: "discord",
         source: "test",
         plugin: {
+          ...createChannelTestPluginBase({ id: "discord", label: "Discord" }),
           bindings: {
             resolveCommandConversation: ({
               threadId,
@@ -235,8 +237,10 @@ function setMinimalAcpCommandRegistryForTests(): void {
         },
       },
       {
+        pluginId: "slack",
         source: "test",
         plugin: {
+          ...createChannelTestPluginBase({ id: "slack", label: "Slack" }),
           bindings: {
             resolveCommandConversation: ({
               originatingTo,
@@ -256,8 +260,10 @@ function setMinimalAcpCommandRegistryForTests(): void {
         },
       },
       {
+        pluginId: "matrix",
         source: "test",
         plugin: {
+          ...createChannelTestPluginBase({ id: "matrix", label: "Matrix" }),
           bindings: {
             resolveCommandConversation: ({
               threadId,
@@ -314,6 +320,7 @@ function createSessionBinding(overrides?: Partial<FakeBinding>): FakeBinding {
     targetSessionKey: "agent:codex:acp:s1",
     targetKind: "session",
     conversation: {
+      channel: "discord",
       accountId: "default",
       conversationId: "thread-created",
       parentConversationId: "parent-1",
@@ -336,6 +343,7 @@ const baseCfg = {
     backend: "acpx",
   },
   channels: {
+    discord: {
       threadBindings: {
         enabled: true,
         spawnAcpSessions: true,
@@ -346,6 +354,9 @@ const baseCfg = {
 
 function createDiscordParams(commandBody: string, cfg: ChainbreakerConfig = baseCfg) {
   const params = buildCommandTestParams(commandBody, cfg, {
+    Provider: "discord",
+    Surface: "discord",
+    OriginatingChannel: "discord",
     OriginatingTo: "channel:parent-1",
     AccountId: "default",
   });
@@ -366,6 +377,7 @@ type AcpSessionIdentity = {
 
 function createThreadConversation(conversationId: string = defaultThreadId) {
   return {
+    channel: "discord" as const,
     accountId: "default",
     conversationId,
     parentConversationId: "parent-1",
@@ -425,6 +437,7 @@ function createAcpThreadBinding(input: AcpBindInput): FakeBinding {
   const nextConversationId =
     input.placement === "child" ? "thread-created" : input.conversation.conversationId;
   const boundBy = typeof input.metadata?.boundBy === "string" ? input.metadata.boundBy : "user-1";
+  const channel = input.conversation.channel ?? "discord";
   const nextParentConversationId =
     input.placement === "child"
       ? input.conversation.conversationId
@@ -548,6 +561,7 @@ async function runSlackDmAcpCommand(commandBody: string, cfg: ChainbreakerConfig
     createConversationParams(
       commandBody,
       {
+        channel: "slack",
         originatingTo: "user:U123",
         senderId: "U123",
       },
@@ -561,6 +575,7 @@ function createMatrixThreadParams(commandBody: string, cfg: ChainbreakerConfig =
   const params = createConversationParams(
     commandBody,
     {
+      channel: "matrix",
       originatingTo: "room:!room:example.org",
     },
     cfg,
@@ -574,6 +589,7 @@ async function runMatrixAcpCommand(commandBody: string, cfg: ChainbreakerConfig 
     createConversationParams(
       commandBody,
       {
+        channel: "matrix",
         originatingTo: "room:!room:example.org",
       },
       cfg,
@@ -606,6 +622,7 @@ async function runLineDmAcpCommand(commandBody: string, cfg: ChainbreakerConfig 
     createConversationParams(
       commandBody,
       {
+        channel: "line",
         originatingTo: "U1234567890abcdef1234567890abcdef",
         senderId: "U1234567890abcdef1234567890abcdef",
       },
@@ -634,6 +651,8 @@ async function runIMessageDmAcpCommand(commandBody: string, cfg: ChainbreakerCon
     createConversationParams(
       commandBody,
       {
+        channel: "imessage",
+        originatingTo: "imessage:+15555550123",
       },
       cfg,
     ),
@@ -992,6 +1011,7 @@ describe("/acp command", () => {
     const cfg = {
       ...baseCfg,
       channels: {
+        discord: {
           threadBindings: {
             enabled: true,
             spawnAcpSessions: false,
@@ -1007,6 +1027,7 @@ describe("/acp command", () => {
       expect.objectContaining({
         placement: "current",
         conversation: expect.objectContaining({
+          channel: "discord",
           accountId: "default",
           conversationId: "channel:parent-1",
         }),
@@ -1038,6 +1059,7 @@ describe("/acp command", () => {
       expect.objectContaining({
         placement: "current",
         conversation: expect.objectContaining({
+          channel: "slack",
           accountId: "default",
           conversationId: "user:U123",
         }),
@@ -1053,6 +1075,7 @@ describe("/acp command", () => {
       expect.objectContaining({
         placement: "current",
         conversation: expect.objectContaining({
+          channel: "imessage",
           accountId: "default",
           conversationId: "+15555550123",
         }),
@@ -1100,6 +1123,7 @@ describe("/acp command", () => {
     const cfg = {
       ...baseCfg,
       channels: {
+        matrix: {
           threadBindings: {
             enabled: true,
             spawnAcpSessions: false,
@@ -1115,6 +1139,7 @@ describe("/acp command", () => {
       expect.objectContaining({
         placement: "current",
         conversation: expect.objectContaining({
+          channel: "matrix",
           accountId: "default",
           conversationId: "room:!room:example.org",
         }),
@@ -1126,6 +1151,7 @@ describe("/acp command", () => {
     const cfg = {
       ...baseCfg,
       channels: {
+        matrix: {
           threadBindings: {
             enabled: true,
             spawnAcpSessions: true,
@@ -1141,6 +1167,7 @@ describe("/acp command", () => {
       expect.objectContaining({
         placement: "child",
         conversation: expect.objectContaining({
+          channel: "matrix",
           accountId: "default",
           conversationId: "room:!room:example.org",
         }),
@@ -1152,6 +1179,7 @@ describe("/acp command", () => {
     const cfg = {
       ...baseCfg,
       channels: {
+        matrix: {
           threadBindings: {
             enabled: true,
             spawnAcpSessions: true,
@@ -1167,6 +1195,7 @@ describe("/acp command", () => {
       expect.objectContaining({
         placement: "current",
         conversation: expect.objectContaining({
+          channel: "matrix",
           accountId: "default",
           conversationId: "$thread-root",
           parentConversationId: "!room:example.org",
@@ -1201,6 +1230,7 @@ describe("/acp command", () => {
       expect.objectContaining({
         placement: "current",
         conversation: expect.objectContaining({
+          channel: "line",
           accountId: "default",
           conversationId: "U1234567890abcdef1234567890abcdef",
         }),
@@ -1227,6 +1257,7 @@ describe("/acp command", () => {
     const cfg = {
       ...baseCfg,
       channels: {
+        discord: {
           threadBindings: {
             enabled: true,
             spawnAcpSessions: false,
@@ -1251,6 +1282,7 @@ describe("/acp command", () => {
     const cfg = {
       ...baseCfg,
       channels: {
+        matrix: {
           threadBindings: {
             enabled: true,
           },

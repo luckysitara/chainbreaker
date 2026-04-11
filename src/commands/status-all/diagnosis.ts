@@ -50,6 +50,7 @@ type ChannelIssueLike = {
 };
 
 export async function appendStatusAllDiagnosis(params: {
+  lines: string[];
   progress: ProgressReporter;
   muted: (text: string) => string;
   ok: (text: string) => string;
@@ -74,16 +75,23 @@ export async function appendStatusAllDiagnosis(params: {
   health: unknown;
   nodeOnlyGateway: NodeOnlyGatewayInfo | null;
 }) {
+  const { lines, muted, ok, warn, fail } = params;
 
   const emitCheck = (label: string, status: "ok" | "warn" | "fail") => {
     const icon = status === "ok" ? ok("✓") : status === "warn" ? warn("!") : fail("✗");
     const colored = status === "ok" ? ok(label) : status === "warn" ? warn(label) : fail(label);
+    lines.push(`${icon} ${colored}`);
   };
 
+  lines.push("");
+  lines.push(muted("Gateway connection details:"));
+  for (const line of redactSecrets(params.connectionDetailsForReport)
     .split("\n")
     .map((l) => l.trimEnd())) {
+    lines.push(`  ${muted(line)}`);
   }
 
+  lines.push("");
   if (params.snap) {
     const status = !params.snap.exists ? "fail" : params.snap.valid ? "ok" : "warn";
     emitCheck(`Config: ${params.snap.path ?? "(unknown)"}`, status);
@@ -93,15 +101,19 @@ export async function appendStatusAllDiagnosis(params: {
         issues.findIndex((x) => x.path === issue.path && x.message === issue.message) === index,
     );
     for (const issue of uniqueIssues.slice(0, 12)) {
+      lines.push(`  ${formatConfigIssueLine(issue, "-")}`);
     }
     if (uniqueIssues.length > 12) {
+      lines.push(`  ${muted(`… +${uniqueIssues.length - 12} more`)}`);
     }
   } else {
     emitCheck("Config: read failed", "warn");
   }
 
   if (params.remoteUrlMissing) {
+    lines.push("");
     emitCheck("Gateway remote mode misconfigured (gateway.remote.url missing)", "warn");
+    lines.push(`  ${muted("Fix: set gateway.remote.url, or set gateway.mode=local.")}`);
   }
 
   emitCheck(
@@ -109,12 +121,15 @@ export async function appendStatusAllDiagnosis(params: {
     params.secretDiagnostics.length === 0 ? "ok" : "warn",
   );
   for (const diagnostic of params.secretDiagnostics.slice(0, 10)) {
+    lines.push(`  - ${muted(redactSecrets(diagnostic))}`);
   }
   if (params.secretDiagnostics.length > 10) {
+    lines.push(`  ${muted(`… +${params.secretDiagnostics.length - 10} more`)}`);
   }
 
   if (params.sentinel?.payload) {
     emitCheck("Restart sentinel present", "warn");
+    lines.push(
       `  ${muted(`${summarizeRestartSentinel(params.sentinel.payload)} · ${formatTimeAgo(Date.now() - params.sentinel.payload.ts)}`)}`,
     );
   } else {
@@ -124,6 +139,9 @@ export async function appendStatusAllDiagnosis(params: {
   const lastErrClean = params.lastErr?.trim() ?? "";
   const isTrivialLastErr = lastErrClean.length < 8 || lastErrClean === "}" || lastErrClean === "{";
   if (lastErrClean && !isTrivialLastErr) {
+    lines.push("");
+    lines.push(muted("Gateway last log line:"));
+    lines.push(`  ${muted(redactSecrets(lastErrClean))}`);
   }
 
   if (params.portUsage) {
@@ -134,8 +152,11 @@ export async function appendStatusAllDiagnosis(params: {
     const portOk = params.portUsage.listeners.length === 0 || benignDualStackLoopback;
     emitCheck(`Port ${params.port}`, portOk ? "ok" : "warn");
     if (!portOk) {
+      for (const line of formatPortDiagnostics(params.portUsage)) {
+        lines.push(`  ${muted(line)}`);
       }
     } else if (benignDualStackLoopback) {
+      lines.push(
         `  ${muted("Detected dual-stack loopback listeners (127.0.0.1 + ::1) for one gateway process.")}`,
       );
     }
@@ -151,12 +172,15 @@ export async function appendStatusAllDiagnosis(params: {
         : `Tailscale: ${params.tailscaleMode} · ${backend}${params.tailscale.dnsName ? ` · ${params.tailscale.dnsName}` : ""}`;
     emitCheck(label, okBackend && (params.tailscaleMode === "off" || hasDns) ? "ok" : "warn");
     if (params.tailscale.error) {
+      lines.push(`  ${muted(`error: ${params.tailscale.error}`)}`);
     }
     if (params.tailscale.ips.length > 0) {
+      lines.push(
         `  ${muted(`ips: ${params.tailscale.ips.slice(0, 3).join(", ")}${params.tailscale.ips.length > 3 ? "…" : ""}`)}`,
       );
     }
     if (params.tailscaleHttpsUrl) {
+      lines.push(`  ${muted(`https: ${params.tailscaleHttpsUrl}`)}`);
     }
   }
 
@@ -177,8 +201,10 @@ export async function appendStatusAllDiagnosis(params: {
   );
   for (const notice of params.pluginCompatibility.slice(0, 12)) {
     const severity = notice.severity === "warn" ? "warn" : "info";
+    lines.push(`  - [${severity}] ${formatPluginCompatibilityNotice(notice)}`);
   }
   if (params.pluginCompatibility.length > 12) {
+    lines.push(`  ${muted(`… +${params.pluginCompatibility.length - 12} more`)}`);
   }
 
   params.progress.setLabel("Reading logs…");
@@ -196,7 +222,15 @@ export async function appendStatusAllDiagnosis(params: {
       readFileTailLines(logPaths.stdoutPath, 40).catch(() => []),
     ]);
     if (stderrTail.length > 0 || stdoutTail.length > 0) {
+      lines.push("");
+      lines.push(muted(`Gateway logs (tail, summarized): ${logPaths.logDir}`));
+      lines.push(`  ${muted(`# stderr: ${logPaths.stderrPath}`)}`);
+      for (const line of summarizeLogTail(stderrTail, { maxLines: 22 }).map(redactSecrets)) {
+        lines.push(`  ${muted(line)}`);
       }
+      lines.push(`  ${muted(`# stdout: ${logPaths.stdoutPath}`)}`);
+      for (const line of summarizeLogTail(stdoutTail, { maxLines: 22 }).map(redactSecrets)) {
+        lines.push(`  ${muted(line)}`);
       }
     }
   }
@@ -209,10 +243,12 @@ export async function appendStatusAllDiagnosis(params: {
     );
     for (const issue of params.channelIssues.slice(0, 12)) {
       const fixText = issue.fix ? ` · fix: ${issue.fix}` : "";
+      lines.push(
         `  - ${issue.channel}[${issue.accountId}] ${issue.kind}: ${issue.message}${fixText}`,
       );
     }
     if (params.channelIssues.length > 12) {
+      lines.push(`  ${muted(`… +${params.channelIssues.length - 12} more`)}`);
     }
   } else if (params.nodeOnlyGateway) {
     emitCheck(
@@ -248,6 +284,13 @@ export async function appendStatusAllDiagnosis(params: {
     }
   })();
   if (healthErr) {
+    lines.push("");
+    lines.push(muted("Gateway health:"));
+    lines.push(`  ${muted(redactSecrets(healthErr))}`);
   }
 
+  lines.push("");
+  lines.push(muted("Pasteable debug report. Auth tokens redacted."));
+  lines.push("Troubleshooting: https://docs.chainbreaker.ai/troubleshooting");
+  lines.push("");
 }

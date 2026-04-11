@@ -165,9 +165,14 @@ function parseNpmPackJsonOutput(
 }
 
 function parsePackedArchiveFromStdout(stdout: string): string | undefined {
+  const lines = stdout
     .split(/\r?\n/)
+    .map((line) => line.trim())
     .filter(Boolean);
 
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const line = lines[index];
+    const match = line?.match(/([^\s"']+\.tgz)/);
     if (match?.[1]) {
       return match[1];
     }
