@@ -84,16 +84,12 @@ export function normalizeMediaAttachments(ctx: MsgContext): MediaAttachment[] {
   return normalizeAttachments(ctx);
 }
 
-export function resolveMediaAttachmentLocalRoots(params: {
+export function resolveMediaAttachmentLocalRoots(_params: {
   cfg: ChainbreakerConfig;
   ctx: MsgContext;
 }): readonly string[] {
   return mergeInboundPathRoots(
     getDefaultMediaLocalRoots(),
-    resolveIMessageAttachmentRoots({
-      cfg: params.cfg,
-      accountId: params.ctx.AccountId,
-    }),
   );
 }
 
