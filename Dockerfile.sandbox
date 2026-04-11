@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1.7
 
-FROM debian:bookworm-slim@sha256:98f4b71de414932439ac6ac690d7060df1f27161073c5036a7553723881bffbe
+FROM debian:bookworm-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PATH="/home/sandbox/.cargo/bin:/home/sandbox/.local/share/solana/install/active_release/bin:/home/sandbox/.foundry/bin:/home/sandbox/.local/bin:${PATH}"
 
 RUN --mount=type=cache,id=chainbreaker-sandbox-bookworm-apt-cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,id=chainbreaker-sandbox-bookworm-apt-lists,target=/var/lib/apt,sharing=locked \
@@ -15,10 +16,35 @@ RUN --mount=type=cache,id=chainbreaker-sandbox-bookworm-apt-cache,target=/var/ca
     git \
     jq \
     python3 \
-    ripgrep
+    python3-pip \
+    python3-venv \
+    ripgrep \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    npm \
+    golang-go
 
 RUN useradd --create-home --shell /bin/bash sandbox
 USER sandbox
 WORKDIR /home/sandbox
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
+# Install Foundry
+RUN curl -L https://foundry.paradigm.xyz | bash \
+    && /home/sandbox/.foundry/bin/foundryup
+
+# Install Solana CLI
+RUN sh -c "$(curl -sSfL https://release.solana.com/v1.18.23/install)"
+
+# Install Anchor via AVM
+RUN /home/sandbox/.cargo/bin/cargo install --git https://github.com/coral-xyz/anchor avm --locked --force \
+    && /home/sandbox/.cargo/bin/avm install latest \
+    && /home/sandbox/.cargo/bin/avm use latest
+
+# Install Slither
+RUN pip3 install slither-analyzer --break-system-packages
 
 CMD ["sleep", "infinity"]
