@@ -1,0 +1,12 @@
+{
+  "name": "@chainbreaker/deepseek-provider",
+  "version": "2026.4.1",
+  "private": true,
+  "description": "Chainbreaker DeepSeek provider plugin",
+  "type": "module",
+  "chainbreaker": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

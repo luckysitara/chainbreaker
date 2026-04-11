@@ -1,0 +1,12 @@
+{
+  "name": "@chainbreaker/brave-plugin",
+  "version": "2026.4.1",
+  "private": true,
+  "description": "Chainbreaker Brave plugin",
+  "type": "module",
+  "chainbreaker": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

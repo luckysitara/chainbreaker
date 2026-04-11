@@ -1,114 +1,103 @@
-// chainbreaker/src/index.ts
-// import { CommanderAgent } from "./agents/commanderAgent.js"; // Removed as it's replaced by AutonomousCommanderAgent
-import { AutonomousCommanderAgent } from "./agents/AutonomousCommanderAgent"; // Removed .js
-import { SpecialistAgent } from "./agents/specialistAgent"; // Removed .js
-import { SolanaAnalystAgent } from "./agents/solanaAnalystAgent"; // Removed .js
-import { EthereumAnalystAgent } from "./agents/ethereumAnalystAgent"; // Removed .js
-import { ToolManager } from "./tools/ToolManager"; // Removed .js
-import { ExecTool } from "./tools/exec"; // Removed .js
-import { ReadFileTool } from "./tools/readfile"; // Removed .js
-import { WriteFileTool } from "./tools/writefile"; // Removed .js
-import { ModuleLoaderTool } from "./tools/moduleLoader"; // Removed .js
-import { RagTool } from "./tools/ragTool"; // Removed .js
-import { SkillLoaderTool } from "./tools/skillLoader"; // Removed .js
-import { SoteriaTool } from "./tools/soteriaTool"; // Removed .js
-import { SlitherTool } from "./tools/slitherTool"; // Removed .js
-import { CommunicationManager } from "./communication/CommunicationManager"; // Removed .js
-import { LLMManager } from "./llms/LLMManager"; // Removed .js
-import { OpenAILLM } from "./llms/OpenAILLM"; // Removed .js
-import { GeminiLLM } from "./llms/GeminiLLM"; // Removed .js
-import { LocalOllamaLLM } from "./llms/LocalOllamaLLM"; // Removed .js
-import fs from "node:fs/promises";
-import path from "node:path";
+#!/usr/bin/env node
+import process from "node:process";
+import { fileURLToPath } from "node:url";
+import { formatUncaughtError } from "./infra/errors.js";
+import { isMainModule } from "./infra/is-main.js";
+import { installUnhandledRejectionHandler } from "./infra/unhandled-rejections.js";
 
-console.log("Chainbreaker Agent Framework starting...");
+type LegacyCliDeps = {
+  installGaxiosFetchCompat: () => Promise<void>;
+  runCli: (argv: string[]) => Promise<void>;
+};
 
-async function main() {
-  console.log("Initializing Chainbreaker components...");
+type LibraryExports = typeof import("./library.js");
 
-  // Ensure output directory exists
-  const outputDir = path.resolve(process.cwd(), "output");
-  await fs.mkdir(outputDir, { recursive: true });
-  console.log(`Ensured output directory exists at: ${outputDir}`);
+// These bindings are populated only for library consumers. The CLI entry stays
+// on the lean path and must not read them while running as main.
+export let assertWebChannel: LibraryExports["assertWebChannel"];
+export let applyTemplate: LibraryExports["applyTemplate"];
+export let createDefaultDeps: LibraryExports["createDefaultDeps"];
+export let deriveSessionKey: LibraryExports["deriveSessionKey"];
+export let describePortOwner: LibraryExports["describePortOwner"];
+export let ensureBinary: LibraryExports["ensureBinary"];
+export let ensurePortAvailable: LibraryExports["ensurePortAvailable"];
+export let getReplyFromConfig: LibraryExports["getReplyFromConfig"];
+export let handlePortError: LibraryExports["handlePortError"];
+export let loadConfig: LibraryExports["loadConfig"];
+export let loadSessionStore: LibraryExports["loadSessionStore"];
+export let monitorWebChannel: LibraryExports["monitorWebChannel"];
+export let normalizeE164: LibraryExports["normalizeE164"];
+export let PortInUseError: LibraryExports["PortInUseError"];
+export let promptYesNo: LibraryExports["promptYesNo"];
+export let resolveSessionKey: LibraryExports["resolveSessionKey"];
+export let resolveStorePath: LibraryExports["resolveStorePath"];
+export let runCommandWithTimeout: LibraryExports["runCommandWithTimeout"];
+export let runExec: LibraryExports["runExec"];
+export let saveSessionStore: LibraryExports["saveSessionStore"];
+export let toWhatsappJid: LibraryExports["toWhatsappJid"];
+export let waitForever: LibraryExports["waitForever"];
 
-  const toolManager = new ToolManager();
-  const execTool = new ExecTool();
-  const readFileTool = new ReadFileTool();
-  const writeFileTool = new WriteFileTool();
-  const moduleLoaderTool = new ModuleLoaderTool();
-  const ragTool = new RagTool();
-  const skillLoaderTool = new SkillLoaderTool();
-  const soteriaTool = new SoteriaTool();
-  const slitherTool = new SlitherTool();
-
-  toolManager.registerTool(execTool);
-  toolManager.registerTool(readFileTool);
-  toolManager.registerTool(writeFileTool);
-  toolManager.registerTool(moduleLoaderTool);
-  toolManager.registerTool(ragTool);
-  toolManager.registerTool(skillLoaderTool);
-  toolManager.registerTool(soteriaTool);
-  toolManager.registerTool(slitherTool);
-
-  const commsManager = new CommunicationManager();
-  const llmManager = new LLMManager(); // Initialize LLMManager
-
-  // Register LLM Providers
-  const openaiApiKey = process.env.OPENAI_API_KEY;
-  if (openaiApiKey) {
-    llmManager.registerProvider(new OpenAILLM(openaiApiKey));
-  } else {
-    console.warn("OPENAI_API_KEY not found. OpenAI LLM not registered.");
-  }
-
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  if (geminiApiKey) {
-    llmManager.registerProvider(new GeminiLLM(geminiApiKey));
-  } else {
-    console.warn("GEMINI_API_KEY not found. Gemini LLM not registered.");
-  }
-
-  llmManager.registerProvider(new LocalOllamaLLM()); // Ollama doesn't strictly need API key for local setup
-
-  // Create and initialize Autonomous Commander
-  const autonomousCommander = new AutonomousCommanderAgent(
-    toolManager,
-    commsManager,
-    llmManager,
-    process.env.DEFAULT_LLM_PROVIDER || "gemini", // Use env var to select default LLM
-  );
-  await autonomousCommander.init();
-
-  // Create and initialize a Generic Specialist
-  const codeAnalyst = new SpecialistAgent(
-    "CodeAnalyst",
-    toolManager,
-    commsManager,
-    ["analyze_code", "read_file", "write_file", "module_loader", "skill_loader"],
-  );
-  await codeAnalyst.init();
-
-  // Create and initialize Solana Analyst
-  const solanaAnalyst = new SolanaAnalystAgent(toolManager, commsManager);
-  solanaAnalyst.capabilities.push("rag_query", "skill_loader", "soteria_audit");
-  await solanaAnalyst.init();
-
-  // Create and initialize Ethereum Analyst
-  const ethereumAnalyst = new EthereumAnalystAgent(toolManager, commsManager);
-  ethereumAnalyst.capabilities.push("rag_query", "skill_loader", "slither_audit");
-  await ethereumAnalyst.init();
-
-  // Give a small delay for discovery to happen before running commander
-  setTimeout(async () => {
-    // Run the autonomous commander with an initial user goal
-    const userGoal =
-      "Perform a security audit of the project, including a simulated Solana contract analysis, Ethereum contract analysis, and look for reentrancy vulnerabilities.";
-    await autonomousCommander.run(userGoal);
-  }, 1000);
-
-  // Keep the process alive for agents to continue receiving messages
-  // process.stdin.resume(); // Removed as autonomous agent finishes its run
-  console.log("Chainbreaker initialization complete. Agents are active.");
+async function loadLegacyCliDeps(): Promise<LegacyCliDeps> {
+  const [{ installGaxiosFetchCompat }, { runCli }] = await Promise.all([
+    import("./infra/gaxios-fetch-compat.js"),
+    import("./cli/run-main.js"),
+  ]);
+  return { installGaxiosFetchCompat, runCli };
 }
 
-main().catch(console.error);
+// Legacy direct file entrypoint only. Package root exports now live in library.ts.
+export async function runLegacyCliEntry(
+  argv: string[] = process.argv,
+  deps?: LegacyCliDeps,
+): Promise<void> {
+  const { installGaxiosFetchCompat, runCli } = deps ?? (await loadLegacyCliDeps());
+  await installGaxiosFetchCompat();
+  await runCli(argv);
+}
+
+const isMain = isMainModule({
+  currentFile: fileURLToPath(import.meta.url),
+});
+
+if (!isMain) {
+  ({
+    assertWebChannel,
+    applyTemplate,
+    createDefaultDeps,
+    deriveSessionKey,
+    describePortOwner,
+    ensureBinary,
+    ensurePortAvailable,
+    getReplyFromConfig,
+    handlePortError,
+    loadConfig,
+    loadSessionStore,
+    monitorWebChannel,
+    normalizeE164,
+    PortInUseError,
+    promptYesNo,
+    resolveSessionKey,
+    resolveStorePath,
+    runCommandWithTimeout,
+    runExec,
+    saveSessionStore,
+    toWhatsappJid,
+    waitForever,
+  } = await import("./library.js"));
+}
+
+if (isMain) {
+  // Global error handlers to prevent silent crashes from unhandled rejections/exceptions.
+  // These log the error and exit gracefully instead of crashing without trace.
+  installUnhandledRejectionHandler();
+
+  process.on("uncaughtException", (error) => {
+    console.error("[chainbreaker] Uncaught exception:", formatUncaughtError(error));
+    process.exit(1);
+  });
+
+  void runLegacyCliEntry(process.argv).catch((err) => {
+    console.error("[chainbreaker] CLI failed:", formatUncaughtError(err));
+    process.exit(1);
+  });
+}

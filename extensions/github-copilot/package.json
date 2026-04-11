@@ -1,0 +1,12 @@
+{
+  "name": "@chainbreaker/github-copilot-provider",
+  "version": "2026.4.1",
+  "private": true,
+  "description": "Chainbreaker GitHub Copilot provider plugin",
+  "type": "module",
+  "chainbreaker": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

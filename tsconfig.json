@@ -1,16 +1,30 @@
 {
   "compilerOptions": {
-    "target": "es2021",
-    "module": "esnext",
-    "lib": ["es2021"],
-    "strict": true,
+    "allowImportingTsExtensions": true,
+    "allowSyntheticDefaultImports": true,
+    "declaration": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    "experimentalDecorators": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
-    "outDir": "./dist",
-    "declaration": true
+    "lib": ["DOM", "DOM.Iterable", "ES2023", "ScriptHost"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "noEmitOnError": true,
+    "outDir": "dist",
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "es2023",
+    "useDefineForClassFields": false,
+    "paths": {
+      "chainbreaker/extension-api": ["./src/extensionAPI.ts"],
+      "chainbreaker/plugin-sdk": ["./src/plugin-sdk/index.ts"],
+      "chainbreaker/plugin-sdk/*": ["./src/plugin-sdk/*.ts"],
+      "chainbreaker/plugin-sdk/account-id": ["./src/plugin-sdk/account-id.ts"],
+      "@chainbreaker/*": ["./extensions/*"]
+    }
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*", "ui/**/*", "extensions/**/*", "packages/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

@@ -1,0 +1,12 @@
+{
+  "name": "@chainbreaker/openshell-sandbox",
+  "version": "2026.4.1",
+  "private": true,
+  "description": "Chainbreaker OpenShell sandbox backend",
+  "type": "module",
+  "chainbreaker": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

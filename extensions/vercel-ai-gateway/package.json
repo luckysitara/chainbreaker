@@ -1,0 +1,12 @@
+{
+  "name": "@chainbreaker/vercel-ai-gateway-provider",
+  "version": "2026.4.1",
+  "private": true,
+  "description": "Chainbreaker Vercel AI Gateway provider plugin",
+  "type": "module",
+  "chainbreaker": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@chainbreaker/memory-core",
+  "version": "2026.4.1",
+  "private": true,
+  "description": "Chainbreaker core memory search plugin",
+  "type": "module",
+  "devDependencies": {
+    "chainbreaker": "workspace:*"
+  },
+  "peerDependencies": {
+    "chainbreaker": ">=2026.4.1"
+  },
+  "peerDependenciesMeta": {
+    "chainbreaker": {
+      "optional": true
+    }
+  },
+  "chainbreaker": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

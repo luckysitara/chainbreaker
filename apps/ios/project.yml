@@ -1,0 +1,339 @@
+name: Chainbreaker
+options:
+  bundleIdPrefix: ai.chainbreaker
+  deploymentTarget:
+    iOS: "18.0"
+  xcodeVersion: "16.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+
+packages:
+  ChainbreakerKit:
+    path: ../shared/ChainbreakerKit
+  Swabble:
+    path: ../../Swabble
+
+schemes:
+  Chainbreaker:
+    shared: true
+    build:
+      targets:
+        Chainbreaker: all
+    test:
+      targets:
+        - ChainbreakerTests
+        - ChainbreakerLogicTests
+  ChainbreakerLogicTests:
+    shared: true
+    build:
+      targets:
+        ChainbreakerLogicTests: all
+    test:
+      targets:
+        - ChainbreakerLogicTests
+
+targets:
+  Chainbreaker:
+    type: application
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: Sources
+    dependencies:
+      - target: ChainbreakerShareExtension
+        embed: true
+      - target: ChainbreakerActivityWidget
+        embed: true
+      - target: ChainbreakerWatchApp
+      - package: ChainbreakerKit
+      - package: ChainbreakerKit
+        product: ChainbreakerChatUI
+      - package: ChainbreakerKit
+        product: ChainbreakerProtocol
+      - package: Swabble
+        product: SwabbleKit
+      - sdk: AppIntents.framework
+    preBuildScripts:
+      - name: SwiftFormat (lint)
+        basedOnDependencyAnalysis: false
+        inputFileLists:
+          - $(SRCROOT)/SwiftSources.input.xcfilelist
+        script: |
+          set -euo pipefail
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+          if ! command -v swiftformat >/dev/null 2>&1; then
+            echo "error: swiftformat not found (brew install swiftformat)" >&2
+            exit 1
+          fi
+          swiftformat --lint --config "$SRCROOT/../../.swiftformat" \
+            --filelist "$SRCROOT/SwiftSources.input.xcfilelist"
+      - name: SwiftLint
+        basedOnDependencyAnalysis: false
+        inputFileLists:
+          - $(SRCROOT)/SwiftSources.input.xcfilelist
+        script: |
+          set -euo pipefail
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+          if ! command -v swiftlint >/dev/null 2>&1; then
+            echo "error: swiftlint not found (brew install swiftlint)" >&2
+            exit 1
+          fi
+          swiftlint lint --config "$SRCROOT/.swiftlint.yml" --use-script-input-file-lists
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_ENTITLEMENTS: Sources/Chainbreaker.entitlements
+        CODE_SIGN_STYLE: "$(CHAINBREAKER_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(CHAINBREAKER_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: "$(CHAINBREAKER_APP_BUNDLE_ID)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(CHAINBREAKER_APP_PROFILE)"
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        SUPPORTS_LIVE_ACTIVITIES: YES
+        ENABLE_APPINTENTS_METADATA: NO
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+      configs:
+        Debug:
+          CHAINBREAKER_PUSH_TRANSPORT: direct
+          CHAINBREAKER_PUSH_DISTRIBUTION: local
+          CHAINBREAKER_PUSH_RELAY_BASE_URL: ""
+          CHAINBREAKER_PUSH_APNS_ENVIRONMENT: sandbox
+        Release:
+          CHAINBREAKER_PUSH_TRANSPORT: direct
+          CHAINBREAKER_PUSH_DISTRIBUTION: local
+          CHAINBREAKER_PUSH_RELAY_BASE_URL: ""
+          CHAINBREAKER_PUSH_APNS_ENVIRONMENT: production
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleDisplayName: Chainbreaker
+        CFBundleIconName: AppIcon
+        CFBundleURLTypes:
+          - CFBundleURLName: ai.chainbreaker.ios
+            CFBundleURLSchemes:
+              - chainbreaker
+        CFBundleShortVersionString: "$(CHAINBREAKER_MARKETING_VERSION)"
+        CFBundleVersion: "$(CHAINBREAKER_BUILD_VERSION)"
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UIBackgroundModes:
+          - audio
+          - remote-notification
+        BGTaskSchedulerPermittedIdentifiers:
+          - ai.chainbreaker.ios.bgrefresh
+        NSLocalNetworkUsageDescription: Chainbreaker discovers and connects to your Chainbreaker gateway on the local network.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoadsInWebContent: true
+        NSBonjourServices:
+          - _chainbreaker-gw._tcp
+        NSCameraUsageDescription: Chainbreaker can capture photos or short video clips when requested via the gateway.
+        NSLocationWhenInUseUsageDescription: Chainbreaker uses your location when you allow location sharing.
+        NSLocationAlwaysAndWhenInUseUsageDescription: Chainbreaker can share your location in the background when you enable Always.
+        NSMicrophoneUsageDescription: Chainbreaker needs microphone access for voice wake.
+        NSMotionUsageDescription: Chainbreaker may use motion data to support device-aware interactions and automations.
+        NSPhotoLibraryUsageDescription: Chainbreaker needs photo library access when you choose existing photos to share with your assistant.
+        NSSpeechRecognitionUsageDescription: Chainbreaker uses on-device speech recognition for voice wake.
+        NSSupportsLiveActivities: true
+        ITSAppUsesNonExemptEncryption: false
+        ChainbreakerPushTransport: "$(CHAINBREAKER_PUSH_TRANSPORT)"
+        ChainbreakerPushDistribution: "$(CHAINBREAKER_PUSH_DISTRIBUTION)"
+        ChainbreakerPushRelayBaseURL: "$(CHAINBREAKER_PUSH_RELAY_BASE_URL)"
+        ChainbreakerPushAPNsEnvironment: "$(CHAINBREAKER_PUSH_APNS_ENVIRONMENT)"
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+
+  ChainbreakerShareExtension:
+    type: app-extension
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: ShareExtension
+    dependencies:
+      - package: ChainbreakerKit
+      - sdk: AppIntents.framework
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: "$(CHAINBREAKER_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(CHAINBREAKER_DEVELOPMENT_TEAM)"
+        ENABLE_APPINTENTS_METADATA: NO
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+        PRODUCT_BUNDLE_IDENTIFIER: "$(CHAINBREAKER_SHARE_BUNDLE_ID)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(CHAINBREAKER_SHARE_PROFILE)"
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+    info:
+      path: ShareExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Chainbreaker Share
+        CFBundleShortVersionString: "$(CHAINBREAKER_MARKETING_VERSION)"
+        CFBundleVersion: "$(CHAINBREAKER_BUILD_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).ShareViewController"
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsText: true
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsImageWithMaxCount: 10
+              NSExtensionActivationSupportsMovieWithMaxCount: 1
+
+  ChainbreakerActivityWidget:
+    type: app-extension
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: ActivityWidget
+      - path: Sources/LiveActivity/ChainbreakerActivityAttributes.swift
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: ActivityKit.framework
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: "$(CHAINBREAKER_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(CHAINBREAKER_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: "$(CHAINBREAKER_ACTIVITY_WIDGET_BUNDLE_ID)"
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        SUPPORTS_LIVE_ACTIVITIES: YES
+    info:
+      path: ActivityWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Chainbreaker Activity
+        CFBundleShortVersionString: "$(CHAINBREAKER_MARKETING_VERSION)"
+        CFBundleVersion: "$(CHAINBREAKER_BUILD_VERSION)"
+        NSSupportsLiveActivities: true
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  ChainbreakerWatchApp:
+    type: application.watchapp2
+    platform: watchOS
+    deploymentTarget: "11.0"
+    sources:
+      - path: WatchApp
+    dependencies:
+      - target: ChainbreakerWatchExtension
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_APPINTENTS_METADATA: NO
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+        PRODUCT_BUNDLE_IDENTIFIER: "$(CHAINBREAKER_WATCH_APP_BUNDLE_ID)"
+    info:
+      path: WatchApp/Info.plist
+      properties:
+        CFBundleDisplayName: Chainbreaker
+        CFBundleShortVersionString: "$(CHAINBREAKER_MARKETING_VERSION)"
+        CFBundleVersion: "$(CHAINBREAKER_BUILD_VERSION)"
+        WKCompanionAppBundleIdentifier: "$(CHAINBREAKER_APP_BUNDLE_ID)"
+        WKWatchKitApp: true
+
+  ChainbreakerWatchExtension:
+    type: watchkit2-extension
+    platform: watchOS
+    deploymentTarget: "11.0"
+    sources:
+      - path: WatchExtension/Sources
+    dependencies:
+      - sdk: AppIntents.framework
+      - sdk: WatchConnectivity.framework
+      - sdk: UserNotifications.framework
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: "$(CHAINBREAKER_WATCH_EXTENSION_BUNDLE_ID)"
+    info:
+      path: WatchExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Chainbreaker
+        CFBundleShortVersionString: "$(CHAINBREAKER_MARKETING_VERSION)"
+        CFBundleVersion: "$(CHAINBREAKER_BUILD_VERSION)"
+        NSExtension:
+          NSExtensionAttributes:
+            WKAppBundleIdentifier: "$(CHAINBREAKER_WATCH_APP_BUNDLE_ID)"
+          NSExtensionPointIdentifier: com.apple.watchkit
+
+  ChainbreakerTests:
+    type: bundle.unit-test
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: Tests
+        excludes:
+          - Logic
+    dependencies:
+      - target: Chainbreaker
+      - package: Swabble
+        product: SwabbleKit
+      - sdk: AppIntents.framework
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: "$(CHAINBREAKER_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(CHAINBREAKER_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: ai.chainbreaker.ios.tests
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Chainbreaker.app/Chainbreaker"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+    info:
+      path: Tests/Info.plist
+      properties:
+        CFBundleDisplayName: ChainbreakerTests
+        CFBundleShortVersionString: "$(CHAINBREAKER_MARKETING_VERSION)"
+        CFBundleVersion: "$(CHAINBREAKER_BUILD_VERSION)"
+
+  ChainbreakerLogicTests:
+    type: bundle.unit-test
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: Tests/Logic
+    dependencies:
+      - package: ChainbreakerKit
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: "$(CHAINBREAKER_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(CHAINBREAKER_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: ai.chainbreaker.ios.logic-tests
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+    info:
+      path: Tests/Info.plist
+      properties:
+        CFBundleDisplayName: ChainbreakerLogicTests
+        CFBundleShortVersionString: "$(CHAINBREAKER_MARKETING_VERSION)"
+        CFBundleVersion: "$(CHAINBREAKER_BUILD_VERSION)"

@@ -1,0 +1,12 @@
+{
+  "name": "@chainbreaker/nvidia-provider",
+  "version": "2026.4.1",
+  "private": true,
+  "description": "Chainbreaker NVIDIA provider plugin",
+  "type": "module",
+  "chainbreaker": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

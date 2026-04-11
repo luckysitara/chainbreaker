@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: chainbreaker
+    runtime: docker
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: CHAINBREAKER_GATEWAY_PORT
+        value: "8080"
+      - key: CHAINBREAKER_STATE_DIR
+        value: /data/.chainbreaker
+      - key: CHAINBREAKER_WORKSPACE_DIR
+        value: /data/workspace
+      - key: CHAINBREAKER_GATEWAY_TOKEN
+        generateValue: true
+    disk:
+      name: chainbreaker-data
+      mountPath: /data
+      sizeGB: 1

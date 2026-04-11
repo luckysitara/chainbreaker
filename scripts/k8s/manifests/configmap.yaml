@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chainbreaker-config
+  labels:
+    app: chainbreaker
+data:
+  chainbreaker.json: |
+    {
+      "gateway": {
+        "mode": "local",
+        "bind": "loopback",
+        "port": 18789,
+        "auth": {
+          "mode": "token"
+        },
+        "controlUi": {
+          "enabled": true
+        }
+      },
+      "agents": {
+        "defaults": {
+          "workspace": "~/.chainbreaker/workspace"
+        },
+        "list": [
+          {
+            "id": "default",
+            "name": "Chainbreaker Assistant",
+            "workspace": "~/.chainbreaker/workspace"
+          }
+        ]
+      },
+      "cron": { "enabled": false }
+    }
+  AGENTS.md: |
+    # Chainbreaker Assistant
+
+    You are a helpful AI assistant running in Kubernetes.

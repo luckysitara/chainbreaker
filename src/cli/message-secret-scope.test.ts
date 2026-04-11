@@ -1,0 +1,49 @@
+import { describe, expect, it } from "vitest";
+import { resolveMessageSecretScope } from "./message-secret-scope.js";
+
+describe("resolveMessageSecretScope", () => {
+  it("prefers explicit channel/account inputs", () => {
+    expect(
+      resolveMessageSecretScope({
+        channel: "Signal",
+        accountId: "Ops",
+      }),
+    ).toEqual({
+      accountId: "ops",
+    });
+  });
+
+  it("infers channel from a prefixed target", () => {
+    expect(
+      resolveMessageSecretScope({
+      }),
+    ).toEqual({
+    });
+  });
+
+  it("infers a shared channel from target arrays", () => {
+    expect(
+      resolveMessageSecretScope({
+      }),
+    ).toEqual({
+    });
+  });
+
+  it("does not infer a channel when target arrays mix channels", () => {
+    expect(
+      resolveMessageSecretScope({
+      }),
+    ).toEqual({});
+  });
+
+  it("uses fallback channel/account when direct inputs are missing", () => {
+    expect(
+      resolveMessageSecretScope({
+        fallbackChannel: "Signal",
+        fallbackAccountId: "Chat",
+      }),
+    ).toEqual({
+      accountId: "chat",
+    });
+  });
+});

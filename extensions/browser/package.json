@@ -1,0 +1,12 @@
+{
+  "name": "@chainbreaker/browser-plugin",
+  "version": "2026.4.1",
+  "private": true,
+  "description": "Chainbreaker browser tool plugin",
+  "type": "module",
+  "chainbreaker": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

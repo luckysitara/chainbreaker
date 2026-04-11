@@ -1,0 +1,12 @@
+{
+  "name": "@chainbreaker/groq-provider",
+  "version": "2026.4.1",
+  "private": true,
+  "description": "Chainbreaker Groq media-understanding provider",
+  "type": "module",
+  "chainbreaker": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

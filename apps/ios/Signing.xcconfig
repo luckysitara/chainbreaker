@@ -1,0 +1,22 @@
+// Default signing values for shared/repo builds.
+// Auto-selected local team overrides live in .local-signing.xcconfig (git-ignored).
+// Manual local overrides can go in LocalSigning.xcconfig (git-ignored).
+
+#include "Config/Version.xcconfig"
+
+CHAINBREAKER_CODE_SIGN_STYLE = Manual
+CHAINBREAKER_DEVELOPMENT_TEAM = Y5PE65HELJ
+
+CHAINBREAKER_APP_BUNDLE_ID = ai.chainbreaker.client
+CHAINBREAKER_SHARE_BUNDLE_ID = ai.chainbreaker.client.share
+CHAINBREAKER_WATCH_APP_BUNDLE_ID = ai.chainbreaker.client.watchkitapp
+CHAINBREAKER_WATCH_EXTENSION_BUNDLE_ID = ai.chainbreaker.client.watchkitapp.extension
+CHAINBREAKER_ACTIVITY_WIDGET_BUNDLE_ID = ai.chainbreaker.client.activitywidget
+
+CHAINBREAKER_APP_PROFILE = ai.chainbreaker.client Development
+CHAINBREAKER_SHARE_PROFILE = ai.chainbreaker.client.share Development
+
+// Keep local includes after defaults: xcconfig is evaluated top-to-bottom,
+// so later assignments in local files override the defaults above.
+#include? ".local-signing.xcconfig"
+#include? "LocalSigning.xcconfig"

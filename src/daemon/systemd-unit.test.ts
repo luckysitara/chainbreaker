@@ -1,0 +1,36 @@
+import { describe, expect, it } from "vitest";
+import { buildSystemdUnit } from "./systemd-unit.js";
+
+describe("buildSystemdUnit", () => {
+  it("quotes arguments with whitespace", () => {
+    const unit = buildSystemdUnit({
+      description: "Chainbreaker Gateway",
+      programArguments: ["/usr/bin/chainbreaker", "gateway", "--name", "My Bot"],
+      environment: {},
+    });
+    expect(execStart).toBe('ExecStart=/usr/bin/chainbreaker gateway --name "My Bot"');
+  });
+
+  it("renders control-group kill mode for child-process cleanup", () => {
+    const unit = buildSystemdUnit({
+      description: "Chainbreaker Gateway",
+      programArguments: ["/usr/bin/chainbreaker", "gateway", "run"],
+      environment: {},
+    });
+    expect(unit).toContain("KillMode=control-group");
+    expect(unit).toContain("TimeoutStopSec=30");
+    expect(unit).toContain("TimeoutStartSec=30");
+    expect(unit).toContain("SuccessExitStatus=0 143");
+  });
+
+    expect(() =>
+      buildSystemdUnit({
+        description: "Chainbreaker Gateway",
+        programArguments: ["/usr/bin/chainbreaker", "gateway", "start"],
+        environment: {
+          INJECT: "ok\nExecStartPre=/bin/touch /tmp/oc15789_rce",
+        },
+      }),
+    ).toThrow(/CR or LF/);
+  });
+});

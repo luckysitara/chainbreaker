@@ -1,0 +1,12 @@
+{
+  "name": "@chainbreaker/huggingface-provider",
+  "version": "2026.4.1",
+  "private": true,
+  "description": "Chainbreaker Hugging Face provider plugin",
+  "type": "module",
+  "chainbreaker": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

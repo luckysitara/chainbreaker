@@ -1,0 +1,7 @@
+{
+  "name": "@chainbreaker/image-generation-core",
+  "version": "2026.4.1",
+  "private": true,
+  "description": "Chainbreaker image generation runtime package",
+  "type": "module"
+}

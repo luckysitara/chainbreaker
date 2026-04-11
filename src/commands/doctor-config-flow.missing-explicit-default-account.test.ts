@@ -1,0 +1,124 @@
+import { describe, expect, it } from "vitest";
+import type { ChainbreakerConfig } from "../config/config.js";
+import { collectMissingExplicitDefaultAccountWarnings } from "./doctor/shared/default-account-warnings.js";
+
+describe("collectMissingExplicitDefaultAccountWarnings", () => {
+  it("warns when multiple named accounts are configured without default selection", () => {
+    const cfg: ChainbreakerConfig = {
+      channels: {
+        telegram: {
+          accounts: {
+            alerts: { botToken: "a" },
+            work: { botToken: "w" },
+          },
+        },
+      },
+    };
+
+    const warnings = collectMissingExplicitDefaultAccountWarnings(cfg);
+    expect(warnings).toEqual([
+      expect.stringContaining("channels.telegram: multiple accounts are configured"),
+    ]);
+  });
+
+  it("does not warn for a single named account without default", () => {
+    const cfg: ChainbreakerConfig = {
+      channels: {
+        telegram: {
+          accounts: {
+            work: { botToken: "w" },
+          },
+        },
+      },
+    };
+
+    expect(collectMissingExplicitDefaultAccountWarnings(cfg)).toEqual([]);
+  });
+
+  it("does not warn when accounts.default exists", () => {
+    const cfg: ChainbreakerConfig = {
+      channels: {
+        telegram: {
+          accounts: {
+            default: { botToken: "d" },
+            work: { botToken: "w" },
+          },
+        },
+      },
+    };
+
+    expect(collectMissingExplicitDefaultAccountWarnings(cfg)).toEqual([]);
+  });
+
+  it("does not warn when defaultAccount points to a configured account", () => {
+    const cfg: ChainbreakerConfig = {
+      channels: {
+        telegram: {
+          defaultAccount: "work",
+          accounts: {
+            alerts: { botToken: "a" },
+            work: { botToken: "w" },
+          },
+        },
+      },
+    };
+
+    expect(collectMissingExplicitDefaultAccountWarnings(cfg)).toEqual([]);
+  });
+
+  it("normalizes defaultAccount before validating configured account ids", () => {
+    const cfg: ChainbreakerConfig = {
+      channels: {
+        telegram: {
+          defaultAccount: "Router D",
+          accounts: {
+            "router-d": { botToken: "r" },
+            work: { botToken: "w" },
+          },
+        },
+      },
+    };
+
+    expect(collectMissingExplicitDefaultAccountWarnings(cfg)).toEqual([]);
+  });
+
+  it("warns when defaultAccount is invalid for configured accounts", () => {
+    const cfg: ChainbreakerConfig = {
+      channels: {
+        telegram: {
+          defaultAccount: "missing",
+          accounts: {
+            alerts: { botToken: "a" },
+            work: { botToken: "w" },
+          },
+        },
+      },
+    };
+
+    const warnings = collectMissingExplicitDefaultAccountWarnings(cfg);
+    expect(warnings).toEqual([
+      expect.stringContaining('channels.telegram: defaultAccount is set to "missing"'),
+    ]);
+  });
+
+  it("warns across channels that support account maps", () => {
+    const cfg: ChainbreakerConfig = {
+      channels: {
+        telegram: {
+          accounts: {
+            alerts: { botToken: "a" },
+            work: { botToken: "w" },
+          },
+        },
+          accounts: {
+            a: { botToken: "x" },
+            b: { botToken: "y" },
+          },
+        },
+      },
+    };
+
+    const warnings = collectMissingExplicitDefaultAccountWarnings(cfg);
+    expect(warnings).toHaveLength(2);
+  });
+});

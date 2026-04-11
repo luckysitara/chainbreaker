@@ -1,0 +1,48 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+import type { ChainbreakerConfig } from "../../config/config.js";
+import type { SessionEntry } from "../../config/sessions.js";
+import { withStateDirEnv } from "../../test-helpers/state-dir-env.js";
+import { resolveSessionAuthProfileOverride } from "./session-override.js";
+
+async function writeAuthStore(agentDir: string) {
+  const authPath = path.join(agentDir, "auth-profiles.json");
+  const payload = {
+    version: 1,
+    profiles: {
+    },
+    order: {
+    },
+  };
+  await fs.writeFile(authPath, JSON.stringify(payload), "utf-8");
+}
+
+describe("resolveSessionAuthProfileOverride", () => {
+  it("keeps user override when provider alias differs", async () => {
+    await withStateDirEnv("chainbreaker-auth-", async ({ stateDir }) => {
+      const agentDir = path.join(stateDir, "agent");
+      await fs.mkdir(agentDir, { recursive: true });
+      await writeAuthStore(agentDir);
+
+      const sessionEntry: SessionEntry = {
+        sessionId: "s1",
+        updatedAt: Date.now(),
+        authProfileOverrideSource: "user",
+      };
+      const sessionStore = { "agent:main:main": sessionEntry };
+
+      const resolved = await resolveSessionAuthProfileOverride({
+        cfg: {} as ChainbreakerConfig,
+        provider: "z.ai",
+        agentDir,
+        sessionEntry,
+        sessionStore,
+        sessionKey: "agent:main:main",
+        storePath: undefined,
+        isNewSession: false,
+      });
+
+    });
+  });
+});

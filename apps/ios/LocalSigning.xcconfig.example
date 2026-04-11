@@ -1,0 +1,15 @@
+// Copy to LocalSigning.xcconfig for personal local signing overrides.
+// This file is only an example and should stay committed.
+
+CHAINBREAKER_CODE_SIGN_STYLE = Automatic
+CHAINBREAKER_DEVELOPMENT_TEAM = YOUR_TEAM_ID
+
+CHAINBREAKER_APP_BUNDLE_ID = ai.chainbreaker.client
+CHAINBREAKER_SHARE_BUNDLE_ID = ai.chainbreaker.client.share
+CHAINBREAKER_ACTIVITY_WIDGET_BUNDLE_ID = ai.chainbreaker.client.activitywidget
+CHAINBREAKER_WATCH_APP_BUNDLE_ID = ai.chainbreaker.client.watchkitapp
+CHAINBREAKER_WATCH_EXTENSION_BUNDLE_ID = ai.chainbreaker.client.watchkitapp.extension
+
+// Leave empty with automatic signing.
+CHAINBREAKER_APP_PROFILE =
+CHAINBREAKER_SHARE_PROFILE =

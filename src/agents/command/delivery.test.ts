@@ -1,0 +1,163 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { CliDeps } from "../../cli/outbound-send-deps.js";
+import type { ChainbreakerConfig } from "../../config/config.js";
+import { setActivePluginRegistry } from "../../plugins/runtime.js";
+import { createOutboundTestPlugin, createTestRegistry } from "../../test-utils/channel-plugins.js";
+import { deliverAgentCommandResult, normalizeAgentCommandReplyPayloads } from "./delivery.js";
+import type { AgentCommandOpts } from "./types.js";
+
+type NormalizeParams = Parameters<typeof normalizeAgentCommandReplyPayloads>[0];
+type RunResult = NormalizeParams["result"];
+
+const emptyRegistry = createTestRegistry([]);
+  {
+    source: "test",
+    plugin: createOutboundTestPlugin({
+      messaging: {
+        enableInteractiveReplies: ({ cfg }) =>
+            ?.capabilities?.interactiveReplies === true,
+      },
+    }),
+  },
+]);
+
+function createResult(overrides: Partial<RunResult> = {}): RunResult {
+  return {
+    meta: {
+      durationMs: 1,
+      ...overrides.meta,
+    },
+    ...(overrides.payloads ? { payloads: overrides.payloads } : {}),
+  } as RunResult;
+}
+
+describe("normalizeAgentCommandReplyPayloads", () => {
+  beforeEach(() => {
+  });
+
+  afterEach(() => {
+    setActivePluginRegistry(emptyRegistry);
+  });
+
+  it("compiles Slack directives for direct agent deliveries when interactive replies are enabled", () => {
+    const normalized = normalizeAgentCommandReplyPayloads({
+      cfg: {
+        channels: {
+            capabilities: { interactiveReplies: true },
+          },
+        },
+      } as ChainbreakerConfig,
+      opts: { message: "test" } as AgentCommandOpts,
+      outboundSession: undefined,
+      result: createResult(),
+    });
+
+    expect(normalized).toMatchObject([
+      {
+        text: "Choose",
+        interactive: {
+          blocks: [
+            {
+              type: "text",
+              text: "Choose",
+            },
+            {
+              type: "buttons",
+              buttons: [{ label: "Retry", value: "retry" }],
+            },
+          ],
+        },
+      },
+    ]);
+  });
+
+  it("renders response prefix templates with the selected runtime model", () => {
+    const normalized = normalizeAgentCommandReplyPayloads({
+      cfg: {
+        messages: {
+          responsePrefix: "[{modelFull}]",
+        },
+      } as ChainbreakerConfig,
+      opts: { message: "test" } as AgentCommandOpts,
+      outboundSession: undefined,
+      payloads: [{ text: "Ready." }],
+      result: createResult({
+        meta: {
+          durationMs: 1,
+          agentMeta: {
+            sessionId: "session-1",
+            provider: "openai-codex",
+            model: "gpt-5.4",
+          },
+        },
+      }),
+    });
+
+    expect(normalized).toMatchObject([
+      {
+        text: "[openai-codex/gpt-5.4] Ready.",
+      },
+    ]);
+  });
+
+  it("keeps Slack options text intact for local preview when delivery is disabled", async () => {
+    const runtime = {
+      log: vi.fn(),
+    };
+
+    const delivered = await deliverAgentCommandResult({
+      cfg: {
+        channels: {
+            capabilities: { interactiveReplies: true },
+          },
+        },
+      } as ChainbreakerConfig,
+      deps: {} as CliDeps,
+      runtime: runtime as never,
+      opts: {
+        message: "test",
+      } as AgentCommandOpts,
+      outboundSession: undefined,
+      sessionEntry: undefined,
+      payloads: [{ text: "Options: on, off." }],
+      result: createResult(),
+    });
+
+    expect(runtime.log).toHaveBeenCalledTimes(1);
+    expect(runtime.log).toHaveBeenCalledWith("Options: on, off.");
+    expect(delivered.payloads).toMatchObject([{ text: "Options: on, off." }]);
+  });
+
+  it("keeps LINE directive-only replies intact for local preview when delivery is disabled", async () => {
+    const runtime = {
+      log: vi.fn(),
+    };
+
+    const delivered = await deliverAgentCommandResult({
+      cfg: {} as ChainbreakerConfig,
+      deps: {} as CliDeps,
+      runtime: runtime as never,
+      opts: {
+        message: "test",
+      } as AgentCommandOpts,
+      outboundSession: undefined,
+      sessionEntry: undefined,
+      payloads: [
+        {
+          text: "[[buttons: Release menu | Choose an action | Retry:retry, Ignore:ignore]]",
+        },
+      ],
+      result: createResult(),
+    });
+
+    expect(runtime.log).toHaveBeenCalledTimes(1);
+    expect(runtime.log).toHaveBeenCalledWith(
+      "[[buttons: Release menu | Choose an action | Retry:retry, Ignore:ignore]]",
+    );
+    expect(delivered.payloads).toMatchObject([
+      {
+        text: "[[buttons: Release menu | Choose an action | Retry:retry, Ignore:ignore]]",
+      },
+    ]);
+  });
+});

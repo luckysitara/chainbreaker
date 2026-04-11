@@ -1,0 +1,12 @@
+{
+  "name": "@chainbreaker/anthropic-vertex-provider",
+  "version": "2026.4.1",
+  "private": true,
+  "description": "Chainbreaker Anthropic Vertex provider plugin",
+  "type": "module",
+  "chainbreaker": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

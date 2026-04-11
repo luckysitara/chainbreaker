@@ -1,0 +1,90 @@
+import { describe, expect, it } from "vitest";
+import {
+  formatConfigIssueLine,
+  formatConfigIssueLines,
+  normalizeConfigIssue,
+  normalizeConfigIssuePath,
+  normalizeConfigIssues,
+} from "./issue-format.js";
+
+describe("config issue format", () => {
+  it("normalizes empty paths to <root>", () => {
+    expect(normalizeConfigIssuePath("")).toBe("<root>");
+    expect(normalizeConfigIssuePath("   ")).toBe("<root>");
+    expect(normalizeConfigIssuePath(null)).toBe("<root>");
+    expect(normalizeConfigIssuePath(undefined)).toBe("<root>");
+  });
+
+    expect(formatConfigIssueLine({ path: "", message: "broken" }, "-")).toBe("- : broken");
+    expect(
+      formatConfigIssueLine({ path: "", message: "broken" }, "-", { normalizeRoot: true }),
+    ).toBe("- <root>: broken");
+    expect(formatConfigIssueLine({ path: "gateway.bind", message: "invalid" }, "")).toBe(
+      "gateway.bind: invalid",
+    );
+    expect(
+      formatConfigIssueLines(
+        [
+          { path: "", message: "first" },
+        ],
+        "×",
+        { normalizeRoot: true },
+      ),
+  });
+
+    expect(
+      formatConfigIssueLine(
+        {
+          path: "gateway.\nbind\x1b[31m",
+          message: "bad\r\n\tvalue\x1b[0m\u0007",
+        },
+        "-",
+      ),
+    ).toBe("- gateway.\\nbind: bad\\r\\n\\tvalue");
+  });
+
+  it("normalizes issue metadata for machine output", () => {
+    expect(
+      normalizeConfigIssue({
+        path: "",
+        message: "invalid",
+        allowedValues: ["stable", "beta"],
+        allowedValuesHiddenCount: 0,
+      }),
+    ).toEqual({
+      path: "<root>",
+      message: "invalid",
+      allowedValues: ["stable", "beta"],
+    });
+
+    expect(
+      normalizeConfigIssues([
+        {
+          path: "update.channel",
+          message: "invalid",
+          allowedValues: [],
+          allowedValuesHiddenCount: 2,
+        },
+      ]),
+    ).toEqual([
+      {
+        path: "update.channel",
+        message: "invalid",
+      },
+    ]);
+
+    expect(
+      normalizeConfigIssue({
+        path: "update.channel",
+        message: "invalid",
+        allowedValues: ["stable"],
+        allowedValuesHiddenCount: 2,
+      }),
+    ).toEqual({
+      path: "update.channel",
+      message: "invalid",
+      allowedValues: ["stable"],
+      allowedValuesHiddenCount: 2,
+    });
+  });
+});

@@ -1,0 +1,14 @@
+{
+  "name": "@chainbreaker/acpx",
+  "version": "2026.4.1",
+  "description": "Chainbreaker ACP runtime backend via acpx",
+  "type": "module",
+  "dependencies": {
+    "acpx": "0.4.0"
+  },
+  "chainbreaker": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

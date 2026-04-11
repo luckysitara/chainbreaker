@@ -1,0 +1,72 @@
+import fs from "node:fs";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+import { isAtLeast, parseSemver } from "../../../src/infra/runtime-guard.js";
+import { parseMinHostVersionRequirement } from "../../../src/plugins/min-host-version.js";
+import { bundledPluginFile } from "../bundled-plugin-paths.js";
+
+type PackageManifest = {
+  dependencies?: Record<string, string>;
+  chainbreaker?: {
+    install?: {
+      minHostVersion?: string;
+    };
+  };
+};
+
+type PackageManifestContractParams = {
+  pluginId: string;
+  runtimeDeps?: string[];
+};
+
+function readJson<T>(relativePath: string): T {
+  const absolutePath = path.resolve(process.cwd(), relativePath);
+  return JSON.parse(fs.readFileSync(absolutePath, "utf8")) as T;
+}
+
+export function describePackageManifestContract(params: PackageManifestContractParams) {
+  const packagePath = bundledPluginFile(params.pluginId, "package.json");
+
+  describe(`${params.pluginId} package manifest contract`, () => {
+    if (params.runtimeDeps?.length) {
+      for (const dependencyName of params.runtimeDeps) {
+        it(`keeps ${dependencyName} plugin-local`, () => {
+          const rootManifest = readJson<PackageManifest>("package.json");
+          const pluginManifest = readJson<PackageManifest>(packagePath);
+          const pluginSpec = pluginManifest.dependencies?.[dependencyName];
+          const rootSpec = rootManifest.dependencies?.[dependencyName];
+
+          expect(pluginSpec).toBeTruthy();
+          expect(rootSpec).toBeUndefined();
+        });
+      }
+    }
+
+          return;
+        }
+
+        const manifest = readJson<PackageManifest>(packagePath);
+        const requirement = parseMinHostVersionRequirement(
+          manifest.chainbreaker?.install?.minHostVersion ?? null,
+        );
+
+        expect(
+          requirement,
+          `${packagePath} should declare chainbreaker.install.minHostVersion`,
+        ).not.toBeNull();
+        if (!requirement) {
+          return;
+        }
+
+        const minimum = parseSemver(requirement.minimumLabel);
+        expect(minimum, `${packagePath} should use a parseable semver floor`).not.toBeNull();
+        if (!minimum) {
+          return;
+        }
+
+        expect(
+        ).toBe(true);
+      });
+    }
+  });
+}

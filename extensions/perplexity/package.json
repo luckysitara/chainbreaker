@@ -1,0 +1,12 @@
+{
+  "name": "@chainbreaker/perplexity-plugin",
+  "version": "2026.4.1",
+  "private": true,
+  "description": "Chainbreaker Perplexity plugin",
+  "type": "module",
+  "chainbreaker": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

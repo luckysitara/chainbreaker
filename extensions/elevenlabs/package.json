@@ -1,0 +1,12 @@
+{
+  "name": "@chainbreaker/elevenlabs-speech",
+  "version": "2026.4.1",
+  "private": true,
+  "description": "Chainbreaker ElevenLabs speech plugin",
+  "type": "module",
+  "chainbreaker": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
