@@ -3,15 +3,15 @@
   "version": "2026.4.1",
   "description": "Multi-channel AI gateway with extensible messaging integrations",
   "keywords": [],
-  "homepage": "https://github.com/chainbreaker/chainbreaker#readme",
+  "homepage": "https://github.com/luckysitara/chainbreaker#readme",
   "bugs": {
-    "url": "https://github.com/chainbreaker/chainbreaker/issues"
+    "url": "https://github.com/luckysitara/chainbreaker/issues"
   },
   "license": "MIT",
   "author": "",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/chainbreaker/chainbreaker.git"
+    "url": "git+https://github.com/luckysitara/chainbreaker.git"
   },
   "bin": {
     "chainbreaker": "chainbreaker.mjs"
